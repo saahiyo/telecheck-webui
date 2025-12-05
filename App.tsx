@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap } from 'lucide-react';
+import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import StatsWidget from './components/StatsWidget';
 import ResultCard from './components/ResultCard';
@@ -66,6 +66,20 @@ function App() {
     const text = filteredResults.map(r => r.link).join('\n');
     navigator.clipboard.writeText(text);
     toast.success(`Copied ${filteredResults.length} links to clipboard`);
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (mode === 'bulk') {
+        setBulkInput(prev => prev + (prev ? '\n' : '') + text);
+      } else {
+        setSingleInput(text);
+      }
+      toast.success('Pasted from clipboard');
+    } catch (err) {
+      toast.error('Failed to read clipboard');
+    }
   };
 
   return (
@@ -150,15 +164,24 @@ function App() {
                         className="w-full h-72 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 dark:focus:border-blue-500/50 outline-none transition-all resize-none text-slate-700 dark:text-slate-200 text-sm font-mono placeholder:text-slate-400 leading-relaxed shadow-inner"
                         spellCheck={false}
                       />
-                      {bulkInput && (
-                        <button 
-                          onClick={() => setBulkInput('')}
-                          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
-                          title="Clear Input"
+                      <div className="absolute top-4 right-4 flex gap-2">
+                        <button
+                          onClick={handlePaste}
+                          className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                          title="Paste from Clipboard"
                         >
-                          <Trash2 size={16} />
+                          <Clipboard size={16} />
                         </button>
-                      )}
+                        {bulkInput && (
+                          <button 
+                            onClick={() => setBulkInput('')}
+                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
+                            title="Clear Input"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <button
                       onClick={handleBulkCheck}
@@ -191,8 +214,18 @@ function App() {
                             value={singleInput}
                             onChange={(e) => setSingleInput(e.target.value)}
                             placeholder="https://t.me/username"
-                            className="w-full pl-12 pr-4 py-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 dark:focus:border-blue-500/50 outline-none transition-all text-slate-700 dark:text-slate-200 shadow-inner font-medium"
+                            className="w-full pl-12 pr-12 py-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 dark:focus:border-blue-500/50 outline-none transition-all text-slate-700 dark:text-slate-200 shadow-inner font-medium"
                           />
+                          <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                            <button
+                              type="button"
+                              onClick={handlePaste}
+                              className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                              title="Paste from Clipboard"
+                            >
+                              <Clipboard size={16} />
+                            </button>
+                          </div>
                        </div>
                      </div>
                      <button
