@@ -93,24 +93,21 @@ function App() {
         <div className="absolute -bottom-[20%] left-[20%] w-[600px] h-[600px] bg-emerald-400/10 dark:bg-emerald-600/10 rounded-full blur-[100px]"></div>
       </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
         {/* Header */}
-        <header className="flex justify-between items-center mb-12">
-          <div className="flex items-center gap-3">
+        <header className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-2.5">
             <div className="relative group">
               <div className="absolute inset-0 bg-blue-500 blur opacity-40 group-hover:opacity-60 transition-opacity rounded-xl"></div>
-              <div className="relative p-2.5 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-inner border border-blue-400/30">
-                <ShieldCheck className="text-white" size={24} />
+              <div className="relative p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg shadow-inner border border-blue-400/30">
+                <ShieldCheck className="text-white" size={20} />
               </div>
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
                 TeleCheck<span className="text-blue-600 dark:text-blue-400">Pro</span>
               </h1>
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 tracking-wider uppercase">
-                Link Verification System
-              </p>
             </div>
           </div>
           <ThemeToggle />
@@ -119,66 +116,66 @@ function App() {
         {/* Global Stats */}
         <StatsWidget />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-6">
           
           {/* Left Panel: Input */}
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            <div className="glass-panel rounded-3xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-white/50 dark:border-slate-800 p-1.5 ring-1 ring-slate-100 dark:ring-slate-800">
+          <div className="lg:col-span-5 flex flex-col gap-4">
+            <div className="glass-panel rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-white/50 dark:border-slate-800 p-1 ring-1 ring-slate-100 dark:ring-slate-800">
               
               {/* Custom Segmented Control */}
-              <div className="grid grid-cols-2 gap-1 bg-slate-100/80 dark:bg-slate-900/50 p-1 rounded-2xl mb-2">
+              <div className="grid grid-cols-2 gap-1 bg-slate-100/80 dark:bg-slate-900/50 p-1 rounded-xl mb-1">
                 <button
                   onClick={() => setMode('bulk')}
-                  className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                  className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all duration-300 ${
                     mode === 'bulk'
                       ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
                       : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
                 >
-                  <Layers size={16} />
+                  <Layers size={14} />
                   Bulk Validator
                 </button>
                 <button
                   onClick={() => setMode('single')}
-                  className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
+                  className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all duration-300 ${
                     mode === 'single'
                       ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
                       : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
                 >
-                  <Zap size={16} />
+                  <Zap size={14} />
                   Quick Check
                 </button>
               </div>
 
               {/* Form Area */}
-              <div className="p-4 pt-2">
+              <div className="p-3 pt-1">
                 {mode === 'bulk' ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div className="relative group">
-                      <div className="absolute inset-0 bg-blue-500/5 rounded-2xl pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
+                      <div className="absolute inset-0 bg-blue-500/5 rounded-xl pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
                       <textarea
                         value={bulkInput}
                         onChange={(e) => setBulkInput(e.target.value)}
                         placeholder={`Paste your list here...\n\nhttps://t.me/channel1\nhttps://t.me/channel2`}
-                        className="w-full h-72 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 dark:focus:border-blue-500/50 outline-none transition-all resize-none text-slate-700 dark:text-slate-200 text-sm font-mono placeholder:text-slate-400 leading-relaxed shadow-inner"
+                        className="w-full h-56 p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 dark:focus:border-blue-500/50 outline-none transition-all resize-none text-slate-700 dark:text-slate-200 text-xs font-mono placeholder:text-slate-400 leading-relaxed shadow-inner"
                         spellCheck={false}
                       />
-                      <div className="absolute top-4 right-4 flex gap-2">
+                      <div className="absolute top-3 right-3 flex gap-1.5">
                         <button
                           onClick={handlePaste}
-                          className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
                           title="Paste from Clipboard"
                         >
-                          <Clipboard size={16} />
+                          <Clipboard size={14} />
                         </button>
                         {bulkInput && (
                           <button 
                             onClick={() => setBulkInput('')}
-                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition-colors"
                             title="Clear Input"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </button>
                         )}
                       </div>
@@ -186,44 +183,44 @@ function App() {
                     <button
                       onClick={handleBulkCheck}
                       disabled={isChecking || !bulkInput.trim()}
-                      className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/25 transition-all flex justify-center items-center gap-2.5"
+                      className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white rounded-xl font-bold shadow-lg shadow-blue-500/25 transition-all flex justify-center items-center gap-2 text-sm"
                     >
                       {isChecking ? (
                         <>
-                          <Loader2 size={18} className="animate-spin" />
+                          <Loader2 size={16} className="animate-spin" />
                           <span>Processing...</span>
                         </>
                       ) : (
                         <>
                           <span>Run Validation</span>
-                          <ArrowRight size={18} className="opacity-80" />
+                          <ArrowRight size={16} className="opacity-80" />
                         </>
                       )}
                     </button>
                   </div>
                 ) : (
-                  <form onSubmit={handleSingleCheck} className="space-y-5 py-8">
-                     <div className="space-y-2">
-                       <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 ml-1 uppercase">Target URL</label>
+                  <form onSubmit={handleSingleCheck} className="space-y-4 py-4">
+                     <div className="space-y-1.5">
+                       <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 ml-1 uppercase tracking-wider">Target URL</label>
                        <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                            <Link2 className="text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Link2 className="text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
                           </div>
                           <input
                             type="text"
                             value={singleInput}
                             onChange={(e) => setSingleInput(e.target.value)}
                             placeholder="https://t.me/username"
-                            className="w-full pl-12 pr-12 py-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 dark:focus:border-blue-500/50 outline-none transition-all text-slate-700 dark:text-slate-200 shadow-inner font-medium"
+                            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 dark:focus:border-blue-500/50 outline-none transition-all text-slate-700 dark:text-slate-200 text-sm shadow-inner font-medium"
                           />
-                          <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                          <div className="absolute inset-y-0 right-0 pr-2 flex items-center">
                             <button
                               type="button"
                               onClick={handlePaste}
                               className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
                               title="Paste from Clipboard"
                             >
-                              <Clipboard size={16} />
+                              <Clipboard size={14} />
                             </button>
                           </div>
                        </div>
@@ -231,9 +228,9 @@ function App() {
                      <button
                       type="submit"
                       disabled={isChecking || !singleInput.trim()}
-                      className="w-full py-4 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 text-white rounded-2xl font-bold shadow-lg transition-all flex justify-center items-center gap-2.5"
+                      className="w-full py-2.5 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 text-white rounded-xl font-bold shadow-lg transition-all flex justify-center items-center gap-2 text-sm"
                     >
-                      {isChecking ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+                      {isChecking ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
                       Check Status
                     </button>
                   </form>
@@ -241,96 +238,91 @@ function App() {
               </div>
             </div>
 
-            {/* Helper Text */}
-            <div className="px-2">
-              <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-                Powered by TeleCheck API. Supports raw text extraction.
-              </p>
-            </div>
+            {/* Helper Text - Removed for minimalism or kept very small */}
           </div>
 
           {/* Right Panel: Results */}
           <div className="lg:col-span-7 h-full">
              {!hasChecked && !isChecking && results.length === 0 && (
-               <div className="h-full min-h-[500px] flex flex-col items-center justify-center text-center p-8 border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 rounded-3xl">
-                 <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                   <Layers size={36} className="text-slate-300 dark:text-slate-600" />
+               <div className="h-full min-h-[350px] flex flex-col items-center justify-center text-center p-6 border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 rounded-2xl">
+                 <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 shadow-inner">
+                   <Layers size={24} className="text-slate-300 dark:text-slate-600" />
                  </div>
-                 <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Awaiting Input</h3>
-                 <p className="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
-                   Paste your Telegram links on the left to begin the validation process. We'll categorize them instantly.
+                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Awaiting Input</h3>
+                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
+                   Paste your Telegram links on the left to begin.
                  </p>
                </div>
              )}
 
              {isChecking && !hasChecked && (
-               <div className="h-full min-h-[500px] flex flex-col items-center justify-center p-8 border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 rounded-3xl">
-                 <div className="relative mb-8">
-                    <div className="w-16 h-16 border-4 border-blue-100 dark:border-blue-900/30 rounded-full"></div>
-                    <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+               <div className="h-full min-h-[350px] flex flex-col items-center justify-center p-6 border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 rounded-2xl">
+                 <div className="relative mb-6">
+                    <div className="w-12 h-12 border-4 border-blue-100 dark:border-blue-900/30 rounded-full"></div>
+                    <div className="absolute top-0 left-0 w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                  </div>
-                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Verifying Links</h3>
-                 <p className="text-sm text-slate-500 mt-1">This usually takes just a moment...</p>
+                 <h3 className="text-base font-semibold text-slate-900 dark:text-white">Verifying Links</h3>
+                 <p className="text-xs text-slate-500 mt-1">Processing...</p>
                </div>
              )}
 
              {hasChecked && (
-               <div className="space-y-6">
+               <div className="space-y-4">
                  <div className="flex items-center justify-between px-1">
-                   <div className="flex items-baseline gap-3">
-                     <h2 className="text-xl font-bold text-slate-900 dark:text-white">Analysis Results</h2>
-                     <span className="text-sm font-medium text-slate-400">
-                       {results.length} link{results.length !== 1 ? 's' : ''} processed
+                   <div className="flex items-baseline gap-2">
+                     <h2 className="text-lg font-bold text-slate-900 dark:text-white">Results</h2>
+                     <span className="text-xs font-medium text-slate-400">
+                       {results.length} link{results.length !== 1 ? 's' : ''}
                      </span>
                    </div>
                    
                    <div className="flex gap-2">
-                     <button onClick={handleCopyList} className="text-xs font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-1.5">
-                       <Link2 size={14} />
-                       Copy List
+                     <button onClick={handleCopyList} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors px-2 py-1 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-1">
+                       <Link2 size={12} />
+                       COPY LIST
                      </button>
-                     <button onClick={clearAll} className="text-xs font-semibold text-slate-400 hover:text-rose-500 transition-colors px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-                       Clear Results
+                     <button onClick={clearAll} className="text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 uppercase">
+                       Clear
                      </button>
                    </div>
                  </div>
 
                  {/* Summary Chips */}
-                 <div className="flex gap-3 overflow-x-auto pb-2">
+                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                    {validCount > 0 && (
                      <button 
                        onClick={() => setFilter(filter === 'valid' ? 'all' : 'valid')}
-                       className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
+                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
                          filter === 'valid' 
-                           ? 'bg-emerald-100 dark:bg-emerald-900/40 border-emerald-300 dark:border-emerald-700 ring-2 ring-emerald-500/20' 
+                           ? 'bg-emerald-100 dark:bg-emerald-900/40 border-emerald-300 dark:border-emerald-700 ring-1 ring-emerald-500/20' 
                            : 'bg-emerald-100/50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
                        }`}
                      >
-                       <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                       <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">{validCount} Valid</span>
+                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                       <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">{validCount} Valid</span>
                      </button>
                    )}
                    {invalidCount > 0 && (
                      <button 
                        onClick={() => setFilter(filter === 'invalid' ? 'all' : 'invalid')}
-                       className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all ${
+                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
                          filter === 'invalid' 
-                           ? 'bg-rose-100 dark:bg-rose-900/40 border-rose-300 dark:border-rose-700 ring-2 ring-rose-500/20' 
+                           ? 'bg-rose-100 dark:bg-rose-900/40 border-rose-300 dark:border-rose-700 ring-1 ring-rose-500/20' 
                            : 'bg-rose-100/50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/30'
                        }`}
                      >
-                       <div className="w-2 h-2 rounded-full bg-rose-500"></div>
-                       <span className="text-sm font-bold text-rose-800 dark:text-rose-300">{invalidCount} Invalid</span>
+                       <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
+                       <span className="text-xs font-bold text-rose-800 dark:text-rose-300">{invalidCount} Invalid</span>
                      </button>
                    )}
                  </div>
 
-                 <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar pb-10">
+                 <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar pb-6">
                    {filteredResults.map((result, idx) => (
                      <ResultCard key={idx} result={result} />
                    ))}
                    {filteredResults.length === 0 && (
-                     <div className="text-center py-12 text-slate-400">
+                     <div className="text-center py-8 text-slate-400 text-xs">
                        No links found for this filter.
                      </div>
                    )}

@@ -44,36 +44,35 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
   };
 
   return (
-    <div className={`group relative bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800 ${statusStyles.border} border-l-[4px] p-4 transition-all hover:shadow-md animate-slide-up`}>
-      <div className="flex items-start justify-between gap-3">
+    <div className={`group relative bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800 ${statusStyles.border} border-l-[3px] p-3 transition-all hover:shadow-md animate-slide-up`}>
+      <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-1.5 mb-0.5">
             {/* Status badge removed as per request */}
-            <span className="text-xs text-slate-400 hidden sm:inline-block">•</span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 truncate max-w-[200px] sm:max-w-none">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[200px] sm:max-w-none opacity-80">
               {result.reason}
             </span>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <a 
               href={result.link.startsWith('http') ? result.link : `https://${result.link}`} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-base font-medium text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate"
+              className="text-sm font-medium text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate leading-tight"
             >
               {result.link}
             </a>
-            <ExternalLink size={14} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ExternalLink size={12} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
         </div>
 
         <button 
           onClick={copyToClipboard}
-          className="p-2 text-slate-400 hover:text-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+          className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md transition-colors opacity-0 group-hover:opacity-100"
           title="Copy Link"
         >
-          <Copy size={16} />
+          <Copy size={14} />
         </button>
       </div>
     </div>

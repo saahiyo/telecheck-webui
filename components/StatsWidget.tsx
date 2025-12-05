@@ -26,27 +26,27 @@ const StatsWidget: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full mb-8">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="h-24 w-full bg-slate-200/50 dark:bg-slate-800/50 rounded-2xl animate-pulse"></div>
-        ))}
-      </div>
-    );
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mb-6">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="h-16 w-full bg-slate-200/50 dark:bg-slate-800/50 rounded-xl animate-pulse"></div>
+      ))}
+    </div>
+  );
   }
 
   const StatCard = ({ icon: Icon, label, value, colorClass, bgClass }: { icon: any, label: string, value: number | undefined, colorClass: string, bgClass: string }) => (
-    <div className={`relative overflow-hidden group p-5 rounded-2xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 transition-all hover:shadow-md hover:-translate-y-1`}>
-      <div className={`absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity ${colorClass}`}>
-        <Icon size={48} />
+    <div className={`relative overflow-hidden group p-3 rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 transition-all hover:shadow-md hover:-translate-y-0.5`}>
+      <div className={`absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity ${colorClass}`}>
+        <Icon size={32} />
       </div>
       
-      <div className="relative z-10 flex items-center gap-4">
-        <div className={`p-3 rounded-xl ${bgClass} ${colorClass}`}>
-          <Icon size={22} />
+      <div className="relative z-10 flex items-center gap-3">
+        <div className={`p-2 rounded-lg ${bgClass} ${colorClass}`}>
+          <Icon size={18} />
         </div>
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0.5">{label}</p>
-          <p className="text-2xl font-bold text-slate-800 dark:text-slate-100 tabular-nums">
+          <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0">{label}</p>
+          <p className="text-lg font-bold text-slate-800 dark:text-slate-100 tabular-nums leading-tight">
             {value?.toLocaleString() || '0'}
           </p>
         </div>
@@ -55,7 +55,7 @@ const StatsWidget: React.FC = () => {
   );
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full mb-10">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mb-6">
       <StatCard 
         icon={Activity} 
         label="Total Processed" 
