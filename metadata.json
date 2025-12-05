@@ -1,0 +1,5 @@
+{
+  "name": "TeleCheck Pro",
+  "description": "A modern, minimalist dashboard for validating Telegram links with real-time API integration.",
+  "requestFramePermissions": []
+}
