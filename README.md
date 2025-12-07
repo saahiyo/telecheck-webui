@@ -2,6 +2,8 @@
 
 **TeleCheck Pro** is a modern, high-performance web application designed to validate Telegram links efficiently. Whether you have a single link or a massive list, TeleCheck Pro provides instant status verification with a premium, user-friendly interface.
 
+![TeleCheck Pro Dashboard](public/preview.png)
+
 ## 🚀 Overview
 
 TeleCheck Pro interacts with a robust backend API to check the validity of Telegram channel, group, and user links. It distinguishes between valid, invalid, and unknown statuses, providing detailed reasons for any issues found. The application features a sleek, responsive design with dark mode support, real-time statistics, and seamless clipboard integrations.
