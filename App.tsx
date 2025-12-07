@@ -63,7 +63,12 @@ function App() {
   });
 
   const handleCopyList = () => {
-    const text = filteredResults.map(r => r.link).join('\n');
+    const title = filter === 'all' ? 'All Links' : `${filter.charAt(0).toUpperCase() + filter.slice(1)} Links`;
+    const separator = '-'.repeat(17); // 17 dashes as per user example
+    const linksText = filteredResults.map((r, i) => `${i + 1}. ${r.link}`).join('\n');
+    
+    const text = `${title}\n${separator}\n${linksText}`;
+    
     navigator.clipboard.writeText(text);
     toast.success(`Copied ${filteredResults.length} links to clipboard`);
   };
@@ -289,6 +294,17 @@ function App() {
 
                  {/* Summary Chips */}
                  <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                    <button 
+                       onClick={() => setFilter('all')}
+                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
+                         filter === 'all' 
+                           ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700 ring-1 ring-blue-500/20' 
+                           : 'bg-blue-100/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                       }`}
+                     >
+                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+                       <span className="text-xs font-bold text-blue-800 dark:text-blue-300">{results.length} All</span>
+                     </button>
                    {validCount > 0 && (
                      <button 
                        onClick={() => setFilter(filter === 'valid' ? 'all' : 'valid')}
