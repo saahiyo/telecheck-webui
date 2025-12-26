@@ -59,7 +59,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
               href={result.link.startsWith('http') ? result.link : `https://${result.link}`} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-sm font-medium text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate leading-tight"
+              className="text-sm font-medium text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white transition-colors truncate leading-tight"
             >
               {result.link}
             </a>

@@ -93,9 +93,9 @@ function App() {
       {/* ... (rest of the component) */}
       {/* Refined Background Gradients */}
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] w-[800px] h-[800px] bg-blue-400/10 dark:bg-blue-600/10 rounded-full blur-[120px]"></div>
-        <div className="absolute top-[20%] -right-[10%] w-[600px] h-[600px] bg-purple-400/10 dark:bg-purple-600/10 rounded-full blur-[100px]"></div>
-        <div className="absolute -bottom-[20%] left-[20%] w-[600px] h-[600px] bg-emerald-400/10 dark:bg-emerald-600/10 rounded-full blur-[100px]"></div>
+        <div className="absolute -top-[20%] -left-[10%] w-[800px] h-[800px] bg-blue-400/10 dark:opacity-0 rounded-full blur-[120px]"></div>
+        <div className="absolute top-[20%] -right-[10%] w-[600px] h-[600px] bg-purple-400/10 dark:opacity-0 rounded-full blur-[100px]"></div>
+        <div className="absolute -bottom-[20%] left-[20%] w-[600px] h-[600px] bg-emerald-400/10 dark:opacity-0 rounded-full blur-[100px]"></div>
       </div>
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -111,7 +111,7 @@ function App() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                TeleCheck<span className="text-blue-600 dark:text-blue-400">Pro</span>
+                TeleCheck<span className="text-blue-600 dark:text-white">Pro</span>
               </h1>
             </div>
           </div>
@@ -133,7 +133,7 @@ function App() {
                   onClick={() => setMode('bulk')}
                   className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all duration-300 ${
                     mode === 'bulk'
-                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
+                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm'
                       : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
                 >
@@ -144,7 +144,7 @@ function App() {
                   onClick={() => setMode('single')}
                   className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all duration-300 ${
                     mode === 'single'
-                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
+                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm'
                       : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
                 >
@@ -188,7 +188,7 @@ function App() {
                     <button
                       onClick={handleBulkCheck}
                       disabled={isChecking || !bulkInput.trim()}
-                      className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white rounded-xl font-bold shadow-lg shadow-blue-500/25 transition-all flex justify-center items-center gap-2 text-sm"
+                      className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 dark:from-white dark:to-slate-100 dark:text-black dark:hover:from-slate-100 dark:hover:to-slate-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white rounded-xl font-bold shadow-lg shadow-blue-500/25 dark:shadow-none transition-all flex justify-center items-center gap-2 text-sm"
                     >
                       {isChecking ? (
                         <>
@@ -282,7 +282,7 @@ function App() {
                    </div>
                    
                    <div className="flex gap-2">
-                     <button onClick={handleCopyList} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors px-2 py-1 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-1">
+                     <button onClick={handleCopyList} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 dark:text-white dark:hover:text-slate-200 transition-colors px-2 py-1 rounded-md hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center gap-1">
                        <Link2 size={12} />
                        COPY LIST
                      </button>
@@ -298,12 +298,12 @@ function App() {
                        onClick={() => setFilter('all')}
                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
                          filter === 'all' 
-                           ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-300 dark:border-blue-700 ring-1 ring-blue-500/20' 
-                           : 'bg-blue-100/50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                           ? 'bg-blue-100 dark:bg-slate-800 border-blue-300 dark:border-slate-600 ring-1 ring-blue-500/20 dark:ring-slate-500/40' 
+                           : 'bg-blue-100/50 dark:bg-slate-800/50 border-blue-200 dark:border-slate-700 hover:bg-blue-100 dark:hover:bg-slate-800'
                        }`}
                      >
-                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
-                       <span className="text-xs font-bold text-blue-800 dark:text-blue-300">{results.length} All</span>
+                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-slate-400"></div>
+                       <span className="text-xs font-bold text-blue-800 dark:text-slate-200">{results.length} All</span>
                      </button>
                    {validCount > 0 && (
                      <button 
