@@ -5,7 +5,7 @@ import StatsWidget from './components/StatsWidget';
 import ResultCard from './components/ResultCard';
 import { checkBulkLinks, checkSingleLink } from './services/api';
 import { LinkResult } from './types';
-import { Toaster, toast } from 'sonner';
+import { Toaster, toast } from 'sonner';  
 
 function App() {
   const [mode, setMode] = useState<'bulk' | 'single'>('bulk');
@@ -21,7 +21,7 @@ function App() {
     setHasChecked(false);
     setResults([]);
 
-    const links = bulkInput.split(/[\n,]+/).map(l => l.trim()).filter(Boolean);
+    const links = bulkInput.split(/[\n,\s]+/).map(l => l.trim()).filter(Boolean);
     const data = await checkBulkLinks(links);
     
     setResults(data);
