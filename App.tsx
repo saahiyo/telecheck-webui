@@ -21,7 +21,8 @@ function App() {
     setHasChecked(false);
     setResults([]);
 
-    const links = bulkInput.split(/[\n,\s]+/).map(l => l.trim()).filter(Boolean);
+    const urlRegex = /(https?:\/\/[^\s,]+|t\.me\/[^\s,]+)/g;
+    const links = (bulkInput.match(urlRegex) || []).map(l => l.trim());
     const data = await checkBulkLinks(links);
     
     setResults(data);
@@ -92,22 +93,16 @@ function App() {
       <Toaster position="bottom-center" richColors />
       {/* ... (rest of the component) */}
       {/* Refined Background Gradients */}
-      <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] w-[800px] h-[800px] bg-blue-400/10 dark:opacity-0 rounded-full blur-[120px]"></div>
-        <div className="absolute top-[20%] -right-[10%] w-[600px] h-[600px] bg-purple-400/10 dark:opacity-0 rounded-full blur-[100px]"></div>
-        <div className="absolute -bottom-[20%] left-[20%] w-[600px] h-[600px] bg-emerald-400/10 dark:opacity-0 rounded-full blur-[100px]"></div>
-      </div>
+      {/* Minimal Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none bg-slate-50 dark:bg-slate-950"></div>
 
       <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
         {/* Header */}
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-2.5">
-            <div className="relative group">
-              <div className="absolute inset-0 bg-blue-500 blur opacity-40 group-hover:opacity-60 transition-opacity rounded-xl"></div>
-              <div className="relative p-2 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg shadow-inner border border-blue-400/30">
-                <ShieldCheck className="text-white" size={20} />
-              </div>
+            <div className="relative group p-1">
+                 <ShieldCheck className="text-blue-600 dark:text-white" size={24} />
             </div>
             <div>
               <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
@@ -125,7 +120,7 @@ function App() {
           
           {/* Left Panel: Input */}
           <div className="lg:col-span-5 flex flex-col gap-4">
-            <div className="glass-panel rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-white/50 dark:border-slate-800 p-1 ring-1 ring-slate-100 dark:ring-slate-800">
+            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-1">
               
               {/* Custom Segmented Control */}
               <div className="grid grid-cols-2 gap-1 bg-slate-100/80 dark:bg-slate-900/50 p-1 rounded-xl mb-1">
@@ -163,7 +158,7 @@ function App() {
                         value={bulkInput}
                         onChange={(e) => setBulkInput(e.target.value)}
                         placeholder={`Paste your list here...\n\nhttps://t.me/channel1\nhttps://t.me/channel2`}
-                        className="w-full h-56 p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 dark:focus:border-blue-500/50 outline-none transition-all resize-none text-slate-700 dark:text-slate-200 text-xs font-mono placeholder:text-slate-400 leading-relaxed shadow-inner"
+                        className="w-full h-56 p-3 rounded-lg bg-slate-50 dark:bg-black border border-slate-200 dark:border-slate-800 focus:border-slate-400 dark:focus:border-slate-600 outline-none transition-all resize-none text-slate-700 dark:text-slate-200 text-xs font-mono placeholder:text-slate-400 leading-relaxed"
                         spellCheck={false}
                       />
                       <div className="absolute top-3 right-3 flex gap-1.5">
@@ -188,7 +183,7 @@ function App() {
                     <button
                       onClick={handleBulkCheck}
                       disabled={isChecking || !bulkInput.trim()}
-                      className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 dark:from-white dark:to-slate-100 dark:text-black dark:hover:from-slate-100 dark:hover:to-slate-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 text-white rounded-xl font-bold shadow-lg shadow-blue-500/25 dark:shadow-none transition-all flex justify-center items-center gap-2 text-sm"
+                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-all flex justify-center items-center gap-2 text-sm"
                     >
                       {isChecking ? (
                         <>
@@ -249,11 +244,11 @@ function App() {
           {/* Right Panel: Results */}
           <div className="lg:col-span-7 h-full">
              {!hasChecked && !isChecking && results.length === 0 && (
-               <div className="h-full min-h-[350px] flex flex-col items-center justify-center text-center p-6 border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 rounded-2xl">
-                 <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4 shadow-inner">
-                   <Layers size={24} className="text-slate-300 dark:text-slate-600" />
+               <div className="h-full min-h-[350px] flex flex-col items-center justify-center text-center p-6 border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 rounded-xl border-dashed">
+                 <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                   <Layers size={20} className="text-slate-300 dark:text-slate-600" />
                  </div>
-                 <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Awaiting Input</h3>
+                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Awaiting Input</h3>
                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
                    Paste your Telegram links on the left to begin.
                  </p>

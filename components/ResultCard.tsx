@@ -20,18 +20,18 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
   
   if (status === 'valid') {
     statusStyles = {
-      border: 'border-l-emerald-500',
+      border: 'border-emerald-500/50',
       text: 'text-emerald-700 dark:text-emerald-400',
       bg: 'bg-emerald-50/50 dark:bg-emerald-900/10',
-      badge: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300',
+      badge: '',
       icon: Check
     };
   } else if (status === 'invalid') {
     statusStyles = {
-      border: 'border-l-rose-500',
+      border: 'border-rose-500/50',
       text: 'text-rose-700 dark:text-rose-400',
       bg: 'bg-rose-50/50 dark:bg-rose-900/10',
-      badge: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300',
+      badge: '',
       icon: X
     };
   }
@@ -44,7 +44,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
   };
 
   return (
-    <div className={`group relative bg-white dark:bg-slate-900 rounded-lg shadow-sm border border-slate-100 dark:border-slate-800 ${statusStyles.border} border-l-[3px] p-3 transition-all hover:shadow-md animate-slide-up`}>
+    <div className={`group relative bg-white dark:bg-slate-900 rounded-md border border-slate-100 dark:border-slate-800 p-2.5 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
@@ -63,7 +63,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
             >
               {result.link}
             </a>
-            <ExternalLink size={12} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className={`w-1.5 h-1.5 rounded-full ${status === 'valid' ? 'bg-emerald-500' : status === 'invalid' ? 'bg-rose-500' : 'bg-amber-500'}`}></div>
           </div>
         </div>
 
