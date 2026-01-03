@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, Check } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import StatsWidget from './components/StatsWidget';
 import ResultCard from './components/ResultCard';
@@ -14,6 +14,20 @@ function App() {
   const [isChecking, setIsChecking] = useState(false);
   const [results, setResults] = useState<LinkResult[]>([]);
   const [hasChecked, setHasChecked] = useState(false);
+  const [copyMenuOpen, setCopyMenuOpen] = useState(false);
+  const copyMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (copyMenuRef.current && !copyMenuRef.current.contains(event.target as Node)) {
+        setCopyMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleBulkCheck = async () => {
     if (!bulkInput.trim()) return;
@@ -63,15 +77,48 @@ function App() {
     return r.status === filter;
   });
 
-  const handleCopyList = () => {
-    const title = filter === 'all' ? 'All Links' : `${filter.charAt(0).toUpperCase() + filter.slice(1)} Links`;
-    const separator = '-'.repeat(17); // 17 dashes as per user example
-    const linksText = filteredResults.map((r, i) => `${i + 1}. ${r.link}`).join('\n');
-    
-    const text = `${title}\n${separator}\n${linksText}`;
-    
-    navigator.clipboard.writeText(text);
-    toast.success(`Copied ${filteredResults.length} links to clipboard`);
+  const handleCopy = (type: 'numbered' | 'gap' | 'plain' | 'original') => {
+    try {
+      let text = '';
+      const title = filter === 'all' ? 'All Links' : `${filter.charAt(0).toUpperCase() + filter.slice(1)} Links`;
+      const separator = '-'.repeat(17);
+
+      switch (type) {
+        case 'numbered':
+           text = `${title}\n${separator}\n` + filteredResults.map((r, i) => `${i + 1}. ${r.link}`).join('\n');
+           break;
+        case 'gap':
+           text = filteredResults.map((r) => r.link).join('\n\n');
+           break;
+        case 'plain':
+           text = filteredResults.map((r) => r.link).join('\n');
+           break;
+        case 'original':
+           text = bulkInput;
+           // Remove invalid links
+           results.filter(r => r.status === 'invalid').forEach(r => {
+             const escapedLink = r.link.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+             const regex = new RegExp(escapedLink, 'g');
+             text = text.replace(regex, '');
+           });
+           // If in single mode, just return the single input (or nothing if invalid)
+           if (mode === 'single') {
+             text = results[0]?.status === 'valid' ? singleInput : '';
+           }
+           break;
+      }
+      
+      if (!text.trim()) {
+        toast.error('Nothing to copy');
+        return;
+      }
+
+      navigator.clipboard.writeText(text);
+      toast.success('Copied to clipboard');
+      setCopyMenuOpen(false);
+    } catch (err) {
+      toast.error('Failed to copy');
+    }
   };
 
   const handlePaste = async () => {
@@ -277,11 +324,55 @@ function App() {
                    </div>
                    
                    <div className="flex gap-2">
-                     <button onClick={handleCopyList} className="text-[10px] font-bold text-blue-600 hover:text-blue-700 dark:text-white dark:hover:text-slate-200 transition-colors px-2 py-1 rounded-md hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center gap-1">
-                       <Link2 size={12} />
-                       COPY LIST
-                     </button>
-                     <button onClick={clearAll} className="text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors px-2 py-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 uppercase">
+                    <div className="relative" ref={copyMenuRef}>
+                      <button 
+                        onClick={() => setCopyMenuOpen(!copyMenuOpen)}
+                        className="text-[10px] font-bold text-blue-600 hover:text-blue-700 dark:text-white dark:hover:text-slate-200 transition-colors px-2 py-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center gap-1"
+                      >
+                        <Link2 size={12} />
+                        COPY
+                        <ChevronDown size={10} className={`transform transition-transform ${copyMenuOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      
+                      {copyMenuOpen && (
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 overflow-hidden">
+                          <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700/50 mb-1">
+                            Copy Format
+                          </div>
+                          
+                          <button 
+                            onClick={() => handleCopy('gap')}
+                            className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-between"
+                          >
+                            <span>Links with Gap</span>
+                          </button>
+                          
+                          <button 
+                            onClick={() => handleCopy('plain')}
+                            className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-between"
+                          >
+                            <span>Plain List (No #)</span>
+                          </button>
+
+                          <button 
+                            onClick={() => handleCopy('original')}
+                            className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-between"
+                          >
+                            <span>Original (Valid Only)</span>
+                          </button>
+
+                          <div className="h-px bg-slate-100 dark:bg-slate-700 my-1"></div>
+                          
+                          <button 
+                            onClick={() => handleCopy('numbered')}
+                            className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-between"
+                          >
+                            <span>Standard (Numbered)</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                     <button onClick={clearAll} className="text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 uppercase">
                        Clear
                      </button>
                    </div>
