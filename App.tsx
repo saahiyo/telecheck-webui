@@ -94,17 +94,56 @@ function App() {
            text = filteredResults.map((r) => r.link).join('\n');
            break;
         case 'original':
-           text = bulkInput;
-           // Remove invalid links
-           results.filter(r => r.status === 'invalid').forEach(r => {
-             const escapedLink = r.link.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-             const regex = new RegExp(escapedLink, 'g');
-             text = text.replace(regex, '');
-           });
-           // If in single mode, just return the single input (or nothing if invalid)
            if (mode === 'single') {
              text = results[0]?.status === 'valid' ? singleInput : '';
+             break;
            }
+
+           // Robust segmentation logic to remove invalid links AND their preceding context (headers/timestamps)
+           // while keeping text belonging to valid links.
+           const urlRegex = /(https?:\/\/[^\s,]+|t\.me\/[^\s,]+)/g;
+           const matches = [...bulkInput.matchAll(urlRegex)];
+           
+           // map link -> status for quick lookup (handles duplicates by taking first found status, usually consistent)
+           const statusMap = new Map(results.map(r => [r.link, r.status]));
+
+           text = '';
+           let lastEnd = 0;
+           
+           matches.forEach((match) => {
+             const linkUrl = match[0].trim();
+             const status = statusMap.get(linkUrl);
+             
+             const start = match.index!;
+             const end = start + match[0].length;
+             
+             // The text preceding this link
+             const precedingContent = bulkInput.slice(lastEnd, start);
+             
+             if (status === 'valid') {
+                let chunkToKeep = precedingContent;
+                
+                // If the preceding content has meaningful text (headers, etc.), 
+                // we only want the LAST paragraph (the one belonging to this link).
+                // We discard orphaned paragraphs (extra texts) separated by blank lines.
+                if (/\S/.test(precedingContent)) {
+                   const parts = precedingContent.split(/\n\s*\n/);
+                   chunkToKeep = parts[parts.length - 1];
+                   
+                   // If we stripped content, ensure we have at least one newline separator from previous output
+                   if (parts.length > 1 && text.length > 0 && !text.endsWith('\n')) {
+                      text += '\n';
+                   }
+                }
+                
+                text += chunkToKeep + match[0];
+             }
+             
+             lastEnd = end;
+           });
+           
+           // Collapse excessive newlines if any remain
+           text = text.replace(/(\r\n|\r|\n){3,}/g, '$1$1');
            break;
       }
       
