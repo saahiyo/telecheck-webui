@@ -3,7 +3,11 @@ import { fetchStats } from '../services/api';
 import { StatsData } from '../types';
 import { Activity, CheckCircle2, XCircle } from 'lucide-react';
 
-const StatsWidget: React.FC = () => {
+interface StatsWidgetProps {
+  refreshTrigger?: number;
+}
+
+const StatsWidget: React.FC<StatsWidgetProps> = ({ refreshTrigger = 0 }) => {
   const [stats, setStats] = useState<StatsData | null>(null);
 
   useEffect(() => {
@@ -19,7 +23,7 @@ const StatsWidget: React.FC = () => {
     // Refresh stats every 30 seconds
     const interval = setInterval(loadStats, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshTrigger]);
 
 
 

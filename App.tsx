@@ -12,6 +12,8 @@ function App() {
   const [bulkInput, setBulkInput] = useState('');
   const [singleInput, setSingleInput] = useState('');
   const [isChecking, setIsChecking] = useState(false);
+  // Trigger for refreshing stats widget
+  const [refreshStatsTrigger, setRefreshStatsTrigger] = useState(0);
   const [results, setResults] = useState<LinkResult[]>([]);
   const [hasChecked, setHasChecked] = useState(false);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
@@ -42,6 +44,7 @@ function App() {
     setResults(data);
     setHasChecked(true);
     setIsChecking(false);
+    setRefreshStatsTrigger(prev => prev + 1);
     toast.success('Analysis complete!');
   };
 
@@ -57,6 +60,7 @@ function App() {
     setResults([data]);
     setHasChecked(true);
     setIsChecking(false);
+    setRefreshStatsTrigger(prev => prev + 1);
     toast.success('Analysis complete!');
   };
 
@@ -198,7 +202,7 @@ function App() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
         {/* Stats Section */}
-        <StatsWidget />
+        <StatsWidget refreshTrigger={refreshStatsTrigger} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-6">
           
