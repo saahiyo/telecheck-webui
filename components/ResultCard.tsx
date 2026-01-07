@@ -10,66 +10,40 @@ interface ResultCardProps {
 const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
   const status = result.status?.toLowerCase();
   
-  let statusStyles = {
-    border: 'border-l-amber-500',
-    text: 'text-amber-700 dark:text-amber-400',
-    bg: 'bg-amber-50 dark:bg-amber-900/10',
-    badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-    icon: AlertTriangle
-  };
-  
-  if (status === 'valid') {
-    statusStyles = {
-      border: 'border-emerald-500/50',
-      text: 'text-emerald-700 dark:text-emerald-400',
-      bg: 'bg-emerald-50/50 dark:bg-emerald-900/10',
-      badge: '',
-      icon: Check
-    };
-  } else if (status === 'invalid') {
-    statusStyles = {
-      border: 'border-rose-500/50',
-      text: 'text-rose-700 dark:text-rose-400',
-      bg: 'bg-rose-50/50 dark:bg-rose-900/10',
-      badge: '',
-      icon: X
-    };
-  }
-
-  const Icon = statusStyles.icon;
+  // Status indicator color only
+  let statusColor = 'bg-amber-500';
+  if (status === 'valid') statusColor = 'bg-black dark:bg-white'; // Valid is "neutral/primary" in this aesthetic
+  else if (status === 'invalid') statusColor = 'bg-red-500';
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(result.link);
-    toast.success('Link copied to clipboard');
+    toast.success('Link copied');
   };
 
   return (
-    <div className={`group relative bg-white dark:bg-slate-900 rounded-md border border-slate-100 dark:border-slate-800 p-2.5 transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50`}>
-      <div className="flex items-start justify-between gap-2">
+    <div className="group relative bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-[#333] p-2.5 transition-all hover:bg-gray-50 dark:hover:bg-[#111]">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            {/* Status badge removed as per request */}
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[200px] sm:max-w-none opacity-80">
-              {result.reason}
+          <div className="flex items-center gap-2 mb-0.5">
+            <div className={`w-1.5 h-1.5 rounded-full ${statusColor} shrink-0`}></div>
+            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">
+              {result.reason || status}
             </span>
           </div>
           
-          <div className="flex items-center gap-1.5">
-            <a 
-              href={result.link.startsWith('http') ? result.link : `https://${result.link}`} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-sm font-medium text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-white transition-colors truncate leading-tight"
-            >
-              {result.link}
-            </a>
-            <div className={`w-1.5 h-1.5 rounded-full ${status === 'valid' ? 'bg-emerald-500' : status === 'invalid' ? 'bg-rose-500' : 'bg-amber-500'}`}></div>
-          </div>
+          <a 
+            href={result.link.startsWith('http') ? result.link : `https://${result.link}`} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="block text-sm font-medium text-black dark:text-white truncate hover:underline decoration-gray-400 underline-offset-2"
+          >
+            {result.link}
+          </a>
         </div>
 
         <button 
           onClick={copyToClipboard}
-          className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md transition-colors opacity-0 group-hover:opacity-100"
+          className="p-2 text-gray-400 hover:text-black dark:hover:text-white rounded-md transition-colors opacity-0 group-hover:opacity-100"
           title="Copy Link"
         >
           <Copy size={14} />

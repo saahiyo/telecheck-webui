@@ -23,48 +23,34 @@ const StatsWidget: React.FC = () => {
 
 
 
-  const StatCard = ({ icon: Icon, label, value, colorClass, bgClass }: { icon: any, label: string, value: number | undefined, colorClass: string, bgClass: string }) => (
-    <div className={`relative overflow-hidden group p-3 rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 transition-all hover:shadow-md hover:-translate-y-0.5`}>
-      <div className={`absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity ${colorClass}`}>
-        <Icon size={32} />
+  const StatCard = ({ icon: Icon, label, value }: { icon: any, label: string, value: number | undefined }) => (
+    <div className="flex flex-col p-3 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] transition-all hover:border-gray-300 dark:hover:border-gray-700">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</span>
+        <Icon size={14} className="text-gray-400 dark:text-gray-600" />
       </div>
-      
-      <div className="relative z-10 flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${bgClass} ${colorClass}`}>
-          <Icon size={18} />
-        </div>
-        <div>
-          <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-0">{label}</p>
-          <p className="text-lg font-bold text-slate-800 dark:text-slate-100 tabular-nums leading-tight">
-            {value?.toLocaleString() || '0'}
-          </p>
-        </div>
+      <div className="text-xl font-bold text-black dark:text-white tabular-nums leading-none">
+        {value?.toLocaleString() || '0'}
       </div>
     </div>
   );
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
       <StatCard 
         icon={Activity} 
         label="Total Processed" 
         value={stats?.total_checked || stats?.total} 
-        colorClass="text-blue-600 dark:text-blue-400" 
-        bgClass="bg-blue-50 dark:bg-blue-900/20"
       />
       <StatCard 
         icon={CheckCircle2} 
         label="Valid Links" 
         value={stats?.valid_links || stats?.valid} 
-        colorClass="text-emerald-600 dark:text-emerald-400" 
-        bgClass="bg-emerald-50 dark:bg-emerald-900/20"
       />
       <StatCard 
         icon={XCircle} 
         label="Invalid Links" 
         value={stats?.invalid_links || stats?.invalid} 
-        colorClass="text-rose-600 dark:text-rose-400" 
-        bgClass="bg-rose-50 dark:bg-rose-900/20"
       />
     </div>
   );

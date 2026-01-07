@@ -175,47 +175,44 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen w-full relative overflow-x-hidden">
-      <Toaster position="bottom-center" richColors />
-      {/* ... (rest of the component) */}
-      {/* Refined Background Gradients */}
-      {/* Minimal Background */}
-      <div className="fixed inset-0 z-0 pointer-events-none bg-slate-50 dark:bg-slate-950"></div>
+    <div className="min-h-screen w-full relative bg-white dark:bg-black font-sans selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
+      <Toaster position="bottom-center" toastOptions={{
+        className: 'dark:bg-[#111] dark:text-white dark:border-[#333] bg-white text-black border-gray-200',
+      }} />
+      
+      {/* Navbar / Header */}
+      <div className="border-b border-gray-200 dark:border-[#333] sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+           <div className="flex items-center gap-2">
+             <div className="w-8 h-8 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center">
+               <ShieldCheck size={18} strokeWidth={2.5} />
+             </div>
+             <h1 className="text-lg font-bold tracking-tight text-black dark:text-white">
+               TeleCheck<span className="text-gray-400 dark:text-gray-600">Pro</span>
+             </h1>
+           </div>
+           <ThemeToggle />
+        </div>
+      </div>
 
-      <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Header */}
-        <header className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2.5">
-            <div className="relative group p-1">
-                 <ShieldCheck className="text-blue-600 dark:text-white" size={24} />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
-                TeleCheck<span className="text-blue-600 dark:text-white">Pro</span>
-              </h1>
-            </div>
-          </div>
-          <ThemeToggle />
-        </header>
-
-        {/* Global Stats */}
+        {/* Stats Section */}
         <StatsWidget />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-6">
           
           {/* Left Panel: Input */}
           <div className="lg:col-span-5 flex flex-col gap-4">
-            <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-1">
-              
-              {/* Custom Segmented Control */}
-              <div className="grid grid-cols-2 gap-1 bg-slate-100/80 dark:bg-slate-900/50 p-1 rounded-xl mb-1">
+            <div className="flex flex-col gap-3">
+              {/* Segmented Control */}
+              <div className="inline-flex p-1 bg-gray-100 dark:bg-[#111] rounded-lg border border-gray-200 dark:border-[#333] w-full">
                 <button
                   onClick={() => setMode('bulk')}
-                  className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all duration-300 ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                     mode === 'bulk'
-                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                      ? 'bg-white dark:bg-[#333] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
                   }`}
                 >
                   <Layers size={14} />
@@ -223,10 +220,10 @@ function App() {
                 </button>
                 <button
                   onClick={() => setMode('single')}
-                  className={`flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-semibold transition-all duration-300 ${
+                  className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                     mode === 'single'
-                      ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-white shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                      ? 'bg-white dark:bg-[#333] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
                   }`}
                 >
                   <Zap size={14} />
@@ -234,131 +231,121 @@ function App() {
                 </button>
               </div>
 
-              {/* Form Area */}
-              <div className="p-3 pt-1">
+              {/* Input Area */}
+              <div className="space-y-3">
                 {mode === 'bulk' ? (
-                  <div className="space-y-3">
-                    <div className="relative group">
-                      <div className="absolute inset-0 bg-blue-500/5 rounded-xl pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity"></div>
-                      <textarea
-                        value={bulkInput}
-                        onChange={(e) => setBulkInput(e.target.value)}
-                        placeholder={`Paste your list here...\n\nhttps://t.me/channel1\nhttps://t.me/channel2`}
-                        className="w-full h-56 p-3 rounded-lg bg-slate-50 dark:bg-black border border-slate-200 dark:border-slate-800 focus:border-slate-400 dark:focus:border-slate-600 outline-none transition-all resize-none text-slate-700 dark:text-slate-200 text-xs font-mono placeholder:text-slate-400 leading-relaxed"
-                        spellCheck={false}
-                      />
-                      <div className="absolute top-3 right-3 flex gap-1.5">
-                        <button
-                          onClick={handlePaste}
-                          className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors"
-                          title="Paste from Clipboard"
+                  <div className="relative group">
+                    <textarea
+                      value={bulkInput}
+                      onChange={(e) => setBulkInput(e.target.value)}
+                      placeholder={`Paste your list here...\n\nhttps://t.me/channel1\nhttps://t.me/channel2`}
+                      className="w-full h-64 p-3 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-colors resize-none text-xs font-mono placeholder:text-gray-400 dark:placeholder:text-gray-600 leading-relaxed text-black dark:text-white"
+                      spellCheck={false}
+                    />
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <button
+                        onClick={handlePaste}
+                        className="p-1.5 text-gray-400 hover:text-black dark:hover:text-white transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-[#222]"
+                        title="Paste"
+                      >
+                        <Clipboard size={12} />
+                      </button>
+                      {bulkInput && (
+                        <button 
+                          onClick={() => setBulkInput('')}
+                          className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-[#222]"
+                          title="Clear"
                         >
-                          <Clipboard size={14} />
+                          <Trash2 size={12} />
                         </button>
-                        {bulkInput && (
-                          <button 
-                            onClick={() => setBulkInput('')}
-                            className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-md transition-colors"
-                            title="Clear Input"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleBulkCheck}
-                      disabled={isChecking || !bulkInput.trim()}
-                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-slate-200 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-semibold transition-all flex justify-center items-center gap-2 text-sm"
-                    >
-                      {isChecking ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" />
-                          <span>Processing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>Run Validation</span>
-                          <ArrowRight size={16} className="opacity-80" />
-                        </>
                       )}
-                    </button>
+                    </div>
                   </div>
                 ) : (
-                  <form onSubmit={handleSingleCheck} className="space-y-4 py-4">
-                     <div className="space-y-1.5">
-                       <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 ml-1 uppercase tracking-wider">Target URL</label>
-                       <div className="relative group">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Link2 className="text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
-                          </div>
-                          <input
-                            type="text"
-                            value={singleInput}
-                            onChange={(e) => setSingleInput(e.target.value)}
-                            placeholder="https://t.me/username"
-                            className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:border-blue-500/50 dark:focus:border-blue-500/50 outline-none transition-all text-slate-700 dark:text-slate-200 text-sm shadow-inner font-medium"
-                          />
-                          <div className="absolute inset-y-0 right-0 pr-2 flex items-center">
-                            <button
-                              type="button"
-                              onClick={handlePaste}
-                              className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                              title="Paste from Clipboard"
-                            >
-                              <Clipboard size={14} />
-                            </button>
-                          </div>
+                  <form onSubmit={handleSingleCheck} className="relative">
+                    <div className="relative">
+                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                         <Link2 className="text-gray-400" size={16} />
                        </div>
-                     </div>
-                     <button
-                      type="submit"
-                      disabled={isChecking || !singleInput.trim()}
-                      className="w-full py-2.5 bg-slate-900 dark:bg-slate-700 hover:bg-slate-800 dark:hover:bg-slate-600 active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100 text-white rounded-xl font-bold shadow-lg transition-all flex justify-center items-center gap-2 text-sm"
-                    >
-                      {isChecking ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-                      Check Status
-                    </button>
+                       <input
+                         type="text"
+                         value={singleInput}
+                         onChange={(e) => setSingleInput(e.target.value)}
+                         placeholder="https://t.me/username"
+                         className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm font-medium"
+                       />
+                       <div className="absolute inset-y-0 right-0 pr-2 flex items-center">
+                         <button
+                           type="button"
+                           onClick={handlePaste}
+                           className="p-1.5 text-gray-400 hover:text-black dark:hover:text-white rounded-md transition-colors"
+                         >
+                           <Clipboard size={14} />
+                         </button>
+                       </div>
+                    </div>
                   </form>
                 )}
+
+                <button
+                  onClick={mode === 'bulk' ? handleBulkCheck : (e) => handleSingleCheck(e)}
+                  disabled={isChecking || (mode === 'bulk' ? !bulkInput.trim() : !singleInput.trim())}
+                  className="w-full py-2.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex justify-center items-center gap-2 text-xs shadow-sm"
+                >
+                  {isChecking ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{mode === 'bulk' ? 'Run Validation' : 'Check Status'}</span>
+                      <ArrowRight size={16} />
+                    </>
+                  )}
+                </button>
               </div>
             </div>
-
-            {/* Helper Text - Removed for minimalism or kept very small */}
+            
+            {/* Disclaimer / Info */}
+            <div className="p-4 rounded-lg bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333]">
+              <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-1">Pro Tip</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                Use the bulk validator to check lists of channels. We'll automatically filter out duplicate links for you.
+              </p>
+            </div>
           </div>
 
           {/* Right Panel: Results */}
-          <div className="lg:col-span-7 h-full">
+          {/* Right Panel: Results */}
+          <div className="lg:col-span-7 h-full min-h-[400px] flex flex-col">
              {!hasChecked && !isChecking && results.length === 0 && (
-               <div className="h-full min-h-[350px] flex flex-col items-center justify-center text-center p-6 border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 rounded-xl border-dashed">
-                 <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                   <Layers size={20} className="text-slate-300 dark:text-slate-600" />
+               <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border border-dashed border-gray-200 dark:border-[#333] rounded-xl bg-gray-50/50 dark:bg-[#111]/50">
+                 <div className="w-12 h-12 bg-white dark:bg-black border border-gray-100 dark:border-[#333] rounded-full flex items-center justify-center mb-3 shadow-sm">
+                   <Layers size={20} className="text-gray-300 dark:text-gray-600" />
                  </div>
-                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Awaiting Input</h3>
-                 <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
-                   Paste your Telegram links on the left to begin.
+                 <h3 className="text-xs font-semibold text-gray-900 dark:text-white mb-1">Ready to start</h3>
+                 <p className="text-[10px] text-gray-500 dark:text-gray-400 max-w-xs leading-relaxed">
+                   Enter your Telegram links on the left to confirm their validity instantly.
                  </p>
                </div>
              )}
 
              {isChecking && !hasChecked && (
-               <div className="h-full min-h-[350px] flex flex-col items-center justify-center p-6 border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 rounded-2xl">
-                 <div className="relative mb-6">
-                    <div className="w-12 h-12 border-4 border-blue-100 dark:border-blue-900/30 rounded-full"></div>
-                    <div className="absolute top-0 left-0 w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                 </div>
-                 <h3 className="text-base font-semibold text-slate-900 dark:text-white">Verifying Links</h3>
-                 <p className="text-xs text-slate-500 mt-1">Processing...</p>
+               <div className="flex-1 flex flex-col items-center justify-center p-6 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black">
+                 <Loader2 className="w-6 h-6 text-black dark:text-white animate-spin mb-3" />
+                 <h3 className="text-xs font-medium text-gray-900 dark:text-white">Verifying Links</h3>
+                 <p className="text-[10px] text-gray-500 mt-1">Please wait...</p>
                </div>
              )}
 
              {hasChecked && (
-               <div className="space-y-4">
-                 <div className="flex items-center justify-between px-1">
+               <div className="flex flex-col h-full">
+                 <div className="flex items-center justify-between mb-4">
                    <div className="flex items-baseline gap-2">
-                     <h2 className="text-lg font-bold text-slate-900 dark:text-white">Results</h2>
-                     <span className="text-xs font-medium text-slate-400">
-                       {results.length} link{results.length !== 1 ? 's' : ''}
+                     <h2 className="text-base font-semibold text-black dark:text-white">Results</h2>
+                     <span className="text-xs text-gray-500 font-mono">
+                       ({results.length})
                      </span>
                    </div>
                    
@@ -366,114 +353,94 @@ function App() {
                     <div className="relative" ref={copyMenuRef}>
                       <button 
                         onClick={() => setCopyMenuOpen(!copyMenuOpen)}
-                        className="text-[10px] font-bold text-blue-600 hover:text-blue-700 dark:text-white dark:hover:text-slate-200 transition-colors px-2 py-1.5 rounded-md hover:bg-blue-50 dark:hover:bg-slate-800 flex items-center gap-1"
+                        className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-3 py-1.5 rounded-md flex items-center gap-1.5"
                       >
                         <Link2 size={12} />
-                        COPY
+                        Export
                         <ChevronDown size={10} className={`transform transition-transform ${copyMenuOpen ? 'rotate-180' : ''}`} />
                       </button>
                       
                       {copyMenuOpen && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-200 dark:border-slate-700 py-1 z-50 overflow-hidden">
-                          <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700/50 mb-1">
-                            Copy Format
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-black rounded-lg shadow-xl border border-gray-200 dark:border-[#333] py-1 z-50 overflow-hidden ring-1 ring-black/5">
+                          <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-[#111] border-b border-gray-100 dark:border-[#333]">
+                            Format
                           </div>
                           
-                          <button 
-                            onClick={() => handleCopy('gap')}
-                            className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-between"
-                          >
-                            <span>Links with Gap</span>
-                          </button>
-                          
-                          <button 
-                            onClick={() => handleCopy('plain')}
-                            className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-between"
-                          >
-                            <span>Plain List (No #)</span>
-                          </button>
-
-                          <button 
-                            onClick={() => handleCopy('original')}
-                            className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-between"
-                          >
-                            <span>Original (Valid Only)</span>
-                          </button>
-
-                          <div className="h-px bg-slate-100 dark:bg-slate-700 my-1"></div>
-                          
-                          <button 
-                            onClick={() => handleCopy('numbered')}
-                            className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center justify-between"
-                          >
-                            <span>Standard (Numbered)</span>
-                          </button>
+                          {[
+                            { id: 'gap', label: 'Links with Gap' },
+                            { id: 'plain', label: 'Plain List' },
+                            { id: 'original', label: 'Original Content' },
+                            { id: 'numbered', label: 'Numbered List' }
+                          ].map((item) => (
+                             <button 
+                              key={item.id}
+                              onClick={() => handleCopy(item.id as any)}
+                              className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#222] hover:text-black dark:hover:text-white transition-colors"
+                            >
+                              {item.label}
+                            </button>
+                          ))}
                         </div>
                       )}
                     </div>
-                     <button onClick={clearAll} className="text-[10px] font-bold text-slate-400 hover:text-rose-500 transition-colors px-2 py-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 uppercase">
+                     <button 
+                      onClick={clearAll} 
+                      className="text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 px-3 py-1.5 rounded-md transition-colors"
+                    >
                        Clear
                      </button>
                    </div>
                  </div>
 
-                 {/* Summary Chips */}
-                 <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-                    <button 
-                       onClick={() => setFilter('all')}
-                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
-                         filter === 'all' 
-                           ? 'bg-blue-100 dark:bg-slate-800 border-blue-300 dark:border-slate-600 ring-1 ring-blue-500/20 dark:ring-slate-500/40' 
-                           : 'bg-blue-100/50 dark:bg-slate-800/50 border-blue-200 dark:border-slate-700 hover:bg-blue-100 dark:hover:bg-slate-800'
-                       }`}
-                     >
-                       <div className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-slate-400"></div>
-                       <span className="text-xs font-bold text-blue-800 dark:text-slate-200">{results.length} All</span>
-                     </button>
-                   {validCount > 0 && (
-                     <button 
-                       onClick={() => setFilter('valid')}
-                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
-                         filter === 'valid' 
-                           ? 'bg-emerald-100 dark:bg-emerald-900/40 border-emerald-300 dark:border-emerald-700 ring-1 ring-emerald-500/20' 
-                           : 'bg-emerald-100/50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
-                       }`}
-                     >
-                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                       <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">{validCount} Valid</span>
-                     </button>
-                   )}
-                   {invalidCount > 0 && (
-                     <button 
-                       onClick={() => setFilter('invalid')}
-                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
-                         filter === 'invalid' 
-                           ? 'bg-rose-100 dark:bg-rose-900/40 border-rose-300 dark:border-rose-700 ring-1 ring-rose-500/20' 
-                           : 'bg-rose-100/50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800 hover:bg-rose-100 dark:hover:bg-rose-900/30'
-                       }`}
-                     >
-                       <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
-                       <span className="text-xs font-bold text-rose-800 dark:text-rose-300">{invalidCount} Invalid</span>
-                     </button>
-                   )}
+                 {/* Filters */}
+                 <div className="flex gap-2 mb-4">
+                    {[
+                      { id: 'all', label: 'All', count: results.length, color: 'gray' },
+                      { id: 'valid', label: 'Valid', count: validCount, color: 'black' },
+                      { id: 'invalid', label: 'Invalid', count: invalidCount, color: 'red' },
+                    ].map((f) => {
+                      if (f.count === 0 && f.id !== 'all') return null;
+                      
+                      const isActive = filter === f.id;
+                      
+                      return (
+                        <button 
+                           key={f.id}
+                           onClick={() => setFilter(f.id as any)}
+                           className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                             isActive 
+                               ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white' 
+                               : 'bg-white dark:bg-black text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#333] hover:border-gray-300 dark:hover:border-[#555]'
+                           }`}
+                         >
+                           {f.label}
+                           <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                              isActive
+                                ? 'bg-white/20 text-white dark:text-black'
+                                : 'bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400'
+                           }`}>
+                             {f.count}
+                           </span>
+                         </button>
+                      )
+                    })}
                  </div>
 
-                 <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1 custom-scrollbar pb-6">
+                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2 pb-10">
                    {filteredResults.map((result, idx) => (
                      <ResultCard key={idx} result={result} />
                    ))}
                    {filteredResults.length === 0 && (
-                     <div className="text-center py-8 text-slate-400 text-xs">
-                       No links found for this filter.
+                     <div className="text-center py-12 text-gray-400 text-xs">
+                       No links matching this filter.
                      </div>
                    )}
                  </div>
                </div>
              )}
           </div>
-
         </div>
-      </div>
+      </main>
     </div>
   );
 }

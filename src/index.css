@@ -38,14 +38,17 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #e5e5e5;
   border-radius: 3px;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #333;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #d4d4d4;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .glass-panel {
