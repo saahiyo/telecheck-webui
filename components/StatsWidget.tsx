@@ -5,7 +5,6 @@ import { Activity, CheckCircle2, XCircle } from 'lucide-react';
 
 const StatsWidget: React.FC = () => {
   const [stats, setStats] = useState<StatsData | null>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -14,8 +13,6 @@ const StatsWidget: React.FC = () => {
         setStats(data);
       } catch (e) {
         console.error("Failed to load stats", e);
-      } finally {
-        setLoading(false);
       }
     };
     loadStats();
@@ -24,15 +21,7 @@ const StatsWidget: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  if (loading) {
-    return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full mb-6">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="h-16 w-full bg-slate-200/50 dark:bg-slate-800/50 rounded-xl animate-pulse"></div>
-      ))}
-    </div>
-  );
-  }
+
 
   const StatCard = ({ icon: Icon, label, value, colorClass, bgClass }: { icon: any, label: string, value: number | undefined, colorClass: string, bgClass: string }) => (
     <div className={`relative overflow-hidden group p-3 rounded-xl bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 transition-all hover:shadow-md hover:-translate-y-0.5`}>
