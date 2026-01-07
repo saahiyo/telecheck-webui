@@ -432,7 +432,7 @@ function App() {
                      </button>
                    {validCount > 0 && (
                      <button 
-                       onClick={() => setFilter(filter === 'valid' ? 'all' : 'valid')}
+                       onClick={() => setFilter('valid')}
                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
                          filter === 'valid' 
                            ? 'bg-emerald-100 dark:bg-emerald-900/40 border-emerald-300 dark:border-emerald-700 ring-1 ring-emerald-500/20' 
@@ -445,7 +445,7 @@ function App() {
                    )}
                    {invalidCount > 0 && (
                      <button 
-                       onClick={() => setFilter(filter === 'invalid' ? 'all' : 'invalid')}
+                       onClick={() => setFilter('invalid')}
                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-all ${
                          filter === 'invalid' 
                            ? 'bg-rose-100 dark:bg-rose-900/40 border-rose-300 dark:border-rose-700 ring-1 ring-rose-500/20' 
