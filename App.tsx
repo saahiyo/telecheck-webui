@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, Check } from 'lucide-react';
+import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, Check, Github } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import StatsWidget from './components/StatsWidget';
 import ResultCard from './components/ResultCard';
 import { checkBulkLinks, checkSingleLink } from './services/api';
 import { LinkResult } from './types';
 import { Toaster, toast } from 'sonner';  
+import GithubBtn from './components/GithubBtn';
 
 function App() {
   const [mode, setMode] = useState<'bulk' | 'single'>('bulk');
@@ -195,7 +196,10 @@ function App() {
                TeleCheck<span className="text-gray-400 dark:text-gray-600">Pro</span>
              </h1>
            </div>
-           <ThemeToggle />
+           <div className="flex items-center gap-2">  
+              <ThemeToggle />
+              <GithubBtn />
+           </div>
         </div>
       </div>
 
