@@ -7,6 +7,18 @@ interface StatsWidgetProps {
   refreshTrigger?: number;
 }
 
+const StatCard = ({ icon: Icon, label, value }: { icon: any, label: string, value: number | undefined }) => (
+  <div className="flex flex-col p-3 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] transition-all hover:border-gray-300 dark:hover:border-gray-700">
+    <div className="flex items-center justify-between mb-1.5">
+      <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</span>
+      <Icon size={14} className="text-gray-400 dark:text-gray-600" />
+    </div>
+    <div className="text-xl font-bold text-black dark:text-white tabular-nums leading-none">
+      {value?.toLocaleString() || '0'}
+    </div>
+  </div>
+);
+
 const StatsWidget: React.FC<StatsWidgetProps> = ({ refreshTrigger = 0 }) => {
   const [stats, setStats] = useState<StatsData | null>(null);
 
@@ -24,20 +36,6 @@ const StatsWidget: React.FC<StatsWidgetProps> = ({ refreshTrigger = 0 }) => {
     const interval = setInterval(loadStats, 30000);
     return () => clearInterval(interval);
   }, [refreshTrigger]);
-
-
-
-  const StatCard = ({ icon: Icon, label, value }: { icon: any, label: string, value: number | undefined }) => (
-    <div className="flex flex-col p-3 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] transition-all hover:border-gray-300 dark:hover:border-gray-700">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</span>
-        <Icon size={14} className="text-gray-400 dark:text-gray-600" />
-      </div>
-      <div className="text-xl font-bold text-black dark:text-white tabular-nums leading-none">
-        {value?.toLocaleString() || '0'}
-      </div>
-    </div>
-  );
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">

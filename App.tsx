@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, Check, Github } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, Check, Github, FileUp } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import StatsWidget from './components/StatsWidget';
 import ResultCard from './components/ResultCard';
@@ -7,6 +7,17 @@ import { checkBulkLinks, checkSingleLink } from './services/api';
 import { LinkResult } from './types';
 import { Toaster, toast } from 'sonner';  
 import GithubBtn from './components/GithubBtn';
+import { URL_REGEX, isMegaLink, extractUrls, deduplicateLinks } from './utils/helpers';
+
+const STORAGE_KEY = 'telecheck_last_results';
+
+/** Contextual empty-state messages per filter tab */
+const emptyMessages: Record<string, string> = {
+  all: 'No results yet.',
+  valid: 'No valid links found.',
+  invalid: 'All links are valid! 🎉',
+  mega: 'No Mega.nz links detected.',
+};
 
 function App() {
   const [mode, setMode] = useState<'bulk' | 'single'>('bulk');
@@ -18,8 +29,45 @@ function App() {
   const [results, setResults] = useState<LinkResult[]>([]);
   const [hasChecked, setHasChecked] = useState(false);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const copyMenuRef = useRef<HTMLDivElement>(null);
 
+  // ── Restore last results from localStorage on mount ──
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as LinkResult[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setResults(parsed);
+          setHasChecked(true);
+        }
+      }
+    } catch { /* ignore corrupt localStorage */ }
+  }, []);
+
+  // ── Persist results to localStorage whenever they change ──
+  useEffect(() => {
+    if (results.length > 0) {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(results)); }
+      catch { /* quota exceeded, silently ignore */ }
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [results]);
+
+  // ── Dynamic page title with result counts ──
+  useEffect(() => {
+    if (hasChecked && results.length > 0) {
+      const v = results.filter(r => r.status === 'valid').length;
+      const inv = results.filter(r => r.status === 'invalid').length;
+      document.title = `(${v} valid, ${inv} invalid) TeleCheck Pro`;
+    } else {
+      document.title = 'TeleCheck Pro - Bulk Telegram Link Validator';
+    }
+  }, [results, hasChecked]);
+
+  // ── Close export dropdown on outside click ──
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (copyMenuRef.current && !copyMenuRef.current.contains(event.target as Node)) {
@@ -32,16 +80,42 @@ function App() {
     };
   }, []);
 
-  const isMegaLink = (url: string) => /mega\.nz/i.test(url);
+  // ── Keyboard shortcuts: Ctrl+Enter → validate, Escape → close export ──
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Escape closes export dropdown
+      if (e.key === 'Escape') {
+        setCopyMenuOpen(false);
+        return;
+      }
+      // Ctrl/Cmd + Enter triggers validation
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        if (mode === 'bulk') {
+          if (bulkInput.trim() && !isChecking) handleBulkCheck();
+        } else {
+          if (singleInput.trim() && !isChecking) handleSingleCheck();
+        }
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [mode, bulkInput, singleInput, isChecking]);
 
+  // ── Bulk check with dedup + streaming (batched) results ──
   const handleBulkCheck = async () => {
     if (!bulkInput.trim()) return;
     setIsChecking(true);
     setHasChecked(false);
     setResults([]);
 
-    const urlRegex = /(https?:\/\/[^\s,]+|t\.me\/[^\s,]+)/g;
-    const links = (bulkInput.match(urlRegex) || []).map(l => l.trim());
+    const allLinks = extractUrls(bulkInput);
+
+    // Deduplicate
+    const { unique: links, duplicateCount } = deduplicateLinks(allLinks);
+    if (duplicateCount > 0) {
+      toast.info(`Removed ${duplicateCount} duplicate${duplicateCount > 1 ? 's' : ''}`);
+    }
 
     // Separate mega links from telegram links
     const megaLinks = links.filter(l => isMegaLink(l));
@@ -53,10 +127,23 @@ function App() {
       reason: 'Mega.nz Link'
     }));
 
-    const apiResults = telegramLinks.length > 0 ? await checkBulkLinks(telegramLinks) : [];
-    
-    setResults([...apiResults, ...megaResults]);
-    setHasChecked(true);
+    // Show mega results immediately
+    if (megaResults.length > 0) {
+      setResults(megaResults);
+      setHasChecked(true);
+    }
+
+    // Stream telegram results in batches of 10
+    if (telegramLinks.length > 0) {
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < telegramLinks.length; i += BATCH_SIZE) {
+        const batch = telegramLinks.slice(i, i + BATCH_SIZE);
+        const batchResults = await checkBulkLinks(batch);
+        setResults(prev => [...prev, ...batchResults]);
+        setHasChecked(true);
+      }
+    }
+
     setIsChecking(false);
     setRefreshStatsTrigger(prev => prev + 1);
     toast.success('Analysis complete!');
@@ -117,14 +204,13 @@ function App() {
            break;
         case 'original':
            if (mode === 'single') {
-             text = results[0]?.status === 'valid' ? singleInput : '';
+             text = (results[0]?.status === 'valid' || results[0]?.status === 'mega') ? singleInput : '';
              break;
            }
 
            // Robust segmentation logic to remove invalid links AND their preceding context (headers/timestamps)
-           // while keeping text belonging to valid links.
-           const urlRegex = /(https?:\/\/[^\s,]+|t\.me\/[^\s,]+)/g;
-           const matches = [...bulkInput.matchAll(urlRegex)];
+           // while keeping text belonging to valid AND mega links.
+           const matches = [...bulkInput.matchAll(new RegExp(URL_REGEX.source, 'g'))];
            
            // map link -> status for quick lookup (handles duplicates by taking first found status, usually consistent)
            const statusMap = new Map(results.map(r => [r.link, r.status]));
@@ -142,7 +228,7 @@ function App() {
              // The text preceding this link
              const precedingContent = bulkInput.slice(lastEnd, start);
              
-             if (status === 'valid') {
+             if (status === 'valid' || status === 'mega') {
                 let chunkToKeep = precedingContent;
                 
                 // If the preceding content has meaningful text (headers, etc.), 
@@ -195,6 +281,49 @@ function App() {
       toast.error('Failed to read clipboard');
     }
   };
+
+  // ── Drag & Drop handlers for .txt file import ──
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const fileList = e.dataTransfer.files;
+    let textFile: File | null = null;
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i];
+      if (f.type === 'text/plain' || f.name.endsWith('.txt')) {
+        textFile = f;
+        break;
+      }
+    }
+    if (textFile) {
+      const reader = new FileReader();
+      const fileName = textFile.name;
+      reader.onload = (ev) => {
+        const content = ev.target?.result as string;
+        if (content) {
+          setBulkInput(prev => prev + (prev ? '\n' : '') + content);
+          toast.success(`Imported ${fileName}`);
+        }
+      };
+      reader.readAsText(textFile);
+    } else if (fileList.length > 0) {
+      toast.error('Please drop a .txt file');
+    }
+  }, []);
 
   return (
     <div className="min-h-screen w-full relative bg-white dark:bg-black font-sans selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
@@ -259,14 +388,28 @@ function App() {
               {/* Input Area */}
               <div className="space-y-3">
                 {mode === 'bulk' ? (
-                  <div className="relative group">
+                  <div
+                    className={`relative group ${isDragging ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-black rounded-lg' : ''}`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
                     <textarea
                       value={bulkInput}
                       onChange={(e) => setBulkInput(e.target.value)}
-                      placeholder={`Paste your list here...\n\nhttps://t.me/channel1\nhttps://t.me/channel2`}
-                      className="w-full h-64 p-3 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-colors resize-none text-xs font-mono placeholder:text-gray-400 dark:placeholder:text-gray-600 leading-relaxed text-black dark:text-white"
+                      placeholder={`Paste your list here or drag a .txt file...\n\nhttps://t.me/channel1\nhttps://t.me/channel2`}
+                      className="w-full h-48 sm:h-64 p-3 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-colors resize-none text-xs font-mono placeholder:text-gray-400 dark:placeholder:text-gray-600 leading-relaxed text-black dark:text-white"
                       spellCheck={false}
                     />
+                    {/* Drag overlay */}
+                    {isDragging && (
+                      <div className="absolute inset-0 bg-blue-500/10 dark:bg-blue-500/5 border-2 border-dashed border-blue-500 rounded-lg flex items-center justify-center pointer-events-none">
+                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs font-medium">
+                          <FileUp size={16} />
+                          Drop .txt file here
+                        </div>
+                      </div>
+                    )}
                     <div className="absolute top-2 right-2 flex gap-1">
                       <button
                         onClick={handlePaste}
@@ -336,12 +479,11 @@ function App() {
             <div className="p-4 rounded-lg bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333]">
               <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-1">Pro Tip</h4>
               <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                Use the bulk validator to check lists of channels. We'll automatically filter out duplicate links for you.
+                Use the bulk validator to check lists of channels. We'll automatically filter out duplicate links for you. You can also drag & drop a <code className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">.txt</code> file, or press <kbd className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">Ctrl+Enter</kbd> to validate.
               </p>
             </div>
           </div>
 
-          {/* Right Panel: Results */}
           {/* Right Panel: Results */}
           <div className="lg:col-span-7 h-full min-h-[400px] flex flex-col">
              {!hasChecked && !isChecking && results.length === 0 && (
@@ -418,7 +560,7 @@ function App() {
                  </div>
 
                  {/* Filters */}
-                 <div className="flex gap-2 mb-4">
+                 <div className="flex gap-2 mb-4 flex-wrap">
                     {[
                       { id: 'all', label: 'All', count: results.length, color: 'gray' },
                       { id: 'valid', label: 'Valid', count: validCount, color: 'black' },
@@ -458,7 +600,7 @@ function App() {
                    ))}
                    {filteredResults.length === 0 && (
                      <div className="text-center py-12 text-gray-400 text-xs">
-                       No links matching this filter.
+                       {emptyMessages[filter] || 'No links matching this filter.'}
                      </div>
                    )}
                  </div>
