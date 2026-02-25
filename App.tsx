@@ -32,6 +32,8 @@ function App() {
     };
   }, []);
 
+  const isMegaLink = (url: string) => /mega\.nz/i.test(url);
+
   const handleBulkCheck = async () => {
     if (!bulkInput.trim()) return;
     setIsChecking(true);
@@ -40,9 +42,20 @@ function App() {
 
     const urlRegex = /(https?:\/\/[^\s,]+|t\.me\/[^\s,]+)/g;
     const links = (bulkInput.match(urlRegex) || []).map(l => l.trim());
-    const data = await checkBulkLinks(links);
+
+    // Separate mega links from telegram links
+    const megaLinks = links.filter(l => isMegaLink(l));
+    const telegramLinks = links.filter(l => !isMegaLink(l));
+
+    const megaResults: LinkResult[] = megaLinks.map(l => ({
+      link: l,
+      status: 'mega',
+      reason: 'Mega.nz Link'
+    }));
+
+    const apiResults = telegramLinks.length > 0 ? await checkBulkLinks(telegramLinks) : [];
     
-    setResults(data);
+    setResults([...apiResults, ...megaResults]);
     setHasChecked(true);
     setIsChecking(false);
     setRefreshStatsTrigger(prev => prev + 1);
@@ -56,9 +69,12 @@ function App() {
     setHasChecked(false);
     setResults([]);
 
-    const data = await checkSingleLink(singleInput);
-    
-    setResults([data]);
+    if (isMegaLink(singleInput.trim())) {
+      setResults([{ link: singleInput.trim(), status: 'mega', reason: 'Mega.nz Link' }]);
+    } else {
+      const data = await checkSingleLink(singleInput);
+      setResults([data]);
+    }
     setHasChecked(true);
     setIsChecking(false);
     setRefreshStatsTrigger(prev => prev + 1);
@@ -74,8 +90,9 @@ function App() {
 
   const validCount = results.filter(r => r.status === 'valid').length;
   const invalidCount = results.filter(r => r.status === 'invalid').length;
+  const megaCount = results.filter(r => r.status === 'mega').length;
 
-  const [filter, setFilter] = useState<'all' | 'valid' | 'invalid'>('all');
+  const [filter, setFilter] = useState<'all' | 'valid' | 'invalid' | 'mega'>('all');
 
   const filteredResults = results.filter(r => {
     if (filter === 'all') return true;
@@ -406,6 +423,7 @@ function App() {
                       { id: 'all', label: 'All', count: results.length, color: 'gray' },
                       { id: 'valid', label: 'Valid', count: validCount, color: 'black' },
                       { id: 'invalid', label: 'Invalid', count: invalidCount, color: 'red' },
+                      { id: 'mega', label: 'Mega', count: megaCount, color: 'blue' },
                     ].map((f) => {
                       if (f.count === 0 && f.id !== 'all') return null;
                       

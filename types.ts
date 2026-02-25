@@ -1,6 +1,6 @@
 export interface LinkResult {
   link: string;
-  status: 'valid' | 'invalid' | 'unknown' | string;
+  status: 'valid' | 'invalid' | 'mega' | 'unknown' | string;
   reason?: string;
   details?: any; // For any extra data API might return
 }

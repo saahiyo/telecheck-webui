@@ -14,6 +14,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
   let statusColor = 'bg-amber-500';
   if (status === 'valid') statusColor = 'bg-black dark:bg-white'; // Valid is "neutral/primary" in this aesthetic
   else if (status === 'invalid') statusColor = 'bg-red-500';
+  else if (status === 'mega') statusColor = 'bg-blue-500';
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(result.link);
