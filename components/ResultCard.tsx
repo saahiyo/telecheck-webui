@@ -37,9 +37,16 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
             target="_blank" 
             rel="noopener noreferrer"
             className="block text-sm font-medium text-black dark:text-white truncate hover:underline decoration-gray-400 underline-offset-2"
+            title={result.details?.title || result.link}
           >
-            {result.link}
+            {result.details?.title || result.link}
           </a>
+          {result.details?.title && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5" title={result.link}>
+              {result.link}
+              {result.details.memberCountRaw ? ` • ${result.details.memberCountRaw}` : ''}
+            </div>
+          )}
         </div>
 
         <button 

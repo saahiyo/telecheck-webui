@@ -30,7 +30,8 @@ export const checkSingleLink = async (link: string): Promise<LinkResult> => {
     return {
       link: cleanLink,
       status: data.status?.toLowerCase() || 'unknown',
-      reason: data.reason || data.message || 'No details provided'
+      reason: data.reason || data.message || undefined,
+      details: data.metadata
     };
   } catch (error) {
     return {
@@ -84,7 +85,8 @@ export const checkBulkLinks = async (links: string[]): Promise<LinkResult[]> => 
     return results.map((r: any) => ({
       link: r.link || r.url || 'Unknown Link',
       status: r.status?.toLowerCase() || 'unknown',
-      reason: r.reason || r.message || 'No reason provided'
+      reason: r.reason || r.message || undefined,
+      details: r.metadata
     }));
 
   } catch (error) {
