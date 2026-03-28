@@ -24,6 +24,7 @@ function App() {
   const [bulkInput, setBulkInput] = useState('');
   const [singleInput, setSingleInput] = useState('');
   const [isChecking, setIsChecking] = useState(false);
+  const [checkingProgress, setCheckingProgress] = useState({ current: 0, total: 0 });
   // Trigger for refreshing stats widget
   const [refreshStatsTrigger, setRefreshStatsTrigger] = useState(0);
   const [results, setResults] = useState<LinkResult[]>([]);
@@ -108,6 +109,7 @@ function App() {
     setIsChecking(true);
     setHasChecked(false);
     setResults([]);
+    setCheckingProgress({ current: 0, total: 0 });
 
     const allLinks = extractUrls(bulkInput);
 
@@ -127,6 +129,9 @@ function App() {
       reason: 'Mega.nz Link'
     }));
 
+    let currentChecked = megaResults.length;
+    setCheckingProgress({ current: currentChecked, total: links.length });
+
     // Show mega results immediately
     if (megaResults.length > 0) {
       setResults(megaResults);
@@ -140,6 +145,8 @@ function App() {
         const batch = telegramLinks.slice(i, i + BATCH_SIZE);
         const batchResults = await checkBulkLinks(batch);
         setResults(prev => [...prev, ...batchResults]);
+        currentChecked += batch.length;
+        setCheckingProgress({ current: currentChecked, total: links.length });
         setHasChecked(true);
       }
     }
@@ -155,6 +162,7 @@ function App() {
     setIsChecking(true);
     setHasChecked(false);
     setResults([]);
+    setCheckingProgress({ current: 0, total: 1 });
 
     if (isMegaLink(singleInput.trim())) {
       setResults([{ link: singleInput.trim(), status: 'mega', reason: 'Mega.nz Link' }]);
@@ -162,6 +170,7 @@ function App() {
       const data = await checkSingleLink(singleInput);
       setResults([data]);
     }
+    setCheckingProgress({ current: 1, total: 1 });
     setHasChecked(true);
     setIsChecking(false);
     setRefreshStatsTrigger(prev => prev + 1);
@@ -173,6 +182,7 @@ function App() {
     setSingleInput('');
     setResults([]);
     setHasChecked(false);
+    setCheckingProgress({ current: 0, total: 0 });
   };
 
   const validCount = results.filter(r => r.status === 'valid').length;
@@ -505,17 +515,36 @@ function App() {
                <div className="flex-1 flex flex-col items-center justify-center p-6 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black">
                  <Loader2 className="w-6 h-6 text-black dark:text-white animate-spin mb-3" />
                  <h3 className="text-xs font-medium text-gray-900 dark:text-white">Verifying Links</h3>
-                 <p className="text-[10px] text-gray-500 mt-1">Please wait...</p>
+                 {checkingProgress.total > 0 ? (
+                   <p className="text-[10px] text-gray-500 mt-1">Starting {checkingProgress.total} links...</p>
+                 ) : (
+                   <p className="text-[10px] text-gray-500 mt-1">Please wait...</p>
+                 )}
                </div>
              )}
 
              {hasChecked && (
                <div className="flex flex-col h-full">
+                 {isChecking && checkingProgress.total > 0 && (
+                   <div className="mb-4 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333] p-3 rounded-lg">
+                     <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-2 font-medium">
+                       <span className="flex items-center gap-1.5"><Loader2 size={10} className="animate-spin" /> Verifying links...</span>
+                       <span>{Math.round((checkingProgress.current / checkingProgress.total) * 100)}% ({checkingProgress.current}/{checkingProgress.total})</span>
+                     </div>
+                     <div className="w-full h-1.5 bg-gray-200 dark:bg-[#333] rounded-full overflow-hidden">
+                       <div 
+                         className="h-full bg-black dark:bg-white rounded-full transition-all duration-300 ease-out"
+                         style={{ width: `${(checkingProgress.current / checkingProgress.total) * 100}%` }}
+                       />
+                     </div>
+                   </div>
+                 )}
+
                  <div className="flex items-center justify-between mb-4">
                    <div className="flex items-baseline gap-2">
                      <h2 className="text-base font-semibold text-black dark:text-white">Results</h2>
                      <span className="text-xs text-gray-500 font-mono">
-                       ({results.length})
+                       ({results.length} {isChecking && checkingProgress.total > 0 ? `/ ${checkingProgress.total}` : ''})
                      </span>
                    </div>
                    
