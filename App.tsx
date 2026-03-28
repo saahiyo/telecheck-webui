@@ -186,7 +186,7 @@ function App() {
     return r.status === filter;
   });
 
-  const handleCopy = (type: 'numbered' | 'gap' | 'plain' | 'original') => {
+  const handleCopy = (type: 'numbered' | 'gap' | 'plain' | 'original' | 'withTitle') => {
     try {
       let text = '';
       const title = filter === 'all' ? 'All Links' : `${filter.charAt(0).toUpperCase() + filter.slice(1)} Links`;
@@ -201,6 +201,9 @@ function App() {
            break;
         case 'plain':
            text = filteredResults.map((r) => r.link).join('\n');
+           break;
+        case 'withTitle':
+           text = filteredResults.map((r) => r.details?.title ? `${r.details.title}\n${r.link}` : r.link).join('\n\n');
            break;
         case 'original':
            if (mode === 'single') {
@@ -536,6 +539,7 @@ function App() {
                           {[
                             { id: 'gap', label: 'Links with Gap' },
                             { id: 'plain', label: 'Plain List' },
+                            { id: 'withTitle', label: 'With Title' },
                             { id: 'original', label: 'Original Content' },
                             { id: 'numbered', label: 'Numbered List' }
                           ].map((item) => (
