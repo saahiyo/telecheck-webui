@@ -40,6 +40,7 @@ export interface StoredLink {
   title?: string;
   description?: string;
   image?: string;
+  member_count?: number;
   checked_at?: string;
 }
 

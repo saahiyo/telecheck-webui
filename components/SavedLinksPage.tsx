@@ -139,7 +139,12 @@ export default function SavedLinksPage() {
                 reason: `Saved on ${new Date(savedLink.checked_at || Date.now()).toLocaleDateString()}`,
                 details: {
                   title: savedLink.title || savedLink.description || 'Database Link',
-                  image: savedLink.image
+                  description: savedLink.description,
+                  image: savedLink.image,
+                  memberCountRaw: savedLink.member_count?.toLocaleString(),
+                  checkedAt: savedLink.checked_at,
+                  savedStatus: savedLink.status,
+                  savedId: savedLink.id
                 }
               };
               
