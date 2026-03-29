@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X } from 'lucide-react';
 import { fetchSavedLinks, checkBulkLinks } from '../services/api';
 import { StoredLink, LinkResult } from '../types';
 import { toast } from 'sonner';
@@ -11,6 +11,8 @@ export default function SavedLinksPage() {
   const [isValidating, setIsValidating] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'valid' | 'invalid' | 'mega' | 'unknown'>('all');
   const PAGE_SIZE = 100;
 
   const loadLinks = async (currentPage: number) => {
@@ -67,6 +69,25 @@ export default function SavedLinksPage() {
     }
   };
 
+  const filteredLinks = links.filter((link) => {
+    const normalizedStatus = (link.status || 'valid').toLowerCase();
+    const matchesStatus = statusFilter === 'all' || normalizedStatus === statusFilter;
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!matchesStatus) return false;
+    if (!query) return true;
+
+    return [
+      link.url,
+      link.title,
+      link.description,
+      link.status,
+      link.member_count?.toString()
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(query));
+  });
+
   if (isLoading && links.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-12 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black min-h-[400px]">
@@ -87,7 +108,7 @@ export default function SavedLinksPage() {
           <div>
             <h2 className="text-lg font-bold text-black dark:text-white">Saved Links</h2>
             <p className="text-xs text-gray-500 font-medium">
-              Loaded {links.length} {total > links.length ? `(out of ${total} total)` : ''} recent valid links
+              Showing {filteredLinks.length} of {links.length} loaded links {total > links.length ? `(out of ${total} total)` : ''}
             </p>
           </div>
         </div>
@@ -112,6 +133,47 @@ export default function SavedLinksPage() {
         </div>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search size={14} className="text-gray-400" />
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by title, link, description, or member count"
+            className="w-full pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+              title="Clear Search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="relative sm:w-52">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <SlidersHorizontal size={14} className="text-gray-400" />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+            className="w-full appearance-none pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white"
+          >
+            <option value="all">All statuses</option>
+            <option value="valid">Valid</option>
+            <option value="invalid">Invalid</option>
+            <option value="mega">Mega</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
+      </div>
+
       {links.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border border-dashed border-gray-200 dark:border-[#333] rounded-xl bg-gray-50/50 dark:bg-[#111]/50">
           <div className="w-14 h-14 bg-white dark:bg-black border border-gray-100 dark:border-[#333] rounded-full flex items-center justify-center mb-4 shadow-sm">
@@ -128,10 +190,29 @@ export default function SavedLinksPage() {
             Refresh Database
           </button>
         </div>
+      ) : filteredLinks.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border border-dashed border-gray-200 dark:border-[#333] rounded-xl bg-gray-50/50 dark:bg-[#111]/50">
+          <div className="w-14 h-14 bg-white dark:bg-black border border-gray-100 dark:border-[#333] rounded-full flex items-center justify-center mb-4 shadow-sm">
+            <Search size={22} className="text-gray-300 dark:text-gray-600" />
+          </div>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1.5">No Matches Found</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">
+            Try a different search term or change the status filter to widen the results on this page.
+          </p>
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setStatusFilter('all');
+            }}
+            className="mt-6 text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-4 py-2 rounded-md"
+          >
+            Clear Filters
+          </button>
+        </div>
       ) : (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto pb-4 custom-scrollbar">
-            {links.map((savedLink, idx) => {
+            {filteredLinks.map((savedLink, idx) => {
               // Adapt StoredLink to LinkResult for ResultCard
               const adaptedResult: LinkResult = {
                 link: savedLink.url,
