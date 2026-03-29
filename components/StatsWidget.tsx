@@ -21,6 +21,12 @@ const StatCard = ({ icon: Icon, label, value }: { icon: any, label: string, valu
 
 const StatsWidget: React.FC<StatsWidgetProps> = ({ refreshTrigger = 0 }) => {
   const [stats, setStats] = useState<StatsData | null>(null);
+  const totalProcessed =
+    (stats?.total_checked && stats.total_checked > 0)
+      ? stats.total_checked
+      : (stats?.total && stats.total > 0)
+        ? stats.total
+        : (stats?.valid_links ?? stats?.valid ?? 0) + (stats?.invalid_links ?? stats?.invalid ?? 0);
 
   useEffect(() => {
     const loadStats = async () => {
@@ -42,7 +48,7 @@ const StatsWidget: React.FC<StatsWidgetProps> = ({ refreshTrigger = 0 }) => {
       <StatCard 
         icon={Activity} 
         label="Total Processed" 
-        value={stats?.total_checked || stats?.total} 
+        value={totalProcessed} 
       />
       <StatCard 
         icon={CheckCircle2} 
