@@ -12,7 +12,7 @@ export default function SavedLinksPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'valid' | 'invalid' | 'mega' | 'unknown'>('all');
+  const [savedFilter, setSavedFilter] = useState<'all' | 'with-description' | 'with-image' | 'with-members' | 'recent'>('all');
   const PAGE_SIZE = 100;
 
   const loadLinks = async (currentPage: number) => {
@@ -70,11 +70,15 @@ export default function SavedLinksPage() {
   };
 
   const filteredLinks = links.filter((link) => {
-    const normalizedStatus = (link.status || 'valid').toLowerCase();
-    const matchesStatus = statusFilter === 'all' || normalizedStatus === statusFilter;
+    const matchesFilter =
+      savedFilter === 'all' ||
+      (savedFilter === 'with-description' && !!link.description?.trim()) ||
+      (savedFilter === 'with-image' && !!link.image?.trim()) ||
+      (savedFilter === 'with-members' && typeof link.member_count === 'number' && link.member_count > 0) ||
+      (savedFilter === 'recent' && !!link.checked_at);
     const query = searchQuery.trim().toLowerCase();
 
-    if (!matchesStatus) return false;
+    if (!matchesFilter) return false;
     if (!query) return true;
 
     return [
@@ -161,15 +165,15 @@ export default function SavedLinksPage() {
             <SlidersHorizontal size={14} className="text-gray-400" />
           </div>
           <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+            value={savedFilter}
+            onChange={(e) => setSavedFilter(e.target.value as typeof savedFilter)}
             className="w-full appearance-none pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white"
           >
-            <option value="all">All statuses</option>
-            <option value="valid">Valid</option>
-            <option value="invalid">Invalid</option>
-            <option value="mega">Mega</option>
-            <option value="unknown">Unknown</option>
+            <option value="all">All links</option>
+            <option value="with-description">Has description</option>
+            <option value="with-image">Has image</option>
+            <option value="with-members">Has members</option>
+            <option value="recent">Has saved date</option>
           </select>
         </div>
       </div>
@@ -197,12 +201,12 @@ export default function SavedLinksPage() {
           </div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1.5">No Matches Found</h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">
-            Try a different search term or change the status filter to widen the results on this page.
+            Try a different search term or change the filter to widen the results on this page.
           </p>
           <button
             onClick={() => {
               setSearchQuery('');
-              setStatusFilter('all');
+              setSavedFilter('all');
             }}
             className="mt-6 text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-4 py-2 rounded-md"
           >
