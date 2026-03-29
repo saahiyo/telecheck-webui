@@ -24,29 +24,43 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
   return (
     <div className="group relative bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-[#333] p-2.5 transition-all hover:bg-gray-50 dark:hover:bg-[#111]">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${statusColor} shrink-0`}></div>
-            <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">
-              {result.reason || status}
-            </span>
-          </div>
-          
-          <a 
-            href={result.link.startsWith('http') ? result.link : `https://${result.link}`} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="block text-sm font-medium text-black dark:text-white truncate hover:underline decoration-gray-400 underline-offset-2"
-            title={result.details?.title || result.link}
-          >
-            {result.details?.title || result.link}
-          </a>
-          {result.details?.title && (
-            <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5" title={result.link}>
-              {result.link}
-              {result.details.memberCountRaw ? ` • ${result.details.memberCountRaw}` : ''}
+        <div className="flex-1 min-w-0 flex items-start gap-3">
+          {result.details?.image ? (
+            <div className="w-9 h-9 shrink-0 overflow-hidden rounded-full border border-gray-200 dark:border-[#333] hidden sm:block">
+              <img 
+                src={result.details.image} 
+                alt="Channel Image" 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
             </div>
-          )}
+          ) : null}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <div className={`w-1.5 h-1.5 rounded-full ${statusColor} shrink-0`}></div>
+              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">
+                {result.reason || status}
+              </span>
+            </div>
+            
+            <a 
+              href={result.link.startsWith('http') ? result.link : `https://${result.link}`} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block text-sm font-medium text-black dark:text-white truncate hover:underline decoration-gray-400 underline-offset-2"
+              title={result.details?.title || result.link}
+            >
+              {result.details?.title || result.link}
+            </a>
+            {result.details?.title && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5" title={result.link}>
+                {result.link}
+                {result.details.memberCountRaw ? ` • ${result.details.memberCountRaw}` : ''}
+              </div>
+            )}
+          </div>
         </div>
 
         <button 

@@ -37,8 +37,8 @@ export default function SavedLinksPage() {
       // Extract URLs from current links
       const urls = links.map(l => l.url);
       
-      // We can chunk them in batches of 10-20 to avoid overwhelming the server
-      const BATCH_SIZE = 10;
+      // We can chunk them in batches of 100 to avoid overwhelming the server
+      const BATCH_SIZE = 100;
       let validUrls = new Set<string>();
       
       for (let i = 0; i < urls.length; i += BATCH_SIZE) {
@@ -134,7 +134,8 @@ export default function SavedLinksPage() {
               status: savedLink.status || 'valid', // Assume database links are valid primarily
               reason: `Saved on ${new Date(savedLink.checked_at || Date.now()).toLocaleDateString()}`,
               details: {
-                title: savedLink.title || savedLink.description || 'Database Link'
+                title: savedLink.title || savedLink.description || 'Database Link',
+                image: savedLink.image
               }
             };
             

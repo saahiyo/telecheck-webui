@@ -140,9 +140,9 @@ function App() {
       setHasChecked(true);
     }
 
-    // Stream telegram results in batches of 10
+    // Stream telegram results in batches of 50
     if (telegramLinks.length > 0) {
-      const BATCH_SIZE = 10;
+      const BATCH_SIZE = 50;
       for (let i = 0; i < telegramLinks.length; i += BATCH_SIZE) {
         const batch = telegramLinks.slice(i, i + BATCH_SIZE);
         const batchResults = await checkBulkLinks(batch);

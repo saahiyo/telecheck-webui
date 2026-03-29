@@ -39,6 +39,7 @@ export interface StoredLink {
   status?: string;
   title?: string;
   description?: string;
+  image?: string;
   checked_at?: string;
 }
 
