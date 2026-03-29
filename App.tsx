@@ -349,16 +349,15 @@ function App() {
       {/* Navbar / Header */}
       <div className="border-b border-gray-200 dark:border-[#333] sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-           <div className="flex items-center gap-6">
-             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('home')}>
-               <div className="w-8 h-8 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center">
-                 <ShieldCheck size={18} strokeWidth={2.5} />
-               </div>
-               <h1 className="text-lg font-bold tracking-tight text-black dark:text-white mr-4">
-                 TeleCheck<span className="text-gray-400 dark:text-gray-600">Pro</span>
-               </h1>
+           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('home')}>
+             <div className="w-8 h-8 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center">
+               <ShieldCheck size={18} strokeWidth={2.5} />
              </div>
-             
+             <h1 className="text-lg font-bold tracking-tight text-black dark:text-white">
+               TeleCheck<span className="text-gray-400 dark:text-gray-600">Pro</span>
+             </h1>
+           </div>
+           <div className="flex items-center gap-3">
              {/* Navigation Links */}
              <div className="hidden sm:flex items-center gap-1 bg-gray-100/50 dark:bg-[#111]/50 p-1 rounded-lg border border-gray-200 dark:border-[#333]">
                 <button
@@ -374,10 +373,10 @@ function App() {
                   <Database size={14} /> Saved Links
                 </button>
              </div>
-           </div>
            <div className="flex items-center gap-2">  
               <ThemeToggle />
               <GithubBtn />
+           </div>
            </div>
         </div>
       </div>
