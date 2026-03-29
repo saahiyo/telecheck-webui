@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Database, RefreshCw, Layers } from 'lucide-react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck } from 'lucide-react';
 import { fetchSavedLinks, checkBulkLinks } from '../services/api';
 import { StoredLink, LinkResult } from '../types';
 import { toast } from 'sonner';
@@ -91,11 +91,19 @@ export default function SavedLinksPage() {
         
         <div className="flex gap-2">
           <button 
+            onClick={loadLinks}
+            disabled={isLoading || isValidating}
+            className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center gap-2 shadow-sm"
+          >
+            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+          <button 
             onClick={handleValidate}
             disabled={isValidating || links.length === 0}
             className="text-xs font-semibold bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all px-4 py-2 rounded-md flex items-center gap-2 shadow-sm"
           >
-            {isValidating ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+            {isValidating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
             {isValidating ? 'Validating...' : 'Validate All'}
           </button>
         </div>
