@@ -99,3 +99,16 @@ export const checkBulkLinks = async (links: string[]): Promise<LinkResult[]> => 
     }));
   }
 };
+
+export const fetchSavedLinks = async (limit = 50, offset = 0): Promise<import('../types').StoredLinkResponse> => {
+  try {
+    const response = await fetch(`${BASE_URL}/links?limit=${limit}&offset=${offset}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch saved links');
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching saved links:', error);
+    return { total: 0, limit, offset, links: [] };
+  }
+};

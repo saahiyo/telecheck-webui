@@ -32,3 +32,19 @@ export interface ThemeContextType {
   theme: Theme;
   toggleTheme: () => void;
 }
+
+export interface StoredLink {
+  id: number;
+  url: string;
+  status?: string;
+  title?: string;
+  description?: string;
+  checked_at?: string;
+}
+
+export interface StoredLinkResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  links: StoredLink[];
+}
