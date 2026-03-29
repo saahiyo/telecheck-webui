@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck } from 'lucide-react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import { fetchSavedLinks, checkBulkLinks } from '../services/api';
 import { StoredLink, LinkResult } from '../types';
 import { toast } from 'sonner';
@@ -10,11 +10,14 @@ export default function SavedLinksPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 100;
 
-  const loadLinks = async () => {
+  const loadLinks = async (currentPage: number) => {
     setIsLoading(true);
     try {
-      const data = await fetchSavedLinks(100, 0); // Fetch up to 100 recent links
+      const offset = (currentPage - 1) * PAGE_SIZE;
+      const data = await fetchSavedLinks(PAGE_SIZE, offset);
       setLinks(data.links || []);
       setTotal(data.total || 0);
     } catch (error) {
@@ -25,8 +28,8 @@ export default function SavedLinksPage() {
   };
 
   useEffect(() => {
-    loadLinks();
-  }, []);
+    loadLinks(page);
+  }, [page]);
 
   const handleValidate = async () => {
     if (links.length === 0) return;
@@ -91,7 +94,7 @@ export default function SavedLinksPage() {
         
         <div className="flex gap-2">
           <button 
-            onClick={loadLinks}
+            onClick={() => loadLinks(page)}
             disabled={isLoading || isValidating}
             className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center gap-2 shadow-sm"
           >
@@ -119,28 +122,56 @@ export default function SavedLinksPage() {
             There are no valid links returned from the database, or they have all been filtered out.
           </p>
           <button 
-            onClick={loadLinks}
+            onClick={() => loadLinks(page)}
             className="mt-6 text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-4 py-2 rounded-md"
           >
             Refresh Database
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto pb-10">
-          {links.map((savedLink, idx) => {
-            // Adapt StoredLink to LinkResult for ResultCard
-            const adaptedResult: LinkResult = {
-              link: savedLink.url,
-              status: savedLink.status || 'valid', // Assume database links are valid primarily
-              reason: `Saved on ${new Date(savedLink.checked_at || Date.now()).toLocaleDateString()}`,
-              details: {
-                title: savedLink.title || savedLink.description || 'Database Link',
-                image: savedLink.image
-              }
-            };
-            
-            return <ResultCard key={savedLink.id || idx} result={adaptedResult} />;
-          })}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto pb-4 custom-scrollbar">
+            {links.map((savedLink, idx) => {
+              // Adapt StoredLink to LinkResult for ResultCard
+              const adaptedResult: LinkResult = {
+                link: savedLink.url,
+                status: savedLink.status || 'valid', // Assume database links are valid primarily
+                reason: `Saved on ${new Date(savedLink.checked_at || Date.now()).toLocaleDateString()}`,
+                details: {
+                  title: savedLink.title || savedLink.description || 'Database Link',
+                  image: savedLink.image
+                }
+              };
+              
+              return <ResultCard key={savedLink.id || idx} result={adaptedResult} />;
+            })}
+          </div>
+          
+          {total > PAGE_SIZE && (
+            <div className="flex items-center justify-between pt-4 pb-2 border-t border-gray-200 dark:border-[#333] mt-auto shrink-0">
+              <span className="text-[10px] sm:text-xs text-gray-500 font-medium">
+                Showing {(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)} of {total}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1 || isLoading}
+                  className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                >
+                  <ChevronLeft size={14} />
+                  Prev
+                </button>
+                <button
+                  onClick={() => setPage(p => Math.min(Math.ceil(total / PAGE_SIZE), p + 1))}
+                  disabled={page >= Math.ceil(total / PAGE_SIZE) || isLoading}
+                  className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                >
+                  Next
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
