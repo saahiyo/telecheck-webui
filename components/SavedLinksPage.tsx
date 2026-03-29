@@ -155,7 +155,7 @@ export default function SavedLinksPage() {
 
   return (
     <div className="flex flex-col h-full min-h-[500px]">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gray-100 dark:bg-[#111] border border-gray-200 dark:border-[#333] rounded-full flex items-center justify-center shadow-sm">
             <Database size={18} className="text-gray-700 dark:text-gray-300" />
@@ -170,22 +170,23 @@ export default function SavedLinksPage() {
           </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto">
           <button 
             onClick={handleRefresh}
             disabled={isLoading || isValidating}
-            className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center gap-2 shadow-sm"
+            className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm w-full sm:w-auto"
           >
             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span>Refresh</span>
           </button>
           <button 
             onClick={handleValidate}
             disabled={isValidating || links.length === 0}
-            className="text-xs font-semibold bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all px-4 py-2 rounded-md flex items-center gap-2 shadow-sm"
+            className="text-xs font-semibold bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all px-3 sm:px-4 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm w-full sm:w-auto"
           >
             {isValidating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-            {isValidating ? 'Validating...' : 'Validate All'}
+            <span className="sm:hidden">{isValidating ? 'Validating...' : 'Validate'}</span>
+            <span className="hidden sm:inline">{isValidating ? 'Validating...' : 'Validate All'}</span>
           </button>
         </div>
       </div>
