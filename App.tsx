@@ -384,10 +384,9 @@ function App() {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {currentView === 'home' ? (
-          <>
-            {/* Stats Section */}
-            <StatsWidget refreshTrigger={refreshStatsTrigger} />
+        <div className={currentView === 'home' ? 'block animate-fade-in' : 'hidden'}>
+          {/* Stats Section */}
+          <StatsWidget refreshTrigger={refreshStatsTrigger} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-6">
           
@@ -663,10 +662,11 @@ function App() {
              )}
           </div>
         </div>
-          </>
-        ) : (
+        </div>
+
+        <div className={currentView === 'saved' ? 'block animate-fade-in' : 'hidden'}>
           <SavedLinksPage />
-        )}
+        </div>
       </main>
     </div>
   );

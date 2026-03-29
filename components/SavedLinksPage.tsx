@@ -14,7 +14,7 @@ export default function SavedLinksPage() {
   const loadLinks = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchSavedLinks(200, 0); // Fetch up to 200 recent links
+      const data = await fetchSavedLinks(100, 0); // Fetch up to 100 recent links
       setLinks(data.links || []);
       setTotal(data.total || 0);
     } catch (error) {
