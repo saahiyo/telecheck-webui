@@ -5,14 +5,46 @@ import { StoredLink, LinkResult } from '../types';
 import { toast } from 'sonner';
 import ResultCard from './ResultCard';
 
+function filterSavedLinks(
+  sourceLinks: StoredLink[],
+  searchQuery: string,
+  savedFilter: 'all' | 'with-description' | 'with-image' | 'with-members' | 'recent'
+) {
+  return sourceLinks.filter((link) => {
+    const matchesFilter =
+      savedFilter === 'all' ||
+      (savedFilter === 'with-description' && !!link.description?.trim()) ||
+      (savedFilter === 'with-image' && !!link.image?.trim()) ||
+      (savedFilter === 'with-members' && typeof link.member_count === 'number' && link.member_count > 0) ||
+      (savedFilter === 'recent' && !!link.checked_at);
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!matchesFilter) return false;
+    if (!query) return true;
+
+    return [
+      link.url,
+      link.title,
+      link.description,
+      link.status,
+      link.member_count?.toString()
+    ]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(query));
+  });
+}
+
 export default function SavedLinksPage() {
   const [links, setLinks] = useState<StoredLink[]>([]);
+  const [allLinks, setAllLinks] = useState<StoredLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isValidating, setIsValidating] = useState(false);
+  const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [savedFilter, setSavedFilter] = useState<'all' | 'with-description' | 'with-image' | 'with-members' | 'recent'>('all');
+  const [searchScope, setSearchScope] = useState<'page' | 'all'>('page');
   const PAGE_SIZE = 100;
 
   const loadLinks = async (currentPage: number) => {
@@ -32,6 +64,44 @@ export default function SavedLinksPage() {
   useEffect(() => {
     loadLinks(page);
   }, [page]);
+
+  useEffect(() => {
+    if (searchScope !== 'all' || allLinks.length > 0 || total === 0) return;
+
+    const loadAllLinks = async () => {
+      setIsLoadingAll(true);
+      try {
+        let combined: StoredLink[] = [];
+        let offset = 0;
+        let fetchedTotal = total;
+
+        while (offset < fetchedTotal) {
+          const data = await fetchSavedLinks(PAGE_SIZE, offset);
+          const batch = data.links || [];
+
+          combined = [...combined, ...batch];
+          fetchedTotal = data.total || fetchedTotal;
+
+          if (batch.length < PAGE_SIZE) break;
+          offset += PAGE_SIZE;
+        }
+
+        setAllLinks(combined);
+      } catch (error) {
+        toast.error('Failed to load all saved links.');
+        setSearchScope('page');
+      } finally {
+        setIsLoadingAll(false);
+      }
+    };
+
+    loadAllLinks();
+  }, [searchScope, allLinks.length, total]);
+
+  const handleRefresh = async () => {
+    setAllLinks([]);
+    await loadLinks(page);
+  };
 
   const handleValidate = async () => {
     if (links.length === 0) return;
@@ -69,28 +139,9 @@ export default function SavedLinksPage() {
     }
   };
 
-  const filteredLinks = links.filter((link) => {
-    const matchesFilter =
-      savedFilter === 'all' ||
-      (savedFilter === 'with-description' && !!link.description?.trim()) ||
-      (savedFilter === 'with-image' && !!link.image?.trim()) ||
-      (savedFilter === 'with-members' && typeof link.member_count === 'number' && link.member_count > 0) ||
-      (savedFilter === 'recent' && !!link.checked_at);
-    const query = searchQuery.trim().toLowerCase();
-
-    if (!matchesFilter) return false;
-    if (!query) return true;
-
-    return [
-      link.url,
-      link.title,
-      link.description,
-      link.status,
-      link.member_count?.toString()
-    ]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(query));
-  });
+  const sourceLinks = searchScope === 'all' ? allLinks : links;
+  const filteredLinks = filterSavedLinks(sourceLinks, searchQuery, savedFilter);
+  const isSearchAllMode = searchScope === 'all';
 
   if (isLoading && links.length === 0) {
     return (
@@ -112,14 +163,16 @@ export default function SavedLinksPage() {
           <div>
             <h2 className="text-lg font-bold text-black dark:text-white">Saved Links</h2>
             <p className="text-xs text-gray-500 font-medium">
-              Showing {filteredLinks.length} of {links.length} loaded links {total > links.length ? `(out of ${total} total)` : ''}
+              {isSearchAllMode
+                ? `Showing ${filteredLinks.length} of ${sourceLinks.length || total} saved links`
+                : `Showing ${filteredLinks.length} of ${links.length} loaded links ${total > links.length ? `(out of ${total} total)` : ''}`}
             </p>
           </div>
         </div>
         
         <div className="flex gap-2">
           <button 
-            onClick={() => loadLinks(page)}
+            onClick={handleRefresh}
             disabled={isLoading || isValidating}
             className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center gap-2 shadow-sm"
           >
@@ -138,6 +191,29 @@ export default function SavedLinksPage() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="inline-flex p-1 bg-gray-100 dark:bg-[#111] rounded-lg border border-gray-200 dark:border-[#333] w-full sm:w-auto">
+          <button
+            onClick={() => setSearchScope('page')}
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              searchScope === 'page'
+                ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                : 'text-gray-500 hover:text-black dark:hover:text-white'
+            }`}
+          >
+            This Page
+          </button>
+          <button
+            onClick={() => setSearchScope('all')}
+            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              searchScope === 'all'
+                ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                : 'text-gray-500 hover:text-black dark:hover:text-white'
+            }`}
+          >
+            Search All
+          </button>
+        </div>
+
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search size={14} className="text-gray-400" />
@@ -146,7 +222,7 @@ export default function SavedLinksPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by title, link, description, or member count"
+            placeholder={isSearchAllMode ? 'Search across all saved links' : 'Search this page by title, link, description, or member count'}
             className="w-full pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
           />
           {searchQuery && (
@@ -178,6 +254,14 @@ export default function SavedLinksPage() {
         </div>
       </div>
 
+      {isSearchAllMode && (
+        <div className="mb-4 text-xs text-gray-500 dark:text-gray-400">
+          {isLoadingAll
+            ? 'Loading all saved links for global search...'
+            : `Global search is active across ${sourceLinks.length || total} saved links.`}
+        </div>
+      )}
+
       {links.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border border-dashed border-gray-200 dark:border-[#333] rounded-xl bg-gray-50/50 dark:bg-[#111]/50">
           <div className="w-14 h-14 bg-white dark:bg-black border border-gray-100 dark:border-[#333] rounded-full flex items-center justify-center mb-4 shadow-sm">
@@ -188,11 +272,17 @@ export default function SavedLinksPage() {
             There are no valid links returned from the database, or they have all been filtered out.
           </p>
           <button 
-            onClick={() => loadLinks(page)}
+            onClick={handleRefresh}
             className="mt-6 text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-4 py-2 rounded-md"
           >
             Refresh Database
           </button>
+        </div>
+      ) : (isSearchAllMode && isLoadingAll) ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-12 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black min-h-[320px]">
+          <Loader2 className="w-8 h-8 text-black dark:text-white animate-spin mb-4" />
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white">Preparing Global Search</h3>
+          <p className="text-xs text-gray-500 mt-1">Fetching all saved links so search can run across the full database.</p>
         </div>
       ) : filteredLinks.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border border-dashed border-gray-200 dark:border-[#333] rounded-xl bg-gray-50/50 dark:bg-[#111]/50">
@@ -201,7 +291,9 @@ export default function SavedLinksPage() {
           </div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1.5">No Matches Found</h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">
-            Try a different search term or change the filter to widen the results on this page.
+            {isSearchAllMode
+              ? 'Try a different search term or change the filter to widen the results across all saved links.'
+              : 'Try a different search term or change the filter to widen the results on this page.'}
           </p>
           <button
             onClick={() => {
@@ -237,7 +329,7 @@ export default function SavedLinksPage() {
             })}
           </div>
           
-          {total > PAGE_SIZE && (
+          {!isSearchAllMode && total > PAGE_SIZE && (
             <div className="flex items-center justify-between pt-4 pb-2 border-t border-gray-200 dark:border-[#333] mt-auto shrink-0">
               <span className="text-[10px] sm:text-xs text-gray-500 font-medium">
                 Showing {(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)} of {total}
