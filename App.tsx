@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, Check, Github, FileUp } from 'lucide-react';
+import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, Check, Github, FileUp, Database } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import StatsWidget from './components/StatsWidget';
 import ResultCard from './components/ResultCard';
+import SavedLinksPage from './components/SavedLinksPage';
 import { checkBulkLinks, checkSingleLink } from './services/api';
 import { LinkResult } from './types';
 import { Toaster, toast } from 'sonner';  
@@ -20,6 +21,7 @@ const emptyMessages: Record<string, string> = {
 };
 
 function App() {
+  const [currentView, setCurrentView] = useState<'home' | 'saved'>('home');
   const [mode, setMode] = useState<'bulk' | 'single'>('bulk');
   const [bulkInput, setBulkInput] = useState('');
   const [singleInput, setSingleInput] = useState('');
@@ -347,13 +349,31 @@ function App() {
       {/* Navbar / Header */}
       <div className="border-b border-gray-200 dark:border-[#333] sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-           <div className="flex items-center gap-2">
-             <div className="w-8 h-8 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center">
-               <ShieldCheck size={18} strokeWidth={2.5} />
+           <div className="flex items-center gap-6">
+             <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('home')}>
+               <div className="w-8 h-8 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center">
+                 <ShieldCheck size={18} strokeWidth={2.5} />
+               </div>
+               <h1 className="text-lg font-bold tracking-tight text-black dark:text-white mr-4">
+                 TeleCheck<span className="text-gray-400 dark:text-gray-600">Pro</span>
+               </h1>
              </div>
-             <h1 className="text-lg font-bold tracking-tight text-black dark:text-white">
-               TeleCheck<span className="text-gray-400 dark:text-gray-600">Pro</span>
-             </h1>
+             
+             {/* Navigation Links */}
+             <div className="hidden sm:flex items-center gap-1 bg-gray-100/50 dark:bg-[#111]/50 p-1 rounded-lg border border-gray-200 dark:border-[#333]">
+                <button
+                  onClick={() => setCurrentView('home')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${currentView === 'home' ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
+                >
+                  <Layers size={14} /> Validator
+                </button>
+                <button
+                  onClick={() => setCurrentView('saved')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${currentView === 'saved' ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
+                >
+                  <Database size={14} /> Saved Links
+                </button>
+             </div>
            </div>
            <div className="flex items-center gap-2">  
               <ThemeToggle />
@@ -364,8 +384,10 @@ function App() {
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Stats Section */}
-        <StatsWidget refreshTrigger={refreshStatsTrigger} />
+        {currentView === 'home' ? (
+          <>
+            {/* Stats Section */}
+            <StatsWidget refreshTrigger={refreshStatsTrigger} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-6">
           
@@ -641,6 +663,10 @@ function App() {
              )}
           </div>
         </div>
+          </>
+        ) : (
+          <SavedLinksPage />
+        )}
       </main>
     </div>
   );
