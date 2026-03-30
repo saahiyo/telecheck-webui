@@ -52,6 +52,19 @@ function getSavedLinksSummary(
   return `${filteredCount}/${loadedCount} loaded`;
 }
 
+function formatSavedDate(dateValue?: string | number | Date) {
+  if (!dateValue) return '';
+
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'numeric',
+    year: 'numeric',
+  }).format(date);
+}
+
 export default function SavedLinksPage() {
   const [links, setLinks] = useState<StoredLink[]>([]);
   const [allLinks, setAllLinks] = useState<StoredLink[]>([]);
@@ -479,7 +492,7 @@ export default function SavedLinksPage() {
               const adaptedResult: LinkResult = {
                 link: savedLink.url,
                 status: savedLink.status || 'valid', // Assume database links are valid primarily
-                reason: `Saved on ${new Date(savedLink.checked_at || Date.now()).toLocaleDateString()}`,
+                reason: `Saved on ${formatSavedDate(savedLink.checked_at || Date.now())}`,
                 details: {
                   title: savedLink.title || savedLink.description || 'Database Link',
                   description: savedLink.description,
