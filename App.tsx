@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, Check, Github, FileUp, Database } from 'lucide-react';
+import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, Check, Github, FileUp, Database, Menu, X } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import StatsWidget from './components/StatsWidget';
 import ResultCard from './components/ResultCard';
@@ -33,6 +33,7 @@ function App() {
   const [hasChecked, setHasChecked] = useState(false);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const copyMenuRef = useRef<HTMLDivElement>(null);
 
   // ── Restore last results from localStorage on mount ──
@@ -89,6 +90,7 @@ function App() {
       // Escape closes export dropdown
       if (e.key === 'Escape') {
         setCopyMenuOpen(false);
+        setIsMobileNavOpen(false);
         return;
       }
       // Ctrl/Cmd + Enter triggers validation
@@ -104,6 +106,21 @@ function App() {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [mode, bulkInput, singleInput, isChecking]);
+
+  useEffect(() => {
+    setIsMobileNavOpen(false);
+  }, [currentView]);
+
+  useEffect(() => {
+    if (!isMobileNavOpen) return;
+
+    const { overflow } = document.body.style;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.body.style.overflow = overflow;
+    };
+  }, [isMobileNavOpen]);
 
   // ── Bulk check with dedup + streaming (batched) results ──
   const handleBulkCheck = async () => {
@@ -348,18 +365,20 @@ function App() {
       
       {/* Navbar / Header */}
       <div className="border-b border-gray-200 dark:border-[#333] sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-           <div className="flex items-center gap-2 cursor-pointer" onClick={() => setCurrentView('home')}>
-             <div className="w-8 h-8 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center">
-               <ShieldCheck size={18} strokeWidth={2.5} />
-             </div>
-             <h1 className="text-lg font-bold tracking-tight text-black dark:text-white">
-               TeleCheck<span className="text-gray-400 dark:text-gray-600">Pro</span>
-             </h1>
-           </div>
-           <div className="flex items-center gap-3">
-             {/* Navigation Links */}
-             <div className="hidden sm:flex items-center gap-1 bg-gray-100/50 dark:bg-[#111]/50 p-1 rounded-lg border border-gray-200 dark:border-[#333]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:h-16 sm:py-0 flex flex-col justify-center gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 cursor-pointer min-w-0" onClick={() => setCurrentView('home')}>
+              <div className="w-8 h-8 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center shrink-0">
+                <ShieldCheck size={18} strokeWidth={2.5} />
+              </div>
+              <h1 className="text-lg font-bold tracking-tight text-black dark:text-white truncate">
+                TeleCheck<span className="text-gray-400 dark:text-gray-600">Pro</span>
+              </h1>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              {/* Navigation Links */}
+              <div className="hidden sm:flex items-center gap-1 bg-gray-100/50 dark:bg-[#111]/50 p-1 rounded-lg border border-gray-200 dark:border-[#333]">
                 <button
                   onClick={() => setCurrentView('home')}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${currentView === 'home' ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
@@ -372,13 +391,86 @@ function App() {
                 >
                   <Database size={14} /> Saved Links
                 </button>
-             </div>
-           <div className="flex items-center gap-2">  
-              <ThemeToggle />
-              <GithubBtn />
-           </div>
-           </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <GithubBtn />
+                <button
+                  type="button"
+                  onClick={() => setIsMobileNavOpen(true)}
+                  className="sm:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 dark:border-[#333] bg-gray-100/50 dark:bg-[#111]/50 text-gray-700 dark:text-gray-200 transition-colors hover:text-black dark:hover:text-white"
+                  aria-label="Open navigation menu"
+                  aria-expanded={isMobileNavOpen}
+                  aria-controls="mobile-navigation-drawer"
+                >
+                  <Menu size={18} />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div
+        className={`sm:hidden fixed inset-0 z-[60] transition-opacity duration-200 ${isMobileNavOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
+        aria-hidden={!isMobileNavOpen}
+      >
+        <button
+          type="button"
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          onClick={() => setIsMobileNavOpen(false)}
+          aria-label="Close navigation menu"
+        />
+        <aside
+          id="mobile-navigation-drawer"
+          className={`absolute right-0 top-0 h-full w-[280px] max-w-[85vw] border-l border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl transition-transform duration-200 ${isMobileNavOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        >
+          <div className="flex items-center justify-between border-b border-gray-200 dark:border-[#333] px-4 py-4">
+            <div>
+              <p className="text-sm font-semibold text-black dark:text-white">Navigation</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Switch between validator views</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsMobileNavOpen(false)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 dark:border-[#333] bg-gray-100/50 dark:bg-[#111]/50 text-gray-700 dark:text-gray-200 transition-colors hover:text-black dark:hover:text-white"
+              aria-label="Close navigation menu"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-3 p-4">
+            <button
+              type="button"
+              onClick={() => setCurrentView('home')}
+              className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${currentView === 'home' ? 'border-black/10 bg-gray-100 text-black dark:border-white/10 dark:bg-[#111] dark:text-white' : 'border-gray-200 text-gray-600 hover:text-black dark:border-[#333] dark:text-gray-400 dark:hover:text-white'}`}
+            >
+              <div className="mt-0.5 shrink-0">
+                <Layers size={18} />
+              </div>
+              <div>
+                <div className="text-sm font-medium">Validator</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Run bulk checks and quick checks</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCurrentView('saved')}
+              className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${currentView === 'saved' ? 'border-black/10 bg-gray-100 text-black dark:border-white/10 dark:bg-[#111] dark:text-white' : 'border-gray-200 text-gray-600 hover:text-black dark:border-[#333] dark:text-gray-400 dark:hover:text-white'}`}
+            >
+              <div className="mt-0.5 shrink-0">
+                <Database size={18} />
+              </div>
+              <div>
+                <div className="text-sm font-medium">Saved Links</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Open your saved results and stored links</div>
+              </div>
+            </button>
+          </div>
+        </aside>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
