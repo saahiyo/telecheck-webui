@@ -441,7 +441,7 @@ export default function SavedLinksPage() {
           </button>
         </div>
       ) : (isSearchAllMode && isLoadingAll) ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-12 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black min-h-[320px]">
+        <div className="flex-1 flex flex-col items-center justify-center p-12 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black min-h-80">
           <Loader2 className="w-8 h-8 text-black dark:text-white animate-spin mb-4" />
           <h3 className="text-sm font-medium text-gray-900 dark:text-white">Preparing Global Search</h3>
           <p className="text-xs text-gray-500 mt-1">Fetching all saved links so search can run across the full database.</p>
