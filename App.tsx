@@ -413,7 +413,7 @@ function App() {
       </div>
 
       <div
-        className={`sm:hidden fixed inset-0 z-[60] transition-opacity duration-200 ${isMobileNavOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
+        className={`sm:hidden fixed inset-0 z-60 transition-opacity duration-200 ${isMobileNavOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
         aria-hidden={!isMobileNavOpen}
       >
         <button
