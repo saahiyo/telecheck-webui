@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, Globe2 } from 'lucide-react';
 import { fetchSavedLinks, checkBulkLinks } from '../services/api';
 import { StoredLink, LinkResult } from '../types';
 import { toast } from 'sonner';
@@ -32,6 +32,24 @@ function filterSavedLinks(
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(query));
   });
+}
+
+function getSavedLinksSummary(
+  isSearchAllMode: boolean,
+  filteredCount: number,
+  loadedCount: number,
+  totalCount: number,
+  sourceCount: number
+) {
+  if (isSearchAllMode) {
+    return `${filteredCount}/${sourceCount || totalCount} saved`;
+  }
+
+  if (totalCount > loadedCount) {
+    return `${filteredCount}/${loadedCount} loaded | ${totalCount} total`;
+  }
+
+  return `${filteredCount}/${loadedCount} loaded`;
 }
 
 export default function SavedLinksPage() {
@@ -142,6 +160,13 @@ export default function SavedLinksPage() {
   const sourceLinks = searchScope === 'all' ? allLinks : links;
   const filteredLinks = filterSavedLinks(sourceLinks, searchQuery, savedFilter);
   const isSearchAllMode = searchScope === 'all';
+  const savedLinksSummary = getSavedLinksSummary(
+    isSearchAllMode,
+    filteredLinks.length,
+    links.length,
+    total,
+    sourceLinks.length
+  );
 
   if (isLoading && links.length === 0) {
     return (
@@ -155,44 +180,94 @@ export default function SavedLinksPage() {
 
   return (
     <div className="flex flex-col h-full min-h-[500px]">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+      <div className="flex gap-3 sm:flex-row sm:items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-gray-100 dark:bg-[#111] border border-gray-200 dark:border-[#333] rounded-full flex items-center justify-center shadow-sm">
             <Database size={18} className="text-gray-700 dark:text-gray-300" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-black dark:text-white">Saved Links</h2>
-            <p className="text-xs text-gray-500 font-medium">
-              {isSearchAllMode
-                ? `Showing ${filteredLinks.length} of ${sourceLinks.length || total} saved links`
-                : `Showing ${filteredLinks.length} of ${links.length} loaded links ${total > links.length ? `(out of ${total} total)` : ''}`}
-            </p>
+            <p className="text-xs text-gray-500 font-medium">{savedLinksSummary}</p>
           </div>
         </div>
         
-        <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto">
+        <div className="flex items-center gap-2 shrink-0 sm:hidden">
           <button 
             onClick={handleRefresh}
             disabled={isLoading || isValidating}
-            className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm w-full sm:w-auto"
+            title="Refresh saved links"
+            aria-label="Refresh saved links"
+            className="h-10 w-10 bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
           >
-            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            <span>Refresh</span>
+            <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} />
           </button>
           <button 
             onClick={handleValidate}
             disabled={isValidating || links.length === 0}
-            className="text-xs font-semibold bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all px-3 sm:px-4 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm w-full sm:w-auto"
+            title={isValidating ? 'Validating loaded links' : 'Validate loaded links'}
+            aria-label={isValidating ? 'Validating loaded links' : 'Validate loaded links'}
+            className="h-10 w-10 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
+          >
+            {isValidating ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+          </button>
+        </div>
+
+        <div className="hidden sm:flex sm:items-center sm:gap-2 shrink-0">
+          <button
+            onClick={handleRefresh}
+            disabled={isLoading || isValidating}
+            className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
+          >
+            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+            <span>Refresh</span>
+          </button>
+          <button
+            onClick={handleValidate}
+            disabled={isValidating || links.length === 0}
+            className="text-xs font-semibold bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all px-4 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
           >
             {isValidating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-            <span className="sm:hidden">{isValidating ? 'Validating...' : 'Validate'}</span>
-            <span className="hidden sm:inline">{isValidating ? 'Validating...' : 'Validate All'}</span>
+            <span>{isValidating ? 'Validating...' : 'Validate All'}</span>
           </button>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="inline-flex p-1 bg-gray-100 dark:bg-[#111] rounded-lg border border-gray-200 dark:border-[#333] w-full sm:w-auto">
+        <div className="flex items-center justify-between gap-3 shrink-0 sm:hidden">
+          <div className="inline-flex items-center gap-1 p-1 bg-gray-100 dark:bg-[#111] rounded-lg border border-gray-200 dark:border-[#333]">
+            <button
+              onClick={() => setSearchScope('page')}
+              title="Search current page"
+              aria-label="Search current page"
+              aria-pressed={searchScope === 'page'}
+              className={`h-8 w-8 rounded-md flex items-center justify-center transition-all ${
+                searchScope === 'page'
+                  ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                  : 'text-gray-500 hover:text-black dark:hover:text-white'
+              }`}
+            >
+              <Layers size={14} />
+            </button>
+            <button
+              onClick={() => setSearchScope('all')}
+              title="Search all saved links"
+              aria-label="Search all saved links"
+              aria-pressed={searchScope === 'all'}
+              className={`h-8 w-8 rounded-md flex items-center justify-center transition-all ${
+                searchScope === 'all'
+                  ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                  : 'text-gray-500 hover:text-black dark:hover:text-white'
+              }`}
+            >
+              <Globe2 size={14} />
+            </button>
+          </div>
+          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+            {isSearchAllMode ? 'All Links' : 'This Page'}
+          </span>
+        </div>
+
+        <div className="hidden sm:inline-flex p-1 bg-gray-100 dark:bg-[#111] rounded-lg border border-gray-200 dark:border-[#333] w-full sm:w-auto">
           <button
             onClick={() => setSearchScope('page')}
             className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
