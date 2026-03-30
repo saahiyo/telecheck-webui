@@ -1,17 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 
+const themeColors = {
+  light: '#f8fafc',
+  dark: '#020617',
+} as const;
+
 const ThemeToggle: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+
+  const syncThemeColor = (nextTheme: 'light' | 'dark') => {
+    let themeColorMeta = document.querySelector('meta[name="theme-color"]:not([media])');
+
+    if (!themeColorMeta) {
+      themeColorMeta = document.createElement('meta');
+      themeColorMeta.setAttribute('name', 'theme-color');
+      document.head.appendChild(themeColorMeta);
+    }
+
+    themeColorMeta.setAttribute('content', themeColors[nextTheme]);
+  };
 
   useEffect(() => {
     // Check system preference or local storage
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       setTheme('dark');
       document.documentElement.classList.add('dark');
+      syncThemeColor('dark');
     } else {
       setTheme('light');
       document.documentElement.classList.remove('dark');
+      syncThemeColor('light');
     }
   }, []);
 
@@ -20,10 +39,12 @@ const ThemeToggle: React.FC = () => {
       setTheme('dark');
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
+      syncThemeColor('dark');
     } else {
       setTheme('light');
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
+      syncThemeColor('light');
     }
   };
 

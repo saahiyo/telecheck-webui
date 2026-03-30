@@ -1,0 +1,22 @@
+{
+  "name": "TeleCheck Pro",
+  "short_name": "TeleCheck",
+  "description": "Validate Telegram links in bulk, inspect metadata, and separate valid, invalid, and Mega links.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

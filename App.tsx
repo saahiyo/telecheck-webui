@@ -67,7 +67,7 @@ function App() {
       const inv = results.filter(r => r.status === 'invalid').length;
       document.title = `(${v} valid, ${inv} invalid) TeleCheck Pro`;
     } else {
-      document.title = 'TeleCheck Pro - Bulk Telegram Link Validator';
+      document.title = 'TeleCheck Pro | Telegram Link Validator';
     }
   }, [results, hasChecked]);
 
