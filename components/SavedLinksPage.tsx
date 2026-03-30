@@ -290,29 +290,53 @@ export default function SavedLinksPage() {
           </button>
         </div>
 
-        <div className="relative flex-1">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={14} className="text-gray-400" />
+        <div className="flex items-stretch gap-2 flex-1">
+          <div className="relative flex-1">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={14} className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={isSearchAllMode ? 'Search across all saved links' : 'Search this page by title, link, description, or member count'}
+              className="w-full pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                title="Clear Search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={isSearchAllMode ? 'Search across all saved links' : 'Search this page by title, link, description, or member count'}
-            className="w-full pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-black dark:hover:text-white transition-colors"
-              title="Clear Search"
+
+          <div className="relative sm:hidden shrink-0">
+            <div className={`h-full w-11 rounded-lg border flex items-center justify-center transition-colors ${
+              savedFilter === 'all'
+                ? 'bg-white dark:bg-black border-gray-200 dark:border-[#333] text-gray-500 dark:text-gray-400'
+                : 'bg-gray-100 dark:bg-[#111] border-black dark:border-white text-black dark:text-white'
+            }`}>
+              <SlidersHorizontal size={15} />
+            </div>
+            <select
+              aria-label="Filter saved links"
+              value={savedFilter}
+              onChange={(e) => setSavedFilter(e.target.value as typeof savedFilter)}
+              className="absolute inset-0 opacity-0 cursor-pointer"
             >
-              <X size={14} />
-            </button>
-          )}
+              <option value="all">All links</option>
+              <option value="with-description">Has description</option>
+              <option value="with-image">Has image</option>
+              <option value="with-members">Has members</option>
+              <option value="recent">Has saved date</option>
+            </select>
+          </div>
         </div>
 
-        <div className="relative sm:w-52">
+        <div className="relative sm:w-52 hidden sm:block">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <SlidersHorizontal size={14} className="text-gray-400" />
           </div>
