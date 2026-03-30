@@ -112,6 +112,10 @@ function App() {
   }, [currentView]);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentView]);
+
+  useEffect(() => {
     if (!isMobileNavOpen) return;
 
     const { overflow } = document.body.style;
