@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, Globe2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, Globe2, ArrowUp, ArrowDown } from 'lucide-react';
 import { fetchSavedLinks, checkBulkLinks } from '../services/api';
 import { StoredLink, LinkResult } from '../types';
 import { toast } from 'sonner';
@@ -63,6 +63,10 @@ export default function SavedLinksPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [savedFilter, setSavedFilter] = useState<'all' | 'with-description' | 'with-image' | 'with-members' | 'recent'>('all');
   const [searchScope, setSearchScope] = useState<'page' | 'all'>('page');
+  const [showScrollJump, setShowScrollJump] = useState(false);
+  const [scrollJumpTarget, setScrollJumpTarget] = useState<'top' | 'bottom'>('bottom');
+  const [scrollJumpContext, setScrollJumpContext] = useState<'container' | 'window'>('window');
+  const resultsScrollRef = useRef<HTMLDivElement | null>(null);
   const PAGE_SIZE = 100;
 
   const loadLinks = async (currentPage: number) => {
@@ -160,6 +164,7 @@ export default function SavedLinksPage() {
   const sourceLinks = searchScope === 'all' ? allLinks : links;
   const filteredLinks = filterSavedLinks(sourceLinks, searchQuery, savedFilter);
   const isSearchAllMode = searchScope === 'all';
+  const hasPagination = !isSearchAllMode && total > PAGE_SIZE;
   const savedLinksSummary = getSavedLinksSummary(
     isSearchAllMode,
     filteredLinks.length,
@@ -167,6 +172,63 @@ export default function SavedLinksPage() {
     total,
     sourceLinks.length
   );
+
+  const updateScrollJumpState = useCallback(() => {
+    const container = resultsScrollRef.current;
+    const containerMaxScrollTop = container ? container.scrollHeight - container.clientHeight : 0;
+    const pageMaxScrollTop = document.documentElement.scrollHeight - window.innerHeight;
+
+    const useContainer = containerMaxScrollTop > 24;
+    const currentScrollTop = useContainer
+      ? container?.scrollTop || 0
+      : window.scrollY || document.documentElement.scrollTop || 0;
+    const maxScrollTop = useContainer ? containerMaxScrollTop : pageMaxScrollTop;
+
+    setScrollJumpContext(useContainer ? 'container' : 'window');
+
+    if (maxScrollTop <= 24) {
+      setShowScrollJump(false);
+      setScrollJumpTarget('bottom');
+      return;
+    }
+
+    setShowScrollJump(currentScrollTop > 32);
+    setScrollJumpTarget(currentScrollTop >= maxScrollTop / 2 ? 'top' : 'bottom');
+  }, []);
+
+  useEffect(() => {
+    updateScrollJumpState();
+  }, [filteredLinks.length, page, searchScope, savedFilter, searchQuery, updateScrollJumpState]);
+
+  useEffect(() => {
+    const handleResize = () => updateScrollJumpState();
+    const handleWindowScroll = () => updateScrollJumpState();
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('scroll', handleWindowScroll, { passive: true });
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('scroll', handleWindowScroll);
+    };
+  }, [updateScrollJumpState]);
+
+  const handleScrollJump = () => {
+    const container = resultsScrollRef.current;
+    const targetTop = scrollJumpTarget === 'top' ? 0 : Number.MAX_SAFE_INTEGER;
+
+    if (scrollJumpContext === 'container' && container) {
+      container.scrollTo({
+        top: targetTop,
+        behavior: 'smooth'
+      });
+      return;
+    }
+
+    window.scrollTo({
+      top: targetTop,
+      behavior: 'smooth'
+    });
+  };
 
   if (isLoading && links.length === 0) {
     return (
@@ -406,8 +468,12 @@ export default function SavedLinksPage() {
           </button>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto pb-4 custom-scrollbar">
+        <div className="flex-1 flex flex-col min-h-0 relative">
+          <div
+            ref={resultsScrollRef}
+            onScroll={updateScrollJumpState}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto pb-4 pr-1 custom-scrollbar"
+          >
             {filteredLinks.map((savedLink, idx) => {
               // Adapt StoredLink to LinkResult for ResultCard
               const adaptedResult: LinkResult = {
@@ -428,8 +494,27 @@ export default function SavedLinksPage() {
               return <ResultCard key={savedLink.id || idx} result={adaptedResult} />;
             })}
           </div>
+
+          {showScrollJump && (
+            <button
+              onClick={handleScrollJump}
+              className={`fixed right-3 sm:right-5 z-30 h-11 w-11 sm:h-auto sm:w-auto sm:px-3 sm:py-2 rounded-full sm:rounded-xl bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white shadow-lg border border-black/10 dark:border-white/10 transition-all flex items-center justify-center ${
+                hasPagination ? 'bottom-12 sm:bottom-8' : 'bottom-2 sm:bottom-4'
+              }`}
+              title={scrollJumpTarget === 'top' ? 'Scroll to top' : 'Scroll to bottom'}
+              aria-label={scrollJumpTarget === 'top' ? 'Scroll to top' : 'Scroll to bottom'}
+            >
+              <span className="sm:hidden">
+                {scrollJumpTarget === 'top' ? <ArrowUp size={16} /> : <ArrowDown size={16} />}
+              </span>
+              <span className="hidden sm:flex items-center gap-2 text-xs font-semibold">
+                {scrollJumpTarget === 'top' ? <ArrowUp size={15} /> : <ArrowDown size={15} />}
+                <span>{scrollJumpTarget === 'top' ? 'Top' : 'Bottom'}</span>
+              </span>
+            </button>
+          )}
           
-          {!isSearchAllMode && total > PAGE_SIZE && (
+          {hasPagination && (
             <div className="flex items-center justify-between pt-4 pb-2 border-t border-gray-200 dark:border-[#333] mt-auto shrink-0">
               <span className="text-[10px] sm:text-xs text-gray-500 font-medium">
                 Showing {(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)} of {total}
