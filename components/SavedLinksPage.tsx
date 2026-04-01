@@ -5,6 +5,14 @@ import { StoredLink, LinkResult } from '../types';
 import { toast } from 'sonner';
 import ResultCard from './ResultCard';
 
+interface SavedLinksPageProps {
+  searchInputRef?: React.RefObject<HTMLInputElement | null>;
+}
+
+export interface SavedLinksPageHandle {
+  scrollToBoundary: (target: 'top' | 'bottom') => void;
+}
+
 function filterSavedLinks(
   sourceLinks: StoredLink[],
   searchQuery: string,
@@ -65,7 +73,7 @@ function formatSavedDate(dateValue?: string | number | Date) {
   }).format(date);
 }
 
-export default function SavedLinksPage() {
+const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProps>(function SavedLinksPage({ searchInputRef }, ref) {
   const [links, setLinks] = useState<StoredLink[]>([]);
   const [allLinks, setAllLinks] = useState<StoredLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -225,11 +233,12 @@ export default function SavedLinksPage() {
     };
   }, [updateScrollJumpState]);
 
-  const handleScrollJump = () => {
+  const scrollToBoundary = useCallback((target: 'top' | 'bottom') => {
     const container = resultsScrollRef.current;
-    const targetTop = scrollJumpTarget === 'top' ? 0 : Number.MAX_SAFE_INTEGER;
+    const containerMaxScrollTop = container ? container.scrollHeight - container.clientHeight : 0;
+    const targetTop = target === 'top' ? 0 : Number.MAX_SAFE_INTEGER;
 
-    if (scrollJumpContext === 'container' && container) {
+    if (containerMaxScrollTop > 24 && container) {
       container.scrollTo({
         top: targetTop,
         behavior: 'smooth'
@@ -241,7 +250,15 @@ export default function SavedLinksPage() {
       top: targetTop,
       behavior: 'smooth'
     });
+  }, []);
+
+  const handleScrollJump = () => {
+    scrollToBoundary(scrollJumpTarget);
   };
+
+  React.useImperativeHandle(ref, () => ({
+    scrollToBoundary,
+  }), [scrollToBoundary]);
 
   if (isLoading && links.length === 0) {
     return (
@@ -371,6 +388,7 @@ export default function SavedLinksPage() {
               <Search size={14} className="text-gray-400" />
             </div>
             <input
+              ref={searchInputRef}
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -556,4 +574,6 @@ export default function SavedLinksPage() {
       )}
     </div>
   );
-}
+});
+
+export default SavedLinksPage;

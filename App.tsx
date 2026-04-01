@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, Check, Github, FileUp, Database, Menu, X } from 'lucide-react';
+import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, FileUp, Database, Menu, X, Keyboard } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import StatsWidget from './components/StatsWidget';
 import ResultCard from './components/ResultCard';
 import SavedLinksPage from './components/SavedLinksPage';
+import type { SavedLinksPageHandle } from './components/SavedLinksPage';
 import { checkBulkLinks, checkSingleLink } from './services/api';
 import { LinkResult } from './types';
 import { Toaster, toast } from 'sonner';  
@@ -20,6 +21,38 @@ const emptyMessages: Record<string, string> = {
   mega: 'No Mega.nz links detected.',
 };
 
+const shortcutGroups = [
+  {
+    title: 'Navigation',
+    items: [
+      { keys: ['Alt', '1'], description: 'Open the validator' },
+      { keys: ['Alt', '2'], description: 'Open saved links' },
+      { keys: ['Alt', 'B'], description: 'Switch to bulk validator' },
+      { keys: ['Alt', 'Q'], description: 'Switch to quick check' },
+    ],
+  },
+  {
+    title: 'Actions',
+    items: [
+      { keys: ['/'], description: 'Focus the main input or search box' },
+      { keys: ['Ctrl/Cmd', 'Enter'], description: 'Run validation' },
+      { keys: ['Ctrl', 'ArrowUp'], description: 'Scroll to the top' },
+      { keys: ['Ctrl', 'ArrowDown'], description: 'Scroll to the bottom' },
+      { keys: ['E'], description: 'Open export when results are visible' },
+      { keys: ['T'], description: 'Toggle theme' },
+      { keys: ['?'], description: 'Show or hide this shortcut list' },
+      { keys: ['Esc'], description: 'Close open menus and panels' },
+    ],
+  },
+];
+
+function isTypingTarget(target: EventTarget | null) {
+  const element = target instanceof HTMLElement ? target : null;
+  if (!element) return false;
+
+  return element.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName);
+}
+
 function App() {
   const [currentView, setCurrentView] = useState<'home' | 'saved'>('home');
   const [mode, setMode] = useState<'bulk' | 'single'>('bulk');
@@ -34,7 +67,15 @@ function App() {
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const copyMenuRef = useRef<HTMLDivElement>(null);
+  const bulkInputRef = useRef<HTMLTextAreaElement>(null);
+  const singleInputRef = useRef<HTMLInputElement>(null);
+  const savedSearchInputRef = useRef<HTMLInputElement>(null);
+  const savedLinksPageRef = useRef<SavedLinksPageHandle>(null);
+  const themeToggleRef = useRef<HTMLButtonElement>(null);
+  const exportButtonRef = useRef<HTMLButtonElement>(null);
+  const homeResultsScrollRef = useRef<HTMLDivElement>(null);
 
   // ── Restore last results from localStorage on mount ──
   useEffect(() => {
@@ -84,29 +125,7 @@ function App() {
     };
   }, []);
 
-  // ── Keyboard shortcuts: Ctrl+Enter → validate, Escape → close export ──
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      // Escape closes export dropdown
-      if (e.key === 'Escape') {
-        setCopyMenuOpen(false);
-        setIsMobileNavOpen(false);
-        return;
-      }
-      // Ctrl/Cmd + Enter triggers validation
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (mode === 'bulk') {
-          if (bulkInput.trim() && !isChecking) handleBulkCheck();
-        } else {
-          if (singleInput.trim() && !isChecking) handleSingleCheck();
-        }
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [mode, bulkInput, singleInput, isChecking]);
-
+  // Close the mobile drawer when switching views
   useEffect(() => {
     setIsMobileNavOpen(false);
   }, [currentView]);
@@ -207,6 +226,85 @@ function App() {
     setHasChecked(false);
     setCheckingProgress({ current: 0, total: 0 });
   };
+
+  const focusTarget = useCallback((target: 'bulk' | 'single' | 'saved') => {
+    requestAnimationFrame(() => {
+      if (target === 'bulk') {
+        bulkInputRef.current?.focus();
+        return;
+      }
+
+      if (target === 'single') {
+        singleInputRef.current?.focus();
+        return;
+      }
+
+      savedSearchInputRef.current?.focus();
+    });
+  }, []);
+
+  const focusPrimaryInput = useCallback(() => {
+    if (currentView === 'saved') {
+      focusTarget('saved');
+      return;
+    }
+
+    focusTarget(mode === 'bulk' ? 'bulk' : 'single');
+  }, [currentView, focusTarget, mode]);
+
+  const openValidatorView = useCallback((nextMode: 'bulk' | 'single' = mode) => {
+    setCurrentView('home');
+    setMode(nextMode);
+    setCopyMenuOpen(false);
+    setShowShortcuts(false);
+    focusTarget(nextMode);
+  }, [focusTarget, mode]);
+
+  const openSavedView = useCallback(() => {
+    setCurrentView('saved');
+    setCopyMenuOpen(false);
+    setShowShortcuts(false);
+    focusTarget('saved');
+  }, [focusTarget]);
+
+  const runValidation = useCallback(() => {
+    if (currentView !== 'home' || isChecking) return;
+
+    if (mode === 'bulk') {
+      if (bulkInput.trim()) {
+        void handleBulkCheck();
+      }
+      return;
+    }
+
+    if (singleInput.trim()) {
+      void handleSingleCheck();
+    }
+  }, [bulkInput, currentView, isChecking, mode, singleInput]);
+
+  const scrollToBoundary = useCallback((target: 'top' | 'bottom') => {
+    if (currentView === 'saved') {
+      savedLinksPageRef.current?.scrollToBoundary(target);
+      return;
+    }
+
+    const container = homeResultsScrollRef.current;
+    const containerMaxScrollTop = container ? container.scrollHeight - container.clientHeight : 0;
+    const targetTop = target === 'top' ? 0 : Number.MAX_SAFE_INTEGER;
+
+    if (containerMaxScrollTop > 24 && container) {
+      container.scrollTo({
+        top: targetTop,
+        behavior: 'smooth'
+      });
+      return;
+    }
+
+    window.scrollTo({
+      top: targetTop,
+      behavior: 'smooth'
+    });
+  }, [currentView]);
 
   const validCount = results.filter(r => r.status === 'valid').length;
   const invalidCount = results.filter(r => r.status === 'invalid').length;
@@ -361,6 +459,87 @@ function App() {
     }
   }, []);
 
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      const key = event.key.toLowerCase();
+
+      if (event.key === 'Escape') {
+        setCopyMenuOpen(false);
+        setIsMobileNavOpen(false);
+        setShowShortcuts(false);
+        return;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+        event.preventDefault();
+        runValidation();
+        return;
+      }
+
+      if (isTypingTarget(event.target)) {
+        return;
+      }
+
+      if (event.key === '?') {
+        event.preventDefault();
+        setShowShortcuts((prev) => !prev);
+        return;
+      }
+
+      if (!event.altKey && !event.ctrlKey && !event.metaKey && event.key === '/') {
+        event.preventDefault();
+        focusPrimaryInput();
+        return;
+      }
+
+      if (event.ctrlKey && !event.altKey && !event.metaKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+        event.preventDefault();
+        scrollToBoundary(event.key === 'ArrowUp' ? 'top' : 'bottom');
+        return;
+      }
+
+      if (event.altKey && !event.ctrlKey && !event.metaKey) {
+        if (key === '1') {
+          event.preventDefault();
+          openValidatorView();
+          return;
+        }
+
+        if (key === '2') {
+          event.preventDefault();
+          openSavedView();
+          return;
+        }
+
+        if (key === 'b') {
+          event.preventDefault();
+          openValidatorView('bulk');
+          return;
+        }
+
+        if (key === 'q') {
+          event.preventDefault();
+          openValidatorView('single');
+          return;
+        }
+      }
+
+      if (key === 't') {
+        event.preventDefault();
+        themeToggleRef.current?.click();
+        return;
+      }
+
+      if (key === 'e' && currentView === 'home' && hasChecked && results.length > 0) {
+        event.preventDefault();
+        exportButtonRef.current?.click();
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [currentView, focusPrimaryInput, hasChecked, openSavedView, openValidatorView, results.length, runValidation, scrollToBoundary]);
+
   return (
     <div className="min-h-screen w-full relative bg-white dark:bg-black font-sans selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
       <Toaster position="bottom-center" toastOptions={{
@@ -398,7 +577,16 @@ function App() {
               </div>
 
               <div className="flex items-center gap-2">
-                <ThemeToggle />
+                <button
+                  type="button"
+                  onClick={() => setShowShortcuts(true)}
+                  className="p-2 rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-all duration-200 hover:bg-gray-50 dark:hover:bg-[#111]"
+                  aria-label="Keyboard shortcuts"
+                  title="Keyboard shortcuts (?)"
+                >
+                  <Keyboard size={16} />
+                </button>
+                <ThemeToggle buttonRef={themeToggleRef} />
                 <GithubBtn />
                 <button
                   type="button"
@@ -524,6 +712,7 @@ function App() {
                     onDrop={handleDrop}
                   >
                     <textarea
+                      ref={bulkInputRef}
                       value={bulkInput}
                       onChange={(e) => setBulkInput(e.target.value)}
                       placeholder={`Paste your list here or drag a .txt file...\n\nhttps://t.me/channel1\nhttps://t.me/channel2`}
@@ -565,6 +754,7 @@ function App() {
                          <Link2 className="text-gray-400" size={16} />
                        </div>
                        <input
+                         ref={singleInputRef}
                          type="text"
                          value={singleInput}
                          onChange={(e) => setSingleInput(e.target.value)}
@@ -608,7 +798,7 @@ function App() {
             <div className="p-4 rounded-lg bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333]">
               <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-1">Pro Tip</h4>
               <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                Use the bulk validator to check lists of channels. We'll automatically filter out duplicate links for you. You can also drag & drop a <code className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">.txt</code> file, or press <kbd className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">Ctrl+Enter</kbd> to validate.
+                Use the bulk validator to check lists of channels. We&apos;ll automatically filter out duplicate links for you. You can also drag &amp; drop a <code className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">.txt</code> file, press <kbd className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">Ctrl/Cmd+Enter</kbd> to validate, tap <kbd className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">/</kbd> to jump to the main input, or press <kbd className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">?</kbd> for the full shortcut list.
               </p>
             </div>
           </div>
@@ -667,8 +857,10 @@ function App() {
                    <div className="flex gap-2">
                     <div className="relative" ref={copyMenuRef}>
                       <button 
+                        ref={exportButtonRef}
                         onClick={() => setCopyMenuOpen(!copyMenuOpen)}
                         className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-3 py-1.5 rounded-md flex items-center gap-1.5"
+                        title="Export results (E)"
                       >
                         <Link2 size={12} />
                         Export
@@ -743,7 +935,7 @@ function App() {
                     })}
                  </div>
 
-                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2 pb-10">
+                  <div ref={homeResultsScrollRef} className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2 pb-10">
                    {filteredResults.map((result, idx) => (
                      <ResultCard key={idx} result={result} />
                    ))}
@@ -760,9 +952,68 @@ function App() {
         </div>
 
         <div className={currentView === 'saved' ? 'block animate-fade-in' : 'hidden'}>
-          <SavedLinksPage />
+          <SavedLinksPage ref={savedLinksPageRef} searchInputRef={savedSearchInputRef} />
         </div>
       </main>
+
+      {showShortcuts && (
+        <div
+          className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setShowShortcuts(false)}
+        >
+          <div
+            className="w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-[#222] px-5 py-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+                  Keyboard Shortcuts
+                </p>
+                <h2 className="mt-1 text-lg font-semibold text-black dark:text-white">Move faster around TeleCheck Pro</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowShortcuts(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 dark:border-[#333] bg-gray-100/50 dark:bg-[#111]/50 text-gray-700 dark:text-gray-200 transition-colors hover:text-black dark:hover:text-white"
+                aria-label="Close keyboard shortcuts"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
+              {shortcutGroups.map((group) => (
+                <div
+                  key={group.title}
+                  className="rounded-xl border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] p-4"
+                >
+                  <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+                    {group.title}
+                  </h3>
+                  <div className="mt-4 space-y-3">
+                    {group.items.map((item) => (
+                      <div key={item.description} className="flex items-start justify-between gap-4">
+                        <p className="text-sm text-black dark:text-white">{item.description}</p>
+                        <div className="flex flex-wrap justify-end gap-1.5 shrink-0">
+                          {item.keys.map((keyLabel) => (
+                            <kbd
+                              key={`${item.description}-${keyLabel}`}
+                              className="min-w-7 rounded-md border border-gray-200 dark:border-[#333] bg-white dark:bg-black px-2 py-1 text-[11px] font-medium text-gray-700 dark:text-gray-200 text-center"
+                            >
+                              {keyLabel}
+                            </kbd>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

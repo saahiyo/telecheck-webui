@@ -6,7 +6,11 @@ const themeColors = {
   dark: '#020617',
 } as const;
 
-const ThemeToggle: React.FC = () => {
+interface ThemeToggleProps {
+  buttonRef?: React.Ref<HTMLButtonElement>;
+}
+
+const ThemeToggle: React.FC<ThemeToggleProps> = ({ buttonRef }) => {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   const syncThemeColor = (nextTheme: 'light' | 'dark') => {
@@ -50,9 +54,11 @@ const ThemeToggle: React.FC = () => {
 
   return (
     <button
+      ref={buttonRef}
       onClick={toggleTheme}
       className="p-2 rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-all duration-200 hover:bg-gray-50 dark:hover:bg-[#111]"
       aria-label="Toggle Theme"
+      title="Toggle theme (T)"
     >
       {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
     </button>
