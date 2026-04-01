@@ -36,6 +36,7 @@ export interface ThemeContextType {
 export interface StoredLink {
   id: number;
   url: string;
+  platform?: string;
   status?: string;
   title?: string;
   description?: string;

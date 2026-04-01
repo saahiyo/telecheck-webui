@@ -102,11 +102,18 @@ export const checkBulkLinks = async (links: string[]): Promise<LinkResult[]> => 
 
 export const fetchSavedLinks = async (limit = 50, offset = 0): Promise<import('../types').StoredLinkResponse> => {
   try {
-    const response = await fetch(`${BASE_URL}/links?limit=${limit}&offset=${offset}`);
+    const response = await fetch(`${BASE_URL}/links?platform=telegram&limit=${limit}&offset=${offset}`);
     if (!response.ok) {
       throw new Error('Failed to fetch saved links');
     }
-    return await response.json();
+    const data = await response.json();
+
+    return {
+      ...data,
+      links: Array.isArray(data.links)
+        ? data.links.filter((link: import('../types').StoredLink) => !link.platform || link.platform === 'telegram')
+        : []
+    };
   } catch (error) {
     console.error('Error fetching saved links:', error);
     return { total: 0, limit, offset, links: [] };

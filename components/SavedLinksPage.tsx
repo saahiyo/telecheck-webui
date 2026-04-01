@@ -13,10 +13,19 @@ export interface SavedLinksPageHandle {
   scrollToBoundary: (target: 'top' | 'bottom') => void;
 }
 
+type SavedFilter = 'all' | 'with-description' | 'with-image' | 'with-members' | 'recent';
+type SavedSort = 'recently-updated' | 'recently-added' | 'random';
+
+const SORT_CHIPS: Array<{ value: SavedSort; label: string; shortLabel: string }> = [
+  { value: 'recently-updated', label: 'Recently Updated', shortLabel: 'Updated' },
+  { value: 'recently-added', label: 'Recently Added', shortLabel: 'Added' },
+  { value: 'random', label: 'Random', shortLabel: 'Random' },
+];
+
 function filterSavedLinks(
   sourceLinks: StoredLink[],
   searchQuery: string,
-  savedFilter: 'all' | 'with-description' | 'with-image' | 'with-members' | 'recent'
+  savedFilter: SavedFilter
 ) {
   return sourceLinks.filter((link) => {
     const matchesFilter =
@@ -73,6 +82,51 @@ function formatSavedDate(dateValue?: string | number | Date) {
   }).format(date);
 }
 
+function getSortableTimestamp(dateValue?: string | number | Date) {
+  if (!dateValue) return 0;
+
+  const timestamp = new Date(dateValue).getTime();
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+function getRandomWeight(link: StoredLink, seed: number) {
+  const input = `${seed}:${link.id ?? 'no-id'}:${link.url}`;
+  let hash = 2166136261;
+
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function sortSavedLinks(sourceLinks: StoredLink[], savedSort: SavedSort, randomSeed: number) {
+  const sortedLinks = [...sourceLinks];
+
+  if (savedSort === 'recently-updated') {
+    return sortedLinks.sort((left, right) => {
+      const checkedAtDiff = getSortableTimestamp(right.checked_at) - getSortableTimestamp(left.checked_at);
+      if (checkedAtDiff !== 0) return checkedAtDiff;
+      return (right.id ?? 0) - (left.id ?? 0);
+    });
+  }
+
+  if (savedSort === 'recently-added') {
+    return sortedLinks.sort((left, right) => {
+      const idDiff = (right.id ?? 0) - (left.id ?? 0);
+      if (idDiff !== 0) return idDiff;
+      return getSortableTimestamp(right.checked_at) - getSortableTimestamp(left.checked_at);
+    });
+  }
+
+  return sortedLinks.sort((left, right) => {
+    const weightDiff = getRandomWeight(left, randomSeed) - getRandomWeight(right, randomSeed);
+    if (weightDiff !== 0) return weightDiff;
+    return (right.id ?? 0) - (left.id ?? 0);
+  });
+}
+
 const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProps>(function SavedLinksPage({ searchInputRef }, ref) {
   const [links, setLinks] = useState<StoredLink[]>([]);
   const [allLinks, setAllLinks] = useState<StoredLink[]>([]);
@@ -82,7 +136,9 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
-  const [savedFilter, setSavedFilter] = useState<'all' | 'with-description' | 'with-image' | 'with-members' | 'recent'>('all');
+  const [savedFilter, setSavedFilter] = useState<SavedFilter>('all');
+  const [savedSort, setSavedSort] = useState<SavedSort>('recently-updated');
+  const [randomSeed, setRandomSeed] = useState(() => Date.now());
   const [searchScope, setSearchScope] = useState<'page' | 'all'>('page');
   const [showScrollJump, setShowScrollJump] = useState(false);
   const [scrollJumpTarget, setScrollJumpTarget] = useState<'top' | 'bottom'>('bottom');
@@ -146,6 +202,14 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     await loadLinks(page);
   };
 
+  const handleSortChange = (nextSort: SavedSort) => {
+    if (nextSort === 'random') {
+      setRandomSeed(Date.now());
+    }
+
+    setSavedSort(nextSort);
+  };
+
   const handleValidate = async () => {
     if (links.length === 0) return;
     setIsValidating(true);
@@ -184,6 +248,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
   const sourceLinks = searchScope === 'all' ? allLinks : links;
   const filteredLinks = filterSavedLinks(sourceLinks, searchQuery, savedFilter);
+  const sortedLinks = sortSavedLinks(filteredLinks, savedSort, randomSeed);
   const isSearchAllMode = searchScope === 'all';
   const hasPagination = !isSearchAllMode && total > PAGE_SIZE;
   const savedLinksSummary = getSavedLinksSummary(
@@ -500,12 +565,34 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         </div>
       ) : (
         <div className="flex-1 flex flex-col min-h-0 relative">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+              Sort
+            </span>
+            {SORT_CHIPS.map((chip) => (
+              <button
+                key={chip.value}
+                type="button"
+                onClick={() => handleSortChange(chip.value)}
+                aria-pressed={savedSort === chip.value}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                  savedSort === chip.value
+                    ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
+                }`}
+              >
+                <span className="sm:hidden">{chip.shortLabel}</span>
+                <span className="hidden sm:inline">{chip.label}</span>
+              </button>
+            ))}
+          </div>
+
           <div
             ref={resultsScrollRef}
             onScroll={updateScrollJumpState}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto pb-4 pr-1 custom-scrollbar"
           >
-            {filteredLinks.map((savedLink, idx) => {
+            {sortedLinks.map((savedLink, idx) => {
               // Adapt StoredLink to LinkResult for ResultCard
               const adaptedResult: LinkResult = {
                 link: savedLink.url,
