@@ -12,6 +12,7 @@ import { LinkResult } from './types';
 import { Toaster, toast } from 'sonner';  
 import GithubBtn from './components/GithubBtn';
 import { URL_REGEX, isMegaLink, extractUrls, deduplicateLinks } from './utils/helpers';
+import { copyText } from './utils/clipboard';
 
 const STORAGE_KEY = 'telecheck_last_results';
 
@@ -319,7 +320,7 @@ function App() {
     return r.status === filter;
   });
 
-  const handleCopy = (type: 'numbered' | 'gap' | 'plain' | 'original' | 'withTitle') => {
+  const handleCopy = async (type: 'numbered' | 'gap' | 'plain' | 'original' | 'withTitle') => {
     try {
       let text = '';
       const title = filter === 'all' ? 'All Links' : `${filter.charAt(0).toUpperCase() + filter.slice(1)} Links`;
@@ -396,7 +397,7 @@ function App() {
         return;
       }
 
-      navigator.clipboard.writeText(text);
+      await copyText(text);
       toast.success('Copied to clipboard');
       setCopyMenuOpen(false);
     } catch (err) {
@@ -884,7 +885,7 @@ function App() {
                           ].map((item) => (
                              <button 
                               key={item.id}
-                              onClick={() => handleCopy(item.id as any)}
+                              onClick={() => void handleCopy(item.id as any)}
                               className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#222] hover:text-black dark:hover:text-white transition-colors"
                             >
                               {item.label}

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { LinkResult } from '../types';
 import { X, ExternalLink, Copy, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { copyText } from '../utils/clipboard';
 
 interface ResultCardProps {
   result: LinkResult;
@@ -46,9 +47,13 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isPreviewOpen]);
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(result.link);
-    toast.success('Link copied');
+  const copyToClipboard = async () => {
+    try {
+      await copyText(result.link);
+      toast.success('Link copied');
+    } catch {
+      toast.error('Failed to copy link');
+    }
   };
 
   const previewModal = isPreviewOpen ? (
@@ -124,7 +129,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={copyToClipboard}
+              onClick={() => void copyToClipboard()}
               className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-[#333] bg-white dark:bg-black text-sm font-medium text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] transition-colors flex items-center justify-center gap-2"
             >
               <Copy size={14} />
@@ -196,7 +201,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
             <Eye size={14} />
           </button>
           <button
-            onClick={copyToClipboard}
+            onClick={() => void copyToClipboard()}
             className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
             title="Copy Link"
           >
