@@ -1,6 +1,8 @@
 import { LinkResult, StatsData } from '../types';
 
-const BASE_URL = 'https://telecheck.vercel.app';
+const BASE_URL =
+  process.env.NEXT_PUBLIC_TELECHECK_API_URL?.replace(/\/$/, '') ||
+  'https://telecheck.vercel.app';
 
 export const fetchStats = async (): Promise<StatsData> => {
   try {

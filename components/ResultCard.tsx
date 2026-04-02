@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { LinkResult } from '../types';
 import { X, ExternalLink, Copy, Eye } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,6 +11,7 @@ interface ResultCardProps {
 const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
   const status = result.status?.toLowerCase();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const details = result.details || {};
   const previewFields = [
     { label: 'Description', value: details.description },
@@ -28,6 +30,10 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
   else if (status === 'mega') statusColor = 'bg-blue-500';
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (!isPreviewOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -44,6 +50,100 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
     navigator.clipboard.writeText(result.link);
     toast.success('Link copied');
   };
+
+  const previewModal = isPreviewOpen ? (
+    <div
+      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={() => setIsPreviewOpen(false)}
+    >
+      <div
+        className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 p-5 border-b border-gray-100 dark:border-[#222]">
+          <div className="flex items-center gap-3 min-w-0">
+            {details.image ? (
+              <div className="w-14 h-14 shrink-0 overflow-hidden rounded-full border border-gray-200 dark:border-[#333]">
+                <img
+                  src={details.image}
+                  alt="Channel Image"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-14 h-14 shrink-0 rounded-full border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111]" />
+            )}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <div className={`w-2 h-2 rounded-full ${statusColor} shrink-0`}></div>
+                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  {result.reason || status}
+                </span>
+              </div>
+              <h3 className="text-lg font-semibold text-black dark:text-white break-words">
+                {details.title || 'Link Preview'}
+              </h3>
+            </div>
+          </div>
+          <button
+            onClick={() => setIsPreviewOpen(false)}
+            className="p-2 text-gray-400 hover:text-black dark:hover:text-white rounded-md transition-colors"
+            title="Close"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="rounded-xl border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] p-4">
+            <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+              Telegram Link
+            </p>
+            <p className="text-sm text-black dark:text-white break-all">
+              {result.link}
+            </p>
+          </div>
+
+          {previewFields.length > 0 && (
+            <div className="space-y-3">
+              {previewFields.map((field) => (
+                <div
+                  key={field.label}
+                  className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between border-b border-gray-100 dark:border-[#1a1a1a] pb-3 last:border-b-0 last:pb-0"
+                >
+                  <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider sm:w-28 shrink-0">
+                    {field.label}
+                  </p>
+                  <p className="text-sm text-black dark:text-white break-words sm:text-right">
+                    {String(field.value)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={copyToClipboard}
+              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-[#333] bg-white dark:bg-black text-sm font-medium text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] transition-colors flex items-center justify-center gap-2"
+            >
+              <Copy size={14} />
+              Copy Link
+            </button>
+            <a
+              href={result.link.startsWith('http') ? result.link : `https://${result.link}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 px-4 py-2.5 rounded-lg bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
+            >
+              <ExternalLink size={14} />
+              Open Link
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   return (
     <div className="group relative bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-[#333] p-2.5 transition-all hover:bg-gray-50 dark:hover:bg-[#111]">
@@ -105,99 +205,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
         </div>
       </div>
 
-      {isPreviewOpen && (
-        <div
-          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setIsPreviewOpen(false)}
-        >
-          <div
-            className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4 p-5 border-b border-gray-100 dark:border-[#222]">
-              <div className="flex items-center gap-3 min-w-0">
-                {details.image ? (
-                  <div className="w-14 h-14 shrink-0 overflow-hidden rounded-full border border-gray-200 dark:border-[#333]">
-                    <img
-                      src={details.image}
-                      alt="Channel Image"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-14 h-14 shrink-0 rounded-full border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111]" />
-                )}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className={`w-2 h-2 rounded-full ${statusColor} shrink-0`}></div>
-                    <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      {result.reason || status}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-black dark:text-white break-words">
-                    {details.title || 'Link Preview'}
-                  </h3>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsPreviewOpen(false)}
-                className="p-2 text-gray-400 hover:text-black dark:hover:text-white rounded-md transition-colors"
-                title="Close"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <div className="rounded-xl border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] p-4">
-                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                  Telegram Link
-                </p>
-                <p className="text-sm text-black dark:text-white break-all">
-                  {result.link}
-                </p>
-              </div>
-
-              {previewFields.length > 0 && (
-                <div className="space-y-3">
-                  {previewFields.map((field) => (
-                    <div
-                      key={field.label}
-                      className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between border-b border-gray-100 dark:border-[#1a1a1a] pb-3 last:border-b-0 last:pb-0"
-                    >
-                      <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider sm:w-28 shrink-0">
-                        {field.label}
-                      </p>
-                      <p className="text-sm text-black dark:text-white break-words sm:text-right">
-                        {String(field.value)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={copyToClipboard}
-                  className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-[#333] bg-white dark:bg-black text-sm font-medium text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] transition-colors flex items-center justify-center gap-2"
-                >
-                  <Copy size={14} />
-                  Copy Link
-                </button>
-                <a
-                  href={result.link.startsWith('http') ? result.link : `https://${result.link}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 px-4 py-2.5 rounded-lg bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
-                >
-                  <ExternalLink size={14} />
-                  Open Link
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {mounted && previewModal ? createPortal(previewModal, document.body) : null}
     </div>
   );
 };

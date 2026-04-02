@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, FileUp, Database, Menu, X, Keyboard } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
@@ -759,8 +761,8 @@ function App() {
                          value={singleInput}
                          onChange={(e) => setSingleInput(e.target.value)}
                          placeholder="https://t.me/username"
-                         className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm font-medium"
-                       />
+                         className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm font-medium text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                        />
                        <div className="absolute inset-y-0 right-0 pr-2 flex items-center">
                          <button
                            type="button"

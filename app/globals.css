@@ -1,7 +1,15 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2') format('woff2');
+}
+
 @theme {
-  --font-sans: 'Inter', 'sans-serif';
+  --font-sans: 'Inter', sans-serif;
 
   --color-glass-100: rgba(255, 255, 255, 0.1);
   --color-glass-200: rgba(255, 255, 255, 0.2);
@@ -14,13 +22,13 @@
     0% { opacity: 0; }
     100% { opacity: 1; }
   }
+
   @keyframes slideUp {
     0% { opacity: 0; transform: translateY(10px); }
     100% { opacity: 1; transform: translateY(0); }
   }
 }
 
-/* Enable class-based dark mode */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
@@ -29,24 +37,28 @@
   }
 }
 
-/* Custom Scrollbar for sleek look */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #e5e5e5;
   border-radius: 3px;
 }
+
 .dark ::-webkit-scrollbar-thumb {
   background: #333;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #d4d4d4;
 }
+
 .dark ::-webkit-scrollbar-thumb:hover {
   background: #555;
 }
@@ -56,6 +68,7 @@
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
+
 .dark .glass-panel {
   background: rgba(15, 23, 42, 0.6);
 }
