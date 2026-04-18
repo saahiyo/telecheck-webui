@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import debounce from 'lodash.debounce';
 import { fetchSavedLinks, validateSavedLinks } from '../services/api';
 import { StoredLink, LinkResult } from '../types';
 import { toast } from 'sonner';
 import ResultCard from './ResultCard';
+import LinkCopyModal from './LinkCopyModal';
 
 interface SavedLinksPageProps {
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
@@ -109,6 +110,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [showScrollJump, setShowScrollJump] = useState(false);
   const [scrollJumpTarget, setScrollJumpTarget] = useState<'top' | 'bottom'>('bottom');
   const [scrollJumpContext, setScrollJumpContext] = useState<'container' | 'window'>('window');
+  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
   const resultsScrollRef = useRef<HTMLDivElement | null>(null);
   const PAGE_SIZE = 100;
 
@@ -342,6 +344,15 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         
         <div className="flex items-center gap-2 shrink-0 sm:hidden">
           <button 
+            onClick={() => setIsCopyModalOpen(true)}
+            disabled={links.length === 0}
+            title="Copy links"
+            aria-label="Copy links"
+            className="h-10 w-10 bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
+          >
+            <Copy size={15} />
+          </button>
+          <button 
             onClick={handleRefresh}
             disabled={isLoading || isValidating}
             title="Refresh saved links"
@@ -371,6 +382,14 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         </div>
 
         <div className="hidden sm:flex sm:items-center sm:gap-2 shrink-0">
+          <button
+            onClick={() => setIsCopyModalOpen(true)}
+            disabled={links.length === 0}
+            className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
+          >
+            <Copy size={14} />
+            <span>Copy Links</span>
+          </button>
           <button
             onClick={handleRefresh}
             disabled={isLoading || isValidating}
@@ -607,6 +626,13 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           )}
         </div>
       )}
+
+      <LinkCopyModal
+        isOpen={isCopyModalOpen}
+        onClose={() => setIsCopyModalOpen(false)}
+        links={sortedLinks}
+        totalInDb={total}
+      />
     </div>
   );
 });
