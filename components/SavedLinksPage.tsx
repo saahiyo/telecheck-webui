@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown } from 'lucide-react';
 import debounce from 'lodash.debounce';
-import { fetchSavedLinks, checkBulkLinks } from '../services/api';
+import { fetchSavedLinks, validateSavedLinks } from '../services/api';
 import { StoredLink, LinkResult } from '../types';
 import { toast } from 'sonner';
 import ResultCard from './ResultCard';
@@ -179,34 +179,24 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const handleValidate = async () => {
     if (links.length === 0) return;
     setIsValidating(true);
-    const toastId = toast.loading('Re-validating stored links. Please wait...');
+    const toastId = toast.loading('Re-validating stored links and removing expired ones...');
     
     try {
-      // Extract URLs from current links
-      const urls = links.map(l => l.url);
+      const result = await validateSavedLinks({ limit: 'all' });
       
-      // We can chunk them in batches of 100 to avoid overwhelming the server
-      const BATCH_SIZE = 100;
-      let validUrls = new Set<string>();
-      
-      for (let i = 0; i < urls.length; i += BATCH_SIZE) {
-        const batch = urls.slice(i, i + BATCH_SIZE);
-        const batchResults = await checkBulkLinks(batch);
-        
-        batchResults.forEach(r => {
-          if (r.status === 'valid' || r.status === 'mega') {
-            validUrls.add(r.link);
-          }
-        });
-      }
-      
-      // Keep only those whose url is in validUrls
-      const freshValidLinks = links.filter(l => validUrls.has(l.url));
-      
-      setLinks(freshValidLinks);
-      toast.success(`Validation complete! Kept ${freshValidLinks.length} valid links out of ${links.length}.`, { id: toastId });
+      const skipped = result.skipped || 0;
+      const msg = skipped > 0
+        ? `Kept ${result.kept}, removed ${result.deleted}, skipped ${skipped} (unreachable).`
+        : `Kept ${result.kept} links, removed ${result.deleted} expired links.`;
+
+      toast.success(`Validation complete! ${msg}`,
+        { id: toastId }
+      );
+
+      // Refresh links from DB to reflect deletions
+      await loadLinks(page, debouncedSearchQuery);
     } catch (error) {
-      toast.error('An error occurred during bulk validation.', { id: toastId });
+      toast.error('An error occurred during validation.', { id: toastId });
     } finally {
       setIsValidating(false);
     }

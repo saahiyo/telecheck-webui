@@ -107,6 +107,45 @@ export const checkBulkLinks = async (
 };
 
 // --------------------------------------------
+// VALIDATE SAVED LINKS (re-check + delete expired from DB)
+// --------------------------------------------
+export const validateSavedLinks = async ({
+  platform,
+  limit = '100',
+  offset = 0
+}: {
+  platform?: string;
+  limit?: string;
+  offset?: number;
+} = {}): Promise<{
+  processed: number;
+  kept: number;
+  deleted: number;
+  skipped?: number;
+  details?: Array<{ url: string; action: string; status: string }>;
+}> => {
+  try {
+    const params = new URLSearchParams({
+      limit: limit,
+      offset: String(offset)
+    });
+
+    if (platform) params.set('platform', platform);
+
+    const response = await fetch(`${BASE_URL}/links/validate?${params.toString()}`, {
+      method: 'POST'
+    });
+
+    if (!response.ok) throw new Error('Failed to validate links');
+
+    return await response.json();
+  } catch (error) {
+    console.error('Validate links error:', error);
+    throw error;
+  }
+};
+
+// --------------------------------------------
 // SAVED LINKS (with search + abort control)
 // --------------------------------------------
 
