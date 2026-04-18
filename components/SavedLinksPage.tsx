@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown } from 'lucide-react';
 import debounce from 'lodash.debounce';
 import { fetchSavedLinks, validateSavedLinks } from '../services/api';
 import { StoredLink, LinkResult } from '../types';
@@ -179,7 +179,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const handleValidate = async () => {
     if (links.length === 0) return;
     setIsValidating(true);
-    const toastId = toast.loading('Re-validating stored links and removing expired ones...');
+    const toastId = toast.loading('Re-validating ALL stored links and removing expired ones...');
     
     try {
       const result = await validateSavedLinks({ limit: 'all' });
@@ -197,6 +197,36 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       await loadLinks(page, debouncedSearchQuery);
     } catch (error) {
       toast.error('An error occurred during validation.', { id: toastId });
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  const handleValidatePage = async () => {
+    if (links.length === 0) return;
+    setIsValidating(true);
+    const offset = (page - 1) * PAGE_SIZE;
+    const toastId = toast.loading(`Validating ${links.length} links on this page...`);
+    
+    try {
+      const result = await validateSavedLinks({
+        limit: String(PAGE_SIZE),
+        offset
+      });
+      
+      const skipped = result.skipped || 0;
+      const msg = skipped > 0
+        ? `Kept ${result.kept}, removed ${result.deleted}, skipped ${skipped} (unreachable).`
+        : `Kept ${result.kept} links, removed ${result.deleted} expired links.`;
+
+      toast.success(`Page validated! ${msg}`,
+        { id: toastId }
+      );
+
+      // Refresh current page
+      await loadLinks(page, debouncedSearchQuery);
+    } catch (error) {
+      toast.error('An error occurred during page validation.', { id: toastId });
     } finally {
       setIsValidating(false);
     }
@@ -321,10 +351,19 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} />
           </button>
           <button 
+            onClick={handleValidatePage}
+            disabled={isValidating || links.length === 0}
+            title="Validate this page"
+            aria-label="Validate this page"
+            className="h-10 w-10 bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
+          >
+            {isValidating ? <Loader2 size={15} className="animate-spin" /> : <ListChecks size={15} />}
+          </button>
+          <button 
             onClick={handleValidate}
             disabled={isValidating || links.length === 0}
-            title={isValidating ? 'Validating loaded links' : 'Validate loaded links'}
-            aria-label={isValidating ? 'Validating loaded links' : 'Validate loaded links'}
+            title={isValidating ? 'Validating...' : 'Validate all links'}
+            aria-label={isValidating ? 'Validating...' : 'Validate all links'}
             className="h-10 w-10 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
           >
             {isValidating ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
@@ -339,6 +378,14 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           >
             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
             <span>Refresh</span>
+          </button>
+          <button
+            onClick={handleValidatePage}
+            disabled={isValidating || links.length === 0}
+            className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
+          >
+            {isValidating ? <Loader2 size={14} className="animate-spin" /> : <ListChecks size={14} />}
+            <span>Validate Page</span>
           </button>
           <button
             onClick={handleValidate}
