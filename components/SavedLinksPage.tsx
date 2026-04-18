@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, Globe2, ArrowUp, ArrowDown } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown } from 'lucide-react';
+import debounce from 'lodash.debounce';
 import { fetchSavedLinks, checkBulkLinks } from '../services/api';
 import { StoredLink, LinkResult } from '../types';
 import { toast } from 'sonner';
@@ -22,51 +23,17 @@ const SORT_CHIPS: Array<{ value: SavedSort; label: string; shortLabel: string }>
   { value: 'random', label: 'Random', shortLabel: 'Random' },
 ];
 
-function filterSavedLinks(
-  sourceLinks: StoredLink[],
-  searchQuery: string,
-  savedFilter: SavedFilter
-) {
+// Client-side filter for metadata attributes (not search — search is server-side)
+function filterByMetadata(sourceLinks: StoredLink[], savedFilter: SavedFilter) {
+  if (savedFilter === 'all') return sourceLinks;
+
   return sourceLinks.filter((link) => {
-    const matchesFilter =
-      savedFilter === 'all' ||
-      (savedFilter === 'with-description' && !!link.description?.trim()) ||
-      (savedFilter === 'with-image' && !!link.image?.trim()) ||
-      (savedFilter === 'with-members' && typeof link.member_count === 'number' && link.member_count > 0) ||
-      (savedFilter === 'recent' && !!link.checked_at);
-    const query = searchQuery.trim().toLowerCase();
-
-    if (!matchesFilter) return false;
-    if (!query) return true;
-
-    return [
-      link.url,
-      link.title,
-      link.description,
-      link.status,
-      link.member_count?.toString()
-    ]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(query));
+    if (savedFilter === 'with-description') return !!link.description?.trim();
+    if (savedFilter === 'with-image') return !!link.image?.trim();
+    if (savedFilter === 'with-members') return typeof link.member_count === 'number' && link.member_count > 0;
+    if (savedFilter === 'recent') return !!link.checked_at;
+    return true;
   });
-}
-
-function getSavedLinksSummary(
-  isSearchAllMode: boolean,
-  filteredCount: number,
-  loadedCount: number,
-  totalCount: number,
-  sourceCount: number
-) {
-  if (isSearchAllMode) {
-    return `${filteredCount}/${sourceCount || totalCount} saved`;
-  }
-
-  if (totalCount > loadedCount) {
-    return `${filteredCount}/${loadedCount} loaded | ${totalCount} total`;
-  }
-
-  return `${filteredCount}/${loadedCount} loaded`;
 }
 
 function formatSavedDate(dateValue?: string | number | Date) {
@@ -129,77 +96,76 @@ function sortSavedLinks(sourceLinks: StoredLink[], savedSort: SavedSort, randomS
 
 const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProps>(function SavedLinksPage({ searchInputRef }, ref) {
   const [links, setLinks] = useState<StoredLink[]>([]);
-  const [allLinks, setAllLinks] = useState<StoredLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
-  const [isLoadingAll, setIsLoadingAll] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [savedFilter, setSavedFilter] = useState<SavedFilter>('all');
   const [savedSort, setSavedSort] = useState<SavedSort>('recently-updated');
   const [randomSeed, setRandomSeed] = useState(() => Date.now());
-  const [searchScope, setSearchScope] = useState<'page' | 'all'>('page');
   const [showScrollJump, setShowScrollJump] = useState(false);
   const [scrollJumpTarget, setScrollJumpTarget] = useState<'top' | 'bottom'>('bottom');
   const [scrollJumpContext, setScrollJumpContext] = useState<'container' | 'window'>('window');
   const resultsScrollRef = useRef<HTMLDivElement | null>(null);
   const PAGE_SIZE = 100;
 
-  const loadLinks = async (currentPage: number) => {
-    setIsLoading(true);
+  // Debounced handler: updates the query sent to the API after 300ms of inactivity
+  const debouncedSetSearch = useMemo(
+    () => debounce((q: string) => {
+      setDebouncedSearchQuery(q);
+      setPage(1); // Reset to first page on new search
+    }, 300),
+    []
+  );
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      debouncedSetSearch.cancel();
+    };
+  }, [debouncedSetSearch]);
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);            // Instant UI update
+    setIsSearching(true);             // Show inline spinner immediately
+    debouncedSetSearch(value);        // Delayed API call
+  };
+
+  const handleClearSearch = () => {
+    debouncedSetSearch.cancel();
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
+    setIsSearching(false);
+    setPage(1);
+  };
+
+  const loadLinks = async (currentPage: number, search: string) => {
+    // Only show full-page spinner if it's initial load (no data), otherwise keep cards visible
+    if (links.length === 0) setIsLoading(true);
     try {
       const offset = (currentPage - 1) * PAGE_SIZE;
-      const data = await fetchSavedLinks(PAGE_SIZE, offset);
+      const data = await fetchSavedLinks({ limit: PAGE_SIZE, offset, search });
       setLinks(data.links || []);
       setTotal(data.total || 0);
     } catch (error) {
       toast.error('Failed to load saved links from database.');
     } finally {
       setIsLoading(false);
+      setIsSearching(false);
     }
   };
 
   useEffect(() => {
-    loadLinks(page);
-  }, [page]);
-
-  useEffect(() => {
-    if (searchScope !== 'all' || allLinks.length > 0 || total === 0) return;
-
-    const loadAllLinks = async () => {
-      setIsLoadingAll(true);
-      try {
-        let combined: StoredLink[] = [];
-        let offset = 0;
-        let fetchedTotal = total;
-
-        while (offset < fetchedTotal) {
-          const data = await fetchSavedLinks(PAGE_SIZE, offset);
-          const batch = data.links || [];
-
-          combined = [...combined, ...batch];
-          fetchedTotal = data.total || fetchedTotal;
-
-          if (batch.length < PAGE_SIZE) break;
-          offset += PAGE_SIZE;
-        }
-
-        setAllLinks(combined);
-      } catch (error) {
-        toast.error('Failed to load all saved links.');
-        setSearchScope('page');
-      } finally {
-        setIsLoadingAll(false);
-      }
-    };
-
-    loadAllLinks();
-  }, [searchScope, allLinks.length, total]);
+    loadLinks(page, debouncedSearchQuery);
+  }, [page, debouncedSearchQuery]);
 
   const handleRefresh = async () => {
-    setAllLinks([]);
-    await loadLinks(page);
+    setIsLoading(true);
+    await loadLinks(page, debouncedSearchQuery);
   };
 
   const handleSortChange = (nextSort: SavedSort) => {
@@ -246,18 +212,24 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     }
   };
 
-  const sourceLinks = searchScope === 'all' ? allLinks : links;
-  const filteredLinks = filterSavedLinks(sourceLinks, searchQuery, savedFilter);
+  // Client-side: filter by metadata attributes only, search is handled server-side
+  const filteredLinks = filterByMetadata(links, savedFilter);
   const sortedLinks = sortSavedLinks(filteredLinks, savedSort, randomSeed);
-  const isSearchAllMode = searchScope === 'all';
-  const hasPagination = !isSearchAllMode && total > PAGE_SIZE;
-  const savedLinksSummary = getSavedLinksSummary(
-    isSearchAllMode,
-    filteredLinks.length,
-    links.length,
-    total,
-    sourceLinks.length
-  );
+  const hasPagination = total > PAGE_SIZE;
+
+  // Summary text
+  const savedLinksSummary = (() => {
+    if (debouncedSearchQuery) {
+      return `${filteredLinks.length} results for "${debouncedSearchQuery}" · ${total} matched`;
+    }
+    if (savedFilter !== 'all') {
+      return `${filteredLinks.length} filtered · ${links.length} loaded · ${total} total`;
+    }
+    if (total > links.length) {
+      return `${links.length}/${total} saved`;
+    }
+    return `${total} saved`;
+  })();
 
   const updateScrollJumpState = useCallback(() => {
     const container = resultsScrollRef.current;
@@ -284,7 +256,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
   useEffect(() => {
     updateScrollJumpState();
-  }, [filteredLinks.length, page, searchScope, savedFilter, searchQuery, updateScrollJumpState]);
+  }, [filteredLinks.length, page, savedFilter, searchQuery, updateScrollJumpState]);
 
   useEffect(() => {
     const handleResize = () => updateScrollJumpState();
@@ -390,79 +362,26 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="flex items-center justify-between gap-3 shrink-0 sm:hidden">
-          <div className="inline-flex items-center gap-1 p-1 bg-gray-100 dark:bg-[#111] rounded-lg border border-gray-200 dark:border-[#333]">
-            <button
-              onClick={() => setSearchScope('page')}
-              title="Search current page"
-              aria-label="Search current page"
-              aria-pressed={searchScope === 'page'}
-              className={`h-8 w-8 rounded-md flex items-center justify-center transition-all ${
-                searchScope === 'page'
-                  ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                  : 'text-gray-500 hover:text-black dark:hover:text-white'
-              }`}
-            >
-              <Layers size={14} />
-            </button>
-            <button
-              onClick={() => setSearchScope('all')}
-              title="Search all saved links"
-              aria-label="Search all saved links"
-              aria-pressed={searchScope === 'all'}
-              className={`h-8 w-8 rounded-md flex items-center justify-center transition-all ${
-                searchScope === 'all'
-                  ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                  : 'text-gray-500 hover:text-black dark:hover:text-white'
-              }`}
-            >
-              <Globe2 size={14} />
-            </button>
-          </div>
-          <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-            {isSearchAllMode ? 'All Links' : 'This Page'}
-          </span>
-        </div>
-
-        <div className="hidden sm:inline-flex p-1 bg-gray-100 dark:bg-[#111] rounded-lg border border-gray-200 dark:border-[#333] w-full sm:w-auto">
-          <button
-            onClick={() => setSearchScope('page')}
-            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              searchScope === 'page'
-                ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                : 'text-gray-500 hover:text-black dark:hover:text-white'
-            }`}
-          >
-            This Page
-          </button>
-          <button
-            onClick={() => setSearchScope('all')}
-            className={`flex-1 sm:flex-none px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-              searchScope === 'all'
-                ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
-                : 'text-gray-500 hover:text-black dark:hover:text-white'
-            }`}
-          >
-            Search All
-          </button>
-        </div>
-
         <div className="flex items-stretch gap-2 flex-1">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search size={14} className="text-gray-400" />
+              {isSearching ? (
+                <Loader2 size={14} className="text-gray-400 animate-spin" />
+              ) : (
+                <Search size={14} className="text-gray-400" />
+              )}
             </div>
             <input
               ref={searchInputRef}
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isSearchAllMode ? 'Search across all saved links' : 'Search this page by title, link, description, or member count'}
+              onChange={handleSearchChange}
+              placeholder="Search by title, link, or description..."
               className="w-full pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={handleClearSearch}
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-black dark:hover:text-white transition-colors"
                 title="Clear Search"
               >
@@ -512,35 +431,29 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         </div>
       </div>
 
-      {isSearchAllMode && (
-        <div className="mb-4 text-xs text-gray-500 dark:text-gray-400">
-          {isLoadingAll
-            ? 'Loading all saved links for global search...'
-            : `Global search is active across ${sourceLinks.length || total} saved links.`}
-        </div>
-      )}
-
-      {links.length === 0 ? (
+      {links.length === 0 && !isLoading ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border border-dashed border-gray-200 dark:border-[#333] rounded-xl bg-gray-50/50 dark:bg-[#111]/50">
           <div className="w-14 h-14 bg-white dark:bg-black border border-gray-100 dark:border-[#333] rounded-full flex items-center justify-center mb-4 shadow-sm">
-            <Layers size={24} className="text-gray-300 dark:text-gray-600" />
+            {debouncedSearchQuery ? (
+              <Search size={24} className="text-gray-300 dark:text-gray-600" />
+            ) : (
+              <Layers size={24} className="text-gray-300 dark:text-gray-600" />
+            )}
           </div>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1.5">No Links Found</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1.5">
+            {debouncedSearchQuery ? 'No Matches Found' : 'No Links Found'}
+          </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">
-            There are no valid links returned from the database, or they have all been filtered out.
+            {debouncedSearchQuery
+              ? `No results found for "${debouncedSearchQuery}". Try a different search term.`
+              : 'There are no valid links returned from the database.'}
           </p>
           <button 
-            onClick={handleRefresh}
+            onClick={debouncedSearchQuery ? handleClearSearch : handleRefresh}
             className="mt-6 text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-4 py-2 rounded-md"
           >
-            Refresh Database
+            {debouncedSearchQuery ? 'Clear Search' : 'Refresh Database'}
           </button>
-        </div>
-      ) : (isSearchAllMode && isLoadingAll) ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-12 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black min-h-80">
-          <Loader2 className="w-8 h-8 text-black dark:text-white animate-spin mb-4" />
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white">Preparing Global Search</h3>
-          <p className="text-xs text-gray-500 mt-1">Fetching all saved links so search can run across the full database.</p>
         </div>
       ) : filteredLinks.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border border-dashed border-gray-200 dark:border-[#333] rounded-xl bg-gray-50/50 dark:bg-[#111]/50">
@@ -549,13 +462,11 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           </div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1.5">No Matches Found</h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">
-            {isSearchAllMode
-              ? 'Try a different search term or change the filter to widen the results across all saved links.'
-              : 'Try a different search term or change the filter to widen the results on this page.'}
+            No links match the current filter. Try changing the filter to widen results.
           </p>
           <button
             onClick={() => {
-              setSearchQuery('');
+              handleClearSearch();
               setSavedFilter('all');
             }}
             className="mt-6 text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-4 py-2 rounded-md"

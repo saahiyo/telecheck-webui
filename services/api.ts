@@ -4,31 +4,36 @@ const BASE_URL =
   process.env.NEXT_PUBLIC_TELECHECK_API_URL?.replace(/\/$/, '') ||
   'https://telecheck.vercel.app';
 
+// --------------------------------------------
+// STATS
+// --------------------------------------------
 export const fetchStats = async (): Promise<StatsData> => {
   try {
     const response = await fetch(`${BASE_URL}/stats`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch stats');
-    }
+    if (!response.ok) throw new Error('Failed to fetch stats');
+
     return await response.json();
   } catch (error) {
     console.error('Error fetching stats:', error);
-    // Return empty stats/zeros on failure to prevent UI crash
     return { total_checked: 0, valid_links: 0, invalid_links: 0 };
   }
 };
 
+// --------------------------------------------
+// SINGLE LINK CHECK
+// --------------------------------------------
 export const checkSingleLink = async (link: string): Promise<LinkResult> => {
   try {
-    // Basic cleanup
     const cleanLink = link.trim();
-    const response = await fetch(`${BASE_URL}/?link=${encodeURIComponent(cleanLink)}`);
-    if (!response.ok) {
-      throw new Error('Failed to check link');
-    }
+
+    const response = await fetch(
+      `${BASE_URL}/?link=${encodeURIComponent(cleanLink)}`
+    );
+
+    if (!response.ok) throw new Error('Failed to check link');
+
     const data = await response.json();
 
-    // Normalize response if needed
     return {
       link: cleanLink,
       status: data.status?.toLowerCase() || 'unknown',
@@ -44,56 +49,55 @@ export const checkSingleLink = async (link: string): Promise<LinkResult> => {
   }
 };
 
-export const checkBulkLinks = async (links: string[]): Promise<LinkResult[]> => {
+// --------------------------------------------
+// BULK LINK CHECK
+// --------------------------------------------
+export const checkBulkLinks = async (
+  links: string[]
+): Promise<LinkResult[]> => {
   try {
-    // Filter empty lines
-    const cleanLinks = links.map(l => l.trim()).filter(l => l.length > 0);
-
-    if (cleanLinks.length === 0) return [];
+    const cleanLinks = links.map(l => l.trim()).filter(Boolean);
+    if (!cleanLinks.length) return [];
 
     const response = await fetch(`${BASE_URL}/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ links: cleanLinks }),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ links: cleanLinks })
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to validate links');
-    }
+    if (!response.ok) throw new Error('Failed to validate links');
 
     const data = await response.json();
 
-    // Handle different potential response structures safely
     let results: any[] = [];
 
     if (data.groups) {
-      // Handle new grouped structure
-      const valid = data.groups.valid || [];
-      const invalid = data.groups.invalid || [];
-      const unknown = data.groups.unknown || [];
-      results = [...valid, ...invalid, ...unknown];
+      results = [
+        ...(data.groups.valid || []),
+        ...(data.groups.invalid || []),
+        ...(data.groups.unknown || [])
+      ];
     } else if (Array.isArray(data)) {
       results = data;
-    } else if (data.results && Array.isArray(data.results)) {
+    } else if (Array.isArray(data.results)) {
       results = data.results;
     } else {
-      // Fallback if structure is unexpected
-      console.warn('Unexpected API response structure', data);
-      return cleanLinks.map(l => ({ link: l, status: 'unknown', reason: 'Invalid API response' }));
+      console.warn('Unexpected API response:', data);
+      return cleanLinks.map(l => ({
+        link: l,
+        status: 'unknown',
+        reason: 'Invalid API response'
+      }));
     }
 
-    return results.map((r: any) => ({
+    return results.map(r => ({
       link: r.link || r.url || 'Unknown Link',
       status: r.status?.toLowerCase() || 'unknown',
       reason: r.reason || r.message || undefined,
       details: r.metadata
     }));
-
   } catch (error) {
     console.error('Bulk check error:', error);
-    // Return all as unknown/error
     return links.map(l => ({
       link: l,
       status: 'unknown',
@@ -102,21 +106,56 @@ export const checkBulkLinks = async (links: string[]): Promise<LinkResult[]> => 
   }
 };
 
-export const fetchSavedLinks = async (limit = 50, offset = 0): Promise<import('../types').StoredLinkResponse> => {
+// --------------------------------------------
+// SAVED LINKS (with search + abort control)
+// --------------------------------------------
+
+// Global controller to cancel previous requests
+let controller: AbortController | null = null;
+
+export const fetchSavedLinks = async ({
+  limit = 50,
+  offset = 0,
+  platform = 'telegram',
+  search = ''
+}: {
+  limit?: number;
+  offset?: number;
+  platform?: string;
+  search?: string;
+}): Promise<import('../types').StoredLinkResponse> => {
   try {
-    const response = await fetch(`${BASE_URL}/links?platform=telegram&limit=${limit}&offset=${offset}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch saved links');
-    }
+    // Cancel previous request (important for search typing)
+    if (controller) controller.abort();
+    controller = new AbortController();
+
+    const params = new URLSearchParams({
+      platform,
+      limit: String(limit),
+      offset: String(offset)
+    });
+
+    if (search) params.set('search', search);
+
+    const response = await fetch(
+      `${BASE_URL}/links?${params.toString()}`,
+      { signal: controller.signal }
+    );
+
+    if (!response.ok) throw new Error('Failed to fetch saved links');
+
     const data = await response.json();
 
     return {
       ...data,
-      links: Array.isArray(data.links)
-        ? data.links.filter((link: import('../types').StoredLink) => !link.platform || link.platform === 'telegram')
-        : []
+      links: Array.isArray(data.links) ? data.links : []
     };
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      // Silent cancel (expected behavior)
+      return { total: 0, limit, offset, links: [] };
+    }
+
     console.error('Error fetching saved links:', error);
     return { total: 0, limit, offset, links: [] };
   }
