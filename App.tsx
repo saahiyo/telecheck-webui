@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, FileUp, Database, Menu, X, Keyboard } from 'lucide-react';
+import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, FileUp, Database, Menu, X, Keyboard, Users } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import StatsWidget from './components/StatsWidget';
 import ResultCard from './components/ResultCard';
 import SavedLinksPage from './components/SavedLinksPage';
+import ContributorsPage from './components/ContributorsPage';
 import type { SavedLinksPageHandle } from './components/SavedLinksPage';
 import { checkBulkLinks, checkSingleLink } from './services/api';
 import { LinkResult } from './types';
@@ -30,6 +31,7 @@ const shortcutGroups = [
     items: [
       { keys: ['Alt', '1'], description: 'Open the validator' },
       { keys: ['Alt', '2'], description: 'Open saved links' },
+      { keys: ['Alt', '3'], description: 'Open contributors' },
       { keys: ['Alt', 'B'], description: 'Switch to bulk validator' },
       { keys: ['Alt', 'Q'], description: 'Switch to quick check' },
     ],
@@ -57,7 +59,7 @@ function isTypingTarget(target: EventTarget | null) {
 }
 
 function App() {
-  const [currentView, setCurrentView] = useState<'home' | 'saved'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'saved' | 'contributors'>('home');
   const [mode, setMode] = useState<'bulk' | 'single'>('bulk');
   const [bulkInput, setBulkInput] = useState('');
   const [singleInput, setSingleInput] = useState('');
@@ -278,6 +280,12 @@ function App() {
     setShowShortcuts(false);
     focusTarget('saved');
   }, [focusTarget]);
+
+  const openContributorsView = useCallback(() => {
+    setCurrentView('contributors');
+    setCopyMenuOpen(false);
+    setShowShortcuts(false);
+  }, []);
 
   const runValidation = useCallback(() => {
     if (currentView !== 'home' || isChecking) return;
@@ -519,6 +527,12 @@ function App() {
           return;
         }
 
+        if (key === '3') {
+          event.preventDefault();
+          openContributorsView();
+          return;
+        }
+
         if (key === 'b') {
           event.preventDefault();
           openValidatorView('bulk');
@@ -581,6 +595,12 @@ function App() {
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${currentView === 'saved' ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
                 >
                   <Database size={14} /> Saved Links
+                </button>
+                <button
+                  onClick={() => setCurrentView('contributors')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${currentView === 'contributors' ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
+                >
+                  <Users size={14} /> Contributors
                 </button>
               </div>
 
@@ -667,6 +687,20 @@ function App() {
               <div>
                 <div className="text-sm font-medium">Saved Links</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">Open your saved results and stored links</div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setCurrentView('contributors')}
+              className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all ${currentView === 'contributors' ? 'border-black/10 bg-gray-100 text-black dark:border-white/10 dark:bg-[#111] dark:text-white' : 'border-gray-200 text-gray-600 hover:text-black dark:border-[#333] dark:text-gray-400 dark:hover:text-white'}`}
+            >
+              <div className="mt-0.5 shrink-0">
+                <Users size={18} />
+              </div>
+              <div>
+                <div className="text-sm font-medium">Contributors</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">View the community leaderboard</div>
               </div>
             </button>
           </div>
@@ -960,8 +994,16 @@ function App() {
         </div>
 
         <div className={currentView === 'saved' ? 'block animate-fade-in' : 'hidden'}>
-          <SavedLinksPage ref={savedLinksPageRef} searchInputRef={savedSearchInputRef} />
+          <SavedLinksPage
+            ref={savedLinksPageRef}
+            searchInputRef={savedSearchInputRef}
+          />
         </div>
+        
+        <div className={currentView === 'contributors' ? 'block animate-fade-in' : 'hidden'}>
+          <ContributorsPage />
+        </div>
+        
       </main>
 
       {showShortcuts && (

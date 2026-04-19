@@ -1,4 +1,4 @@
-import { LinkResult, StatsData } from '../types';
+import { LinkResult, StatsData, ContributorsResponse, MyProfileResponse } from '../types';
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_TELECHECK_API_URL?.replace(/\/$/, '') ||
@@ -197,5 +197,46 @@ export const fetchSavedLinks = async ({
 
     console.error('Error fetching saved links:', error);
     return { total: 0, limit, offset, links: [] };
+  }
+};
+
+// --------------------------------------------
+// CONTRIBUTORS
+// --------------------------------------------
+export const fetchContributors = async ({
+  limit = 20,
+  offset = 0
+}: {
+  limit?: number;
+  offset?: number;
+} = {}): Promise<ContributorsResponse> => {
+  try {
+    const params = new URLSearchParams({
+      limit: String(limit),
+      offset: String(offset)
+    });
+
+    const response = await fetch(`${BASE_URL}/contributors?${params.toString()}`);
+    if (!response.ok) throw new Error('Failed to fetch contributors');
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching contributors:', error);
+    return { total: 0, limit, offset, contributors: [] };
+  }
+};
+
+// --------------------------------------------
+// MY PROFILE
+// --------------------------------------------
+export const fetchMyProfile = async (): Promise<MyProfileResponse> => {
+  try {
+    const response = await fetch(`${BASE_URL}/contributors/me`);
+    if (!response.ok) throw new Error('Failed to fetch my profile');
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching my profile:', error);
+    return { username: null, links_added: 0, rank: null };
   }
 };

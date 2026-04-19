@@ -51,3 +51,26 @@ export interface StoredLinkResponse {
   offset: number;
   links: StoredLink[];
 }
+
+export interface Contributor {
+  rank: number;
+  username: string;
+  links_added: number;
+  first_seen: string;
+  last_seen: string;
+}
+
+export interface ContributorsResponse {
+  total: number;
+  limit: number;
+  offset: number;
+  contributors: Contributor[];
+}
+
+export interface MyProfileResponse {
+  username: string | null;
+  links_added: number;
+  rank: number | null;
+  first_seen?: string;
+  last_seen?: string;
+}
