@@ -413,7 +413,7 @@ function ValidatorContent() {
             <div className="inline-flex p-1 bg-gray-100 dark:bg-[#111] rounded-lg border border-gray-200 dark:border-[#333] w-full">
               <button
                 onClick={() => setMode('bulk')}
-                className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 \${
+                className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                   mode === 'bulk'
                     ? 'bg-white dark:bg-[#333] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                     : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
@@ -424,7 +424,7 @@ function ValidatorContent() {
               </button>
               <button
                 onClick={() => setMode('single')}
-                className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 \${
+                className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                   mode === 'single'
                     ? 'bg-white dark:bg-[#333] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
                     : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
