@@ -162,7 +162,7 @@ export const fetchSavedLinks = async ({
   offset?: number;
   platform?: string;
   search?: string;
-}): Promise<import('../types').StoredLinkResponse> => {
+}): Promise<import('../types').StoredLinkResponse | null> => {
   try {
     // Cancel previous request (important for search typing)
     if (controller) controller.abort();
@@ -191,8 +191,8 @@ export const fetchSavedLinks = async ({
     };
   } catch (error: any) {
     if (error.name === 'AbortError') {
-      // Silent cancel (expected behavior)
-      return { total: 0, limit, offset, links: [] };
+      // Silent cancel — return null so caller knows to skip state update
+      return null;
     }
 
     console.error('Error fetching saved links:', error);

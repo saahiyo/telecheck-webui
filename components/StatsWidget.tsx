@@ -7,7 +7,7 @@ interface StatsWidgetProps {
   refreshTrigger?: number;
 }
 
-const StatCard = ({ icon: Icon, label, value }: { icon: any, label: string, value: number | undefined }) => (
+const StatCard = React.memo(({ icon: Icon, label, value }: { icon: any, label: string, value: number | undefined }) => (
   <div className="flex flex-col p-3 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] transition-all hover:border-gray-300 dark:hover:border-gray-700">
     <div className="flex items-center justify-between mb-1.5">
       <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{label}</span>
@@ -17,7 +17,9 @@ const StatCard = ({ icon: Icon, label, value }: { icon: any, label: string, valu
       {value?.toLocaleString() || '0'}
     </div>
   </div>
-);
+));
+
+StatCard.displayName = 'StatCard';
 
 const StatsWidget: React.FC<StatsWidgetProps> = ({ refreshTrigger = 0 }) => {
   const [stats, setStats] = useState<StatsData | null>(null);

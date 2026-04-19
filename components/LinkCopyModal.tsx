@@ -187,7 +187,7 @@ const LinkCopyModal: React.FC<LinkCopyModalProps> = ({ isOpen, onClose, links, t
                         : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:text-black dark:bg-black dark:text-gray-400 dark:border-[#333] dark:hover:border-[#444] dark:hover:text-white'
                     }`}
                   >
-                    {React.cloneElement(opt.icon as React.ReactElement, { size: 14 })}
+                    {React.cloneElement(opt.icon as React.ReactElement<{ size?: number }>, { size: 14 })}
                     <span>{opt.label}</span>
                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] ml-1 leading-none ${
                         isActive

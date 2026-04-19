@@ -9,10 +9,9 @@ interface ResultCardProps {
   result: LinkResult;
 }
 
-const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
+const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
   const status = result.status?.toLowerCase();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const details = result.details || {};
   const previewFields = [
     { label: 'Description', value: details.description },
@@ -30,9 +29,7 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
   else if (status === 'invalid') statusColor = 'bg-red-500';
   else if (status === 'mega') statusColor = 'bg-blue-500';
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+
 
   useEffect(() => {
     if (!isPreviewOpen) return;
@@ -210,9 +207,11 @@ const ResultCard: React.FC<ResultCardProps> = ({ result }) => {
         </div>
       </div>
 
-      {mounted && previewModal ? createPortal(previewModal, document.body) : null}
+      {isPreviewOpen && previewModal ? createPortal(previewModal, document.body) : null}
     </div>
   );
-};
+});
+
+ResultCard.displayName = 'ResultCard';
 
 export default ResultCard;

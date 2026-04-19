@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, ShieldCheck, Zap, Clipboard, ChevronDown, FileUp, Database, Menu, X, Keyboard } from 'lucide-react';
 import ThemeToggle from './components/ThemeToggle';
 import StatsWidget from './components/StatsWidget';
@@ -104,16 +104,25 @@ function App() {
     }
   }, [results]);
 
+  // ── Memoized result counts (single pass) ──
+  const { validCount, invalidCount, megaCount } = useMemo(() => {
+    let valid = 0, invalid = 0, mega = 0;
+    for (const r of results) {
+      if (r.status === 'valid') valid++;
+      else if (r.status === 'invalid') invalid++;
+      else if (r.status === 'mega') mega++;
+    }
+    return { validCount: valid, invalidCount: invalid, megaCount: mega };
+  }, [results]);
+
   // ── Dynamic page title with result counts ──
   useEffect(() => {
     if (hasChecked && results.length > 0) {
-      const v = results.filter(r => r.status === 'valid').length;
-      const inv = results.filter(r => r.status === 'invalid').length;
-      document.title = `(${v} valid, ${inv} invalid) TeleCheck Pro`;
+      document.title = `(${validCount} valid, ${invalidCount} invalid) TeleCheck Pro`;
     } else {
       document.title = 'TeleCheck Pro | Telegram Link Validator';
     }
-  }, [results, hasChecked]);
+  }, [results.length, hasChecked, validCount, invalidCount]);
 
   // ── Close export dropdown on outside click ──
   useEffect(() => {
@@ -309,16 +318,12 @@ function App() {
     });
   }, [currentView]);
 
-  const validCount = results.filter(r => r.status === 'valid').length;
-  const invalidCount = results.filter(r => r.status === 'invalid').length;
-  const megaCount = results.filter(r => r.status === 'mega').length;
-
   const [filter, setFilter] = useState<'all' | 'valid' | 'invalid' | 'mega'>('all');
 
-  const filteredResults = results.filter(r => {
-    if (filter === 'all') return true;
-    return r.status === filter;
-  });
+  const filteredResults = useMemo(() => {
+    if (filter === 'all') return results;
+    return results.filter(r => r.status === filter);
+  }, [results, filter]);
 
   const handleCopy = async (type: 'numbered' | 'gap' | 'plain' | 'original' | 'withTitle') => {
     try {

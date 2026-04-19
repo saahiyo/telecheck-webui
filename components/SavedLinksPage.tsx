@@ -112,6 +112,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [scrollJumpContext, setScrollJumpContext] = useState<'container' | 'window'>('window');
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
   const resultsScrollRef = useRef<HTMLDivElement | null>(null);
+  const hasDataRef = useRef(false);
   const PAGE_SIZE = 100;
 
   // Debounced handler: updates the query sent to the API after 300ms of inactivity
@@ -145,21 +146,26 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     setPage(1);
   };
 
-  const loadLinks = async (currentPage: number, search: string) => {
+  const loadLinks = useCallback(async (currentPage: number, search: string) => {
     // Only show full-page spinner if it's initial load (no data), otherwise keep cards visible
-    if (links.length === 0) setIsLoading(true);
+    if (!hasDataRef.current) setIsLoading(true);
     try {
       const offset = (currentPage - 1) * PAGE_SIZE;
       const data = await fetchSavedLinks({ limit: PAGE_SIZE, offset, search });
+
+      // If request was aborted (null), skip state update to avoid wiping current data
+      if (data === null) return;
+
       setLinks(data.links || []);
       setTotal(data.total || 0);
+      hasDataRef.current = (data.links?.length ?? 0) > 0;
     } catch (error) {
       toast.error('Failed to load saved links from database.');
     } finally {
       setIsLoading(false);
       setIsSearching(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadLinks(page, debouncedSearchQuery);
@@ -235,8 +241,28 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   };
 
   // Client-side: filter by metadata attributes only, search is handled server-side
-  const filteredLinks = filterByMetadata(links, savedFilter);
-  const sortedLinks = sortSavedLinks(filteredLinks, savedSort, randomSeed);
+  const filteredLinks = useMemo(() => filterByMetadata(links, savedFilter), [links, savedFilter]);
+  const sortedLinks = useMemo(() => sortSavedLinks(filteredLinks, savedSort, randomSeed), [filteredLinks, savedSort, randomSeed]);
+
+  // Pre-compute adapted results so React.memo'd ResultCards receive stable object references
+  const adaptedResults = useMemo(() => sortedLinks.map((savedLink, idx) => ({
+    key: savedLink.id || idx,
+    result: {
+      link: savedLink.url,
+      status: savedLink.status || 'valid',
+      reason: `Saved on ${formatSavedDate(savedLink.checked_at || Date.now())}`,
+      details: {
+        title: savedLink.title || savedLink.description || 'Database Link',
+        description: savedLink.description,
+        image: savedLink.image,
+        memberCountRaw: savedLink.member_count?.toLocaleString(),
+        checkedAt: savedLink.checked_at,
+        savedStatus: savedLink.status,
+        savedId: savedLink.id
+      }
+    } as LinkResult
+  })), [sortedLinks]);
+
   const hasPagination = total > PAGE_SIZE;
 
   // Summary text
@@ -253,27 +279,33 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     return `${total} saved`;
   })();
 
+  // Throttle scroll handler with rAF to avoid firing setState on every scroll pixel
+  const scrollRafRef = useRef<number>(0);
   const updateScrollJumpState = useCallback(() => {
-    const container = resultsScrollRef.current;
-    const containerMaxScrollTop = container ? container.scrollHeight - container.clientHeight : 0;
-    const pageMaxScrollTop = document.documentElement.scrollHeight - window.innerHeight;
+    if (scrollRafRef.current) return;
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = 0;
+      const container = resultsScrollRef.current;
+      const containerMaxScrollTop = container ? container.scrollHeight - container.clientHeight : 0;
+      const pageMaxScrollTop = document.documentElement.scrollHeight - window.innerHeight;
 
-    const useContainer = containerMaxScrollTop > 24;
-    const currentScrollTop = useContainer
-      ? container?.scrollTop || 0
-      : window.scrollY || document.documentElement.scrollTop || 0;
-    const maxScrollTop = useContainer ? containerMaxScrollTop : pageMaxScrollTop;
+      const useContainer = containerMaxScrollTop > 24;
+      const currentScrollTop = useContainer
+        ? container?.scrollTop || 0
+        : window.scrollY || document.documentElement.scrollTop || 0;
+      const maxScrollTop = useContainer ? containerMaxScrollTop : pageMaxScrollTop;
 
-    setScrollJumpContext(useContainer ? 'container' : 'window');
+      setScrollJumpContext(useContainer ? 'container' : 'window');
 
-    if (maxScrollTop <= 24) {
-      setShowScrollJump(false);
-      setScrollJumpTarget('bottom');
-      return;
-    }
+      if (maxScrollTop <= 24) {
+        setShowScrollJump(false);
+        setScrollJumpTarget('bottom');
+        return;
+      }
 
-    setShowScrollJump(currentScrollTop > 32);
-    setScrollJumpTarget(currentScrollTop >= maxScrollTop / 2 ? 'top' : 'bottom');
+      setShowScrollJump(currentScrollTop > 32);
+      setScrollJumpTarget(currentScrollTop >= maxScrollTop / 2 ? 'top' : 'bottom');
+    });
   }, []);
 
   useEffect(() => {
@@ -559,25 +591,9 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             onScroll={updateScrollJumpState}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto pb-4 pr-1 custom-scrollbar"
           >
-            {sortedLinks.map((savedLink, idx) => {
-              // Adapt StoredLink to LinkResult for ResultCard
-              const adaptedResult: LinkResult = {
-                link: savedLink.url,
-                status: savedLink.status || 'valid', // Assume database links are valid primarily
-                reason: `Saved on ${formatSavedDate(savedLink.checked_at || Date.now())}`,
-                details: {
-                  title: savedLink.title || savedLink.description || 'Database Link',
-                  description: savedLink.description,
-                  image: savedLink.image,
-                  memberCountRaw: savedLink.member_count?.toLocaleString(),
-                  checkedAt: savedLink.checked_at,
-                  savedStatus: savedLink.status,
-                  savedId: savedLink.id
-                }
-              };
-              
-              return <ResultCard key={savedLink.id || idx} result={adaptedResult} />;
-            })}
+            {adaptedResults.map((adapted) => (
+              <ResultCard key={adapted.key} result={adapted.result} />
+            ))}
           </div>
 
           {showScrollJump && (
