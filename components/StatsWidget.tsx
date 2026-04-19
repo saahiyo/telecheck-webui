@@ -49,17 +49,17 @@ const StatsWidget: React.FC<StatsWidgetProps> = ({ refreshTrigger = 0 }) => {
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
       <StatCard 
         icon={Activity} 
-        label="Total Processed" 
+        label="24H Processed" 
         value={totalProcessed} 
       />
       <StatCard 
         icon={CheckCircle2} 
-        label="Valid Links" 
+        label="24H Valid Links" 
         value={stats?.valid_links || stats?.valid} 
       />
       <StatCard 
         icon={XCircle} 
-        label="Invalid Links" 
+        label="24H Invalid Links" 
         value={stats?.invalid_links || stats?.invalid} 
       />
     </div>

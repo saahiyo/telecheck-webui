@@ -34,12 +34,12 @@ export function clearCache(prefix?: string) {
 // STATS
 // --------------------------------------------
 export const fetchStats = async (): Promise<StatsData> => {
-  const cacheKey = 'stats';
+  const cacheKey = 'stats:24h';
   const cached = getCached<StatsData>(cacheKey);
   if (cached) return cached;
 
   try {
-    const response = await fetch(`${BASE_URL}/stats`);
+    const response = await fetch(`${BASE_URL}/stats?period=24h`);
     if (!response.ok) throw new Error('Failed to fetch stats');
 
     const data = await response.json();
