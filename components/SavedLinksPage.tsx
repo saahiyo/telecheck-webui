@@ -351,15 +351,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     scrollToBoundary,
   }), [scrollToBoundary]);
 
-  if (isLoading && links.length === 0) {
-    return (
-      <div className="flex-1 flex flex-col items-center justify-center p-12 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-black dark:text-white animate-spin mb-4" />
-        <h3 className="text-sm font-medium text-gray-900 dark:text-white">Loading Database Links</h3>
-        <p className="text-xs text-gray-500 mt-1">Fetching latest links from the server...</p>
-      </div>
-    );
-  }
+
 
   return (
     <div className="flex flex-col h-full min-h-[500px]">
@@ -519,7 +511,13 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         </div>
       </div>
 
-      {links.length === 0 && !isLoading ? (
+      {isLoading && links.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-12 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black min-h-[400px]">
+          <Loader2 className="w-8 h-8 text-black dark:text-white animate-spin mb-4" />
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white">Loading Database Links</h3>
+          <p className="text-xs text-gray-500 mt-1">Fetching latest links from the server...</p>
+        </div>
+      ) : links.length === 0 && !isLoading ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border border-dashed border-gray-200 dark:border-[#333] rounded-xl bg-gray-50/50 dark:bg-[#111]/50">
           <div className="w-14 h-14 bg-white dark:bg-black border border-gray-100 dark:border-[#333] rounded-full flex items-center justify-center mb-4 shadow-sm">
             {debouncedSearchQuery ? (
