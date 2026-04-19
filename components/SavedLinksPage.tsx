@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import debounce from 'lodash.debounce';
-import { fetchSavedLinks, validateSavedLinks } from '../services/api';
-import { StoredLink, LinkResult } from '../types';
+import { fetchSavedLinks, validateSavedLinks, getCached } from '../services/api';
+import { StoredLink, LinkResult, StoredLinkResponse } from '../types';
 import { toast } from 'sonner';
 import ResultCard from './ResultCard';
 import LinkCopyModal from './LinkCopyModal';
@@ -96,11 +96,16 @@ function sortSavedLinks(sourceLinks: StoredLink[], savedSort: SavedSort, randomS
 }
 
 const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProps>(function SavedLinksPage({ searchInputRef }, ref) {
-  const [links, setLinks] = useState<StoredLink[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const PAGE_SIZE = 100;
+  
+  // Synchronous cache read for instant mount
+  const initialCache = getCached<StoredLinkResponse>(`links:${PAGE_SIZE}:0:telegram:`);
+  
+  const [links, setLinks] = useState<StoredLink[]>(initialCache?.links || []);
+  const [isLoading, setIsLoading] = useState(!initialCache);
   const [isSearching, setIsSearching] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(initialCache?.total || 0);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -113,7 +118,6 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
   const resultsScrollRef = useRef<HTMLDivElement | null>(null);
   const hasDataRef = useRef(false);
-  const PAGE_SIZE = 100;
 
   // Debounced handler: updates the query sent to the API after 300ms of inactivity
   const debouncedSetSearch = useMemo(

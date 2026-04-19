@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
+import AppLayout from '@/components/AppLayout';
 
 const themeInitScript = `
   (() => {
@@ -58,7 +59,9 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">
           {themeInitScript}
         </Script>
-        {children}
+        <AppLayout>
+          {children}
+        </AppLayout>
         <Analytics />
       </body>
     </html>

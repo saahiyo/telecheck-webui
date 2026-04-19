@@ -4,15 +4,47 @@ const BASE_URL =
   process.env.NEXT_PUBLIC_TELECHECK_API_URL?.replace(/\/$/, '') ||
   'https://telecheck.vercel.app';
 
+// Simple in-memory cache
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 1000 * 60 * 2; // 2 minutes
+
+export function getCached<T>(key: string): T | null {
+  const entry = cache.get(key);
+  if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
+    return entry.data as T;
+  }
+  return null;
+}
+
+function setCache(key: string, data: any) {
+  cache.set(key, { data, timestamp: Date.now() });
+}
+
+export function clearCache(prefix?: string) {
+  if (!prefix) {
+    cache.clear();
+    return;
+  }
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) cache.delete(key);
+  }
+}
+
 // --------------------------------------------
 // STATS
 // --------------------------------------------
 export const fetchStats = async (): Promise<StatsData> => {
+  const cacheKey = 'stats';
+  const cached = getCached<StatsData>(cacheKey);
+  if (cached) return cached;
+
   try {
     const response = await fetch(`${BASE_URL}/stats`);
     if (!response.ok) throw new Error('Failed to fetch stats');
 
-    return await response.json();
+    const data = await response.json();
+    setCache(cacheKey, data);
+    return data;
   } catch (error) {
     console.error('Error fetching stats:', error);
     return { total_checked: 0, valid_links: 0, invalid_links: 0 };
@@ -138,6 +170,9 @@ export const validateSavedLinks = async ({
 
     if (!response.ok) throw new Error('Failed to validate links');
 
+    // After mutation, clear the links cache so we don't serve stale invalid links
+    clearCache('links:');
+
     return await response.json();
   } catch (error) {
     console.error('Validate links error:', error);
@@ -164,6 +199,10 @@ export const fetchSavedLinks = async ({
   search?: string;
 }): Promise<import('../types').StoredLinkResponse | null> => {
   try {
+    const cacheKey = `links:${limit}:${offset}:${platform}:${search}`;
+    const cached = getCached<import('../types').StoredLinkResponse>(cacheKey);
+    if (cached) return cached;
+
     // Cancel previous request (important for search typing)
     if (controller) controller.abort();
     controller = new AbortController();
@@ -185,10 +224,14 @@ export const fetchSavedLinks = async ({
 
     const data = await response.json();
 
-    return {
+    const result = {
       ...data,
       links: Array.isArray(data.links) ? data.links : []
     };
+
+    setCache(cacheKey, result);
+    return result;
+
   } catch (error: any) {
     if (error.name === 'AbortError') {
       // Silent cancel — return null so caller knows to skip state update
@@ -211,6 +254,10 @@ export const fetchContributors = async ({
   offset?: number;
 } = {}): Promise<ContributorsResponse> => {
   try {
+    const cacheKey = `contributors:${limit}:${offset}`;
+    const cached = getCached<ContributorsResponse>(cacheKey);
+    if (cached) return cached;
+
     const params = new URLSearchParams({
       limit: String(limit),
       offset: String(offset)
@@ -219,7 +266,9 @@ export const fetchContributors = async ({
     const response = await fetch(`${BASE_URL}/contributors?${params.toString()}`);
     if (!response.ok) throw new Error('Failed to fetch contributors');
 
-    return await response.json();
+    const data = await response.json();
+    setCache(cacheKey, data);
+    return data;
   } catch (error) {
     console.error('Error fetching contributors:', error);
     return { total: 0, limit, offset, contributors: [] };
@@ -230,11 +279,17 @@ export const fetchContributors = async ({
 // MY PROFILE
 // --------------------------------------------
 export const fetchMyProfile = async (): Promise<MyProfileResponse> => {
+  const cacheKey = 'profile';
+  const cached = getCached<MyProfileResponse>(cacheKey);
+  if (cached) return cached;
+
   try {
     const response = await fetch(`${BASE_URL}/contributors/me`);
     if (!response.ok) throw new Error('Failed to fetch my profile');
 
-    return await response.json();
+    const data = await response.json();
+    setCache(cacheKey, data);
+    return data;
   } catch (error) {
     console.error('Error fetching my profile:', error);
     return { username: null, links_added: 0, rank: null };

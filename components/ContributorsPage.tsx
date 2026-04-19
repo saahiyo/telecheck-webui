@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Loader2, Users, Trophy, Medal, Award, Activity, Search, RefreshCw, X, ChevronLeft, ChevronRight, Hash, Calendar, Sparkles } from 'lucide-react';
 import debounce from 'lodash.debounce';
-import { fetchContributors, fetchMyProfile } from '../services/api';
-import { Contributor, MyProfileResponse } from '../types';
+import { fetchContributors, fetchMyProfile, getCached } from '../services/api';
+import { Contributor, MyProfileResponse, ContributorsResponse } from '../types';
 import { toast } from 'sonner';
 
 interface ContributorsPageProps {}
@@ -21,10 +21,13 @@ function formatShortDate(dateValue?: string) {
 }
 
 const ContributorsPage: React.FC<ContributorsPageProps> = () => {
-  const [contributors, setContributors] = useState<Contributor[]>([]);
-  const [profile, setProfile] = useState<MyProfileResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  const initialContribCache = getCached<ContributorsResponse>(`contributors:${PAGE_SIZE}:0`);
+  const initialProfileCache = getCached<MyProfileResponse>('profile');
+
+  const [contributors, setContributors] = useState<Contributor[]>(initialContribCache?.contributors || []);
+  const [profile, setProfile] = useState<MyProfileResponse | null>(initialProfileCache || null);
+  const [isLoading, setIsLoading] = useState(!initialContribCache);
+  const [total, setTotal] = useState(initialContribCache?.total || 0);
   const [page, setPage] = useState(1);
   const hasDataRef = useRef(false);
 
