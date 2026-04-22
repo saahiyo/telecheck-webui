@@ -72,13 +72,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (isTypingTarget(event.target)) {
-        return;
-      }
-
-      if (event.key === '?') {
+      // Global shortcuts that should work even when typing
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
         event.preventDefault();
-        setShowShortcuts((prev) => !prev);
+        window.dispatchEvent(new Event('app-run-validation'));
         return;
       }
 
@@ -114,6 +111,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
       }
 
+      if (isTypingTarget(event.target)) {
+        return;
+      }
+
+      if (event.key === '?') {
+        event.preventDefault();
+        setShowShortcuts((prev) => !prev);
+        return;
+      }
+
+
       if (key === 't') {
         event.preventDefault();
         themeToggleRef.current?.click();
@@ -121,11 +129,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
       
       // Dispatch other shortcuts to the active pages
-      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-        event.preventDefault();
-        window.dispatchEvent(new Event('app-run-validation'));
-        return;
-      }
       if (!event.altKey && !event.ctrlKey && !event.metaKey && event.key === '/') {
         event.preventDefault();
         window.dispatchEvent(new Event('app-focus-primary-input'));
@@ -193,7 +196,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   onClick={() => setShowShortcuts(true)}
-                  className="p-2 rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-all duration-200 hover:bg-gray-50 dark:hover:bg-[#111]"
+                  className="hidden sm:inline-flex p-2 rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-all duration-200 hover:bg-gray-50 dark:hover:bg-[#111]"
                   aria-label="Keyboard shortcuts"
                   title="Keyboard shortcuts (?)"
                 >
