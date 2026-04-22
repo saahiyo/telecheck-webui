@@ -223,8 +223,15 @@ function ValidatorContent() {
     setResults([]);
     setCheckingProgress({ current: 0, total: 0 });
 
-    const allLinks = extractUrls(bulkInput);
-    const { unique: links, duplicateCount } = deduplicateLinks(allLinks);
+    const { unique: links, duplicateCount } = await new Promise<{ unique: string[]; duplicateCount: number }>((resolve) => {
+      const worker = new Worker(new URL('../utils/dedup.worker.ts', import.meta.url));
+      worker.onmessage = (e) => {
+        resolve(e.data);
+        worker.terminate();
+      };
+      worker.postMessage(bulkInput);
+    });
+
     if (duplicateCount > 0) {
       toast.info(`Removed ${duplicateCount} duplicate${duplicateCount > 1 ? 's' : ''}`);
     }
