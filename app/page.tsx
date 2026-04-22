@@ -10,8 +10,8 @@ import { toast } from 'sonner';
 import { URL_REGEX, isMegaLink, extractUrls, deduplicateLinks } from '@/utils/helpers';
 import { copyText } from '@/utils/clipboard';
 import { useSearchParams } from 'next/navigation';
+import { saveResults, getResults, clearResults } from '@/utils/db';
 
-const STORAGE_KEY = 'telecheck_last_results';
 
 /** Contextual empty-state messages per filter tab */
 const emptyMessages: Record<string, string> = {
@@ -42,34 +42,35 @@ function ValidatorContent() {
   const exportButtonRef = useRef<HTMLButtonElement>(null);
   const homeResultsScrollRef = useRef<HTMLDivElement>(null);
 
-  // ── Restore from sessionStorage and localStorage on mount ──
+  // ── Restore from sessionStorage and IndexedDB on mount ──
   useEffect(() => {
-    try {
-      const savedResults = localStorage.getItem(STORAGE_KEY);
-      if (savedResults) {
-        const parsed = JSON.parse(savedResults) as LinkResult[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setResults(parsed);
+    const restoreData = async () => {
+      try {
+        const savedResults = await getResults();
+        if (savedResults && savedResults.length > 0) {
+          setResults(savedResults);
           setHasChecked(true);
         }
+
+        const savedBulk = sessionStorage.getItem('telecheck_bulkInput');
+        if (savedBulk) setBulkInput(savedBulk);
+        
+        const savedSingle = sessionStorage.getItem('telecheck_singleInput');
+        if (savedSingle) setSingleInput(savedSingle);
+      } catch (e) {
+        console.error('Error restoring session:', e);
       }
-
-      const savedBulk = sessionStorage.getItem('telecheck_bulkInput');
-      if (savedBulk) setBulkInput(savedBulk);
-      
-      const savedSingle = sessionStorage.getItem('telecheck_singleInput');
-      if (savedSingle) setSingleInput(savedSingle);
-
-    } catch { /* ignore corrupt storage */ }
+    };
+    
+    restoreData();
   }, []);
 
-  // ── Persist results to localStorage whenever they change ──
+  // ── Persist results to IndexedDB whenever they change ──
   useEffect(() => {
     if (results.length > 0) {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(results)); }
-      catch { /* quota exceeded, silently ignore */ }
+      void saveResults(results);
     } else {
-      localStorage.removeItem(STORAGE_KEY);
+      void clearResults();
     }
   }, [results]);
 
@@ -265,6 +266,7 @@ function ValidatorContent() {
     setResults([]);
     setHasChecked(false);
     setCheckingProgress({ current: 0, total: 0 });
+    void clearResults();
   };
 
   const [filter, setFilter] = useState<'all' | 'valid' | 'invalid' | 'mega'>('all');
