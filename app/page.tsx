@@ -11,6 +11,7 @@ import { URL_REGEX, isMegaLink, extractUrls, deduplicateLinks } from '@/utils/he
 import { copyText } from '@/utils/clipboard';
 import { useSearchParams } from 'next/navigation';
 import { saveResults, getResults, clearResults } from '@/utils/db';
+import confetti from 'canvas-confetti';
 
 
 /** Contextual empty-state messages per filter tab */
@@ -19,6 +20,29 @@ const emptyMessages: Record<string, string> = {
   valid: 'No valid links found.',
   invalid: 'All links are valid! 🎉',
   mega: 'No Mega.nz links detected.',
+};
+
+const triggerSuccessConfetti = () => {
+  const count = 200;
+  const defaults = {
+    origin: { y: 0.7 },
+    zIndex: 1000,
+  };
+
+  const fire = (particleRatio: number, opts: any) => {
+    void confetti({
+      ...defaults,
+      ...opts,
+      particleCount: Math.floor(count * particleRatio),
+      colors: ['#000000', '#666666', '#ffffff'],
+    });
+  };
+
+  fire(0.25, { spread: 26, startVelocity: 55 });
+  fire(0.2, { spread: 60 });
+  fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+  fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+  fire(0.1, { spread: 120, startVelocity: 45 });
 };
 
 function ValidatorContent() {
@@ -222,12 +246,15 @@ function ValidatorContent() {
       setHasChecked(true);
     }
 
+    const allResults: LinkResult[] = [...megaResults];
+
     if (telegramLinks.length > 0) {
       const BATCH_SIZE = 50;
       for (let i = 0; i < telegramLinks.length; i += BATCH_SIZE) {
         const batch = telegramLinks.slice(i, i + BATCH_SIZE);
         const batchResults = await checkBulkLinks(batch);
         setResults(prev => [...prev, ...batchResults]);
+        allResults.push(...batchResults);
         currentChecked += batch.length;
         setCheckingProgress({ current: currentChecked, total: links.length });
         setHasChecked(true);
@@ -237,6 +264,10 @@ function ValidatorContent() {
     setIsChecking(false);
     setRefreshStatsTrigger(prev => prev + 1);
     toast.success('Analysis complete!');
+
+    if (allResults.length >= 3 && allResults.every(r => r.status === 'valid' || r.status === 'mega')) {
+      triggerSuccessConfetti();
+    }
   };
 
   const handleSingleCheck = async (e?: React.FormEvent) => {
@@ -247,11 +278,15 @@ function ValidatorContent() {
     setResults([]);
     setCheckingProgress({ current: 0, total: 1 });
 
+    let finalStatus = '';
     if (isMegaLink(singleInput.trim())) {
-      setResults([{ link: singleInput.trim(), status: 'mega', reason: 'Mega.nz Link' }]);
+      const result: LinkResult = { link: singleInput.trim(), status: 'mega', reason: 'Mega.nz Link' };
+      setResults([result]);
+      finalStatus = 'mega';
     } else {
       const data = await checkSingleLink(singleInput);
       setResults([data]);
+      finalStatus = data.status;
     }
     setCheckingProgress({ current: 1, total: 1 });
     setHasChecked(true);
