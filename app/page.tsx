@@ -248,24 +248,48 @@ function ValidatorContent() {
     let currentChecked = megaResults.length;
     setCheckingProgress({ current: currentChecked, total: links.length });
 
+    const allResults: LinkResult[] = [...megaResults];
+
     if (megaResults.length > 0) {
       setResults(megaResults);
       setHasChecked(true);
     }
 
-    const allResults: LinkResult[] = [...megaResults];
-
     if (telegramLinks.length > 0) {
-      const BATCH_SIZE = 50;
+      const BATCH_SIZE = 100; // Increased batch size for efficiency
+      const CONCURRENCY = 3; // Parallel requests
+      
+      const batches: string[][] = [];
       for (let i = 0; i < telegramLinks.length; i += BATCH_SIZE) {
-        const batch = telegramLinks.slice(i, i + BATCH_SIZE);
-        const batchResults = await checkBulkLinks(batch);
-        setResults(prev => [...prev, ...batchResults]);
-        allResults.push(...batchResults);
-        currentChecked += batch.length;
-        setCheckingProgress({ current: currentChecked, total: links.length });
-        setHasChecked(true);
+        batches.push(telegramLinks.slice(i, i + BATCH_SIZE));
       }
+
+      let activeIndex = 0;
+      const processWorker = async () => {
+        while (activeIndex < batches.length) {
+          const index = activeIndex++;
+          const batch = batches[index];
+          try {
+            const batchResults = await checkBulkLinks(batch);
+            allResults.push(...batchResults);
+            setResults(prev => [...prev, ...batchResults]);
+            
+            // Calculate progress based on total accumulated results
+            setCheckingProgress({ 
+              current: allResults.length, 
+              total: links.length 
+            });
+          } catch (e) {
+            console.error('Batch failed:', e);
+          }
+        }
+      };
+
+      // Start parallel workers
+      const workers = Array.from({ length: Math.min(CONCURRENCY, batches.length) }, processWorker);
+      await Promise.all(workers);
+      
+      setHasChecked(true);
     }
 
     setIsChecking(false);
