@@ -1,4 +1,5 @@
 import { LinkResult, StatsData, ContributorsResponse, MyProfileResponse } from '../types';
+import { formatCompactNumber } from '../utils/helpers';
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_TELECHECK_API_URL?.replace(/\/$/, '') ||
@@ -73,7 +74,9 @@ export const checkSingleLink = async (link: string): Promise<LinkResult> => {
       details: data.metadata ? {
         ...data.metadata,
         image: data.metadata.photo || data.metadata.image,
-        memberCountRaw: data.metadata.memberCountRaw || data.metadata.member_count?.toLocaleString(),
+        memberCount: data.metadata.memberCount,
+        memberCountCompact: formatCompactNumber(data.metadata.memberCount),
+        memberCountRaw: data.metadata.memberCount?.toLocaleString(),
       } : undefined
     };
   } catch (error) {
@@ -135,7 +138,9 @@ export const checkBulkLinks = async (
         details: {
           ...meta,
           image: meta.photo || meta.image,
-          memberCountRaw: meta.memberCountRaw || (meta.memberCount ? meta.memberCount.toLocaleString() : undefined),
+          memberCount: meta.memberCount,
+          memberCountCompact: formatCompactNumber(meta.memberCount),
+          memberCountRaw: meta.memberCount?.toLocaleString(),
         }
       };
     });

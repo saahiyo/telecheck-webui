@@ -4,6 +4,7 @@ import debounce from 'lodash.debounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { fetchSavedLinks, validateSavedLinks, getCached } from '../services/api';
 import { StoredLink, LinkResult, StoredLinkResponse } from '../types';
+import { formatCompactNumber } from '../utils/helpers';
 import { toast } from 'sonner';
 import ResultCard from './ResultCard';
 import LinkCopyModal from './LinkCopyModal';
@@ -260,6 +261,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         title: savedLink.title || savedLink.description || 'Database Link',
         description: savedLink.description,
         image: savedLink.image,
+        memberCount: savedLink.member_count,
+        memberCountCompact: formatCompactNumber(savedLink.member_count),
         memberCountRaw: savedLink.member_count?.toLocaleString(),
         checkedAt: savedLink.checked_at,
         savedStatus: savedLink.status,

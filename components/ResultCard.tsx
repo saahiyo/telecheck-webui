@@ -253,17 +253,17 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
             </a>
 
             {/* Subtitle row: link + metadata */}
-            {(details.title || details.memberCountRaw) && (
+            {(details.title || details.memberCountCompact || details.memberCountRaw) && (
               <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">
                 {details.title && (
                   <span className="truncate" title={result.link}>
                     {result.link}
                   </span>
                 )}
-                {details.memberCountRaw && (
+                {(details.memberCountCompact || details.memberCountRaw) && (
                   <span className="flex items-center gap-1 shrink-0 text-[10px] font-medium">
                     <Users size={10} className="opacity-60" />
-                    {details.memberCountRaw}
+                    {details.memberCountCompact || details.memberCountRaw}
                   </span>
                 )}
               </div>
