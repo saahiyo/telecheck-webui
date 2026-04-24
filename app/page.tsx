@@ -59,12 +59,35 @@ function ValidatorContent() {
   const [hasChecked, setHasChecked] = useState(false);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const copyMenuRef = useRef<HTMLDivElement>(null);
   const bulkInputRef = useRef<HTMLTextAreaElement>(null);
   const singleInputRef = useRef<HTMLInputElement>(null);
   const exportButtonRef = useRef<HTMLButtonElement>(null);
   const homeResultsScrollRef = useRef<HTMLDivElement>(null);
+
+  // ── Elapsed time timer ──
+  useEffect(() => {
+    if (isChecking) {
+      setElapsedSeconds(0);
+      elapsedIntervalRef.current = setInterval(() => {
+        setElapsedSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (elapsedIntervalRef.current) {
+        clearInterval(elapsedIntervalRef.current);
+        elapsedIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (elapsedIntervalRef.current) {
+        clearInterval(elapsedIntervalRef.current);
+        elapsedIntervalRef.current = null;
+      }
+    };
+  }, [isChecking]);
 
   // ── Restore from sessionStorage and IndexedDB on mount ──
   useEffect(() => {
@@ -170,6 +193,14 @@ function ValidatorContent() {
       window.removeEventListener('app-escape', handleEscape);
     };
   }, [mode, hasChecked, results.length]);
+
+  // ── Memoized link count from bulk input ──
+  const { detectedLinkCount, detectedDuplicateCount } = useMemo(() => {
+    if (!bulkInput.trim()) return { detectedLinkCount: 0, detectedDuplicateCount: 0 };
+    const allLinks = extractUrls(bulkInput);
+    const { unique, duplicateCount } = deduplicateLinks(allLinks);
+    return { detectedLinkCount: unique.length, detectedDuplicateCount: duplicateCount };
+  }, [bulkInput]);
 
   // ── Memoized result counts (single pass) ──
   const { validCount, invalidCount, megaCount } = useMemo(() => {
@@ -294,7 +325,7 @@ function ValidatorContent() {
 
     setIsChecking(false);
     setRefreshStatsTrigger(prev => prev + 1);
-    toast.success('Analysis complete!');
+    toast.success(`Analysis complete! (${elapsedSeconds}s)`);
 
     if (allResults.length >= 3 && allResults.every(r => r.status === 'valid' || r.status === 'mega')) {
       triggerSuccessConfetti();
@@ -323,7 +354,7 @@ function ValidatorContent() {
     setHasChecked(true);
     setIsChecking(false);
     setRefreshStatsTrigger(prev => prev + 1);
-    toast.success('Analysis complete!');
+    toast.success(`Analysis complete! (${elapsedSeconds}s)`);
   };
 
   const clearAll = () => {
@@ -547,6 +578,20 @@ function ValidatorContent() {
                       </button>
                     )}
                   </div>
+                  {/* Link count badge */}
+                  {detectedLinkCount > 0 && (
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-100/90 dark:bg-[#222]/90 backdrop-blur-sm border border-gray-200/60 dark:border-[#444]/60 pointer-events-none select-none">
+                      <Link2 size={10} className="text-gray-500 dark:text-gray-400 shrink-0" />
+                      <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300 tabular-nums">
+                        {detectedLinkCount} link{detectedLinkCount !== 1 ? 's' : ''} detected
+                      </span>
+                      {detectedDuplicateCount > 0 && (
+                        <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 tabular-nums">
+                          · {detectedDuplicateCount} dupe{detectedDuplicateCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <form onSubmit={handleSingleCheck} className="relative">
@@ -583,7 +628,7 @@ function ValidatorContent() {
                 {isChecking ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    <span>Processing...</span>
+                    <span>Processing...{elapsedSeconds > 0 && <span className="ml-1 tabular-nums">{elapsedSeconds}s</span>}</span>
                   </>
                 ) : (
                   <>
@@ -622,11 +667,11 @@ function ValidatorContent() {
              <div className="flex-1 flex flex-col items-center justify-center p-6 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black">
                <Loader2 className="w-6 h-6 text-black dark:text-white animate-spin mb-3" />
                <h3 className="text-xs font-medium text-gray-900 dark:text-white">Verifying Links</h3>
-               {checkingProgress.total > 0 ? (
-                 <p className="text-[10px] text-gray-500 mt-1">Starting {checkingProgress.total} links...</p>
-               ) : (
-                 <p className="text-[10px] text-gray-500 mt-1">Please wait...</p>
-               )}
+                {checkingProgress.total > 0 ? (
+                  <p className="text-[10px] text-gray-500 mt-1">Starting {checkingProgress.total} links...{elapsedSeconds > 0 && <span className="ml-1 tabular-nums">({elapsedSeconds}s)</span>}</p>
+                ) : (
+                  <p className="text-[10px] text-gray-500 mt-1">Please wait...{elapsedSeconds > 0 && <span className="ml-1 tabular-nums">({elapsedSeconds}s)</span>}</p>
+                )}
              </div>
            )}
 
@@ -635,7 +680,7 @@ function ValidatorContent() {
                {isChecking && checkingProgress.total > 0 && (
                  <div className="mb-4 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333] p-3 rounded-lg">
                    <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-2 font-medium">
-                     <span className="flex items-center gap-1.5"><Loader2 size={10} className="animate-spin" /> Verifying links...</span>
+                      <span className="flex items-center gap-1.5"><Loader2 size={10} className="animate-spin" /> Verifying links...{elapsedSeconds > 0 && <span className="tabular-nums"> ({elapsedSeconds}s)</span>}</span>
                      <span>{Math.round((checkingProgress.current / checkingProgress.total) * 100)}% ({checkingProgress.current}/{checkingProgress.total})</span>
                    </div>
                    <div className="w-full h-1.5 bg-gray-200 dark:bg-[#333] rounded-full overflow-hidden">

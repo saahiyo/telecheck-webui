@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard } from 'lucide-react';
+import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Github, Heart } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import GithubBtn from './GithubBtn';
 import { Toaster } from 'sonner';
@@ -39,9 +39,15 @@ function isTypingTarget(target: EventTarget | null) {
   return element.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName);
 }
 
+const APP_VERSION = '0.0.0';
+const API_URL =
+  process.env.NEXT_PUBLIC_TELECHECK_API_URL?.replace(/\/$/, '') ||
+  'https://telecheck.vercel.app';
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const themeToggleRef = useRef<HTMLButtonElement>(null);
 
   const pathname = usePathname();
@@ -50,6 +56,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setIsMobileNavOpen(false);
   }, [pathname]);
+
+  // Ping API to check status
+  useEffect(() => {
+    let cancelled = false;
+    const checkApi = async () => {
+      try {
+        const res = await fetch(`${API_URL}/stats?period=24h`, { signal: AbortSignal.timeout(8000) });
+        if (!cancelled) setApiStatus(res.ok ? 'online' : 'offline');
+      } catch {
+        if (!cancelled) setApiStatus('offline');
+      }
+    };
+    checkApi();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!isMobileNavOpen) return;
@@ -298,6 +319,65 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {children}
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 dark:border-[#333] mt-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            {/* Left: Brand + version */}
+            <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              <ShieldCheck size={14} className="text-gray-400 dark:text-gray-500" />
+              <span className="font-medium text-gray-700 dark:text-gray-300">TeleCheck Pro</span>
+              <span className="px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-[#222] text-[10px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-[#333] tabular-nums">
+                v{APP_VERSION}
+              </span>
+            </div>
+
+            {/* Center: API status + GitHub */}
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    apiStatus === 'online'
+                      ? 'bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.6)]'
+                      : apiStatus === 'offline'
+                        ? 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.6)]'
+                        : 'bg-gray-400 animate-pulse'
+                  }`}
+                />
+                <span className="text-gray-500 dark:text-gray-400 font-medium">
+                  API {apiStatus === 'online' ? 'Online' : apiStatus === 'offline' ? 'Offline' : 'Checking...'}
+                </span>
+              </div>
+              <span className="text-gray-200 dark:text-[#333]">|</span>
+              <a
+                href="https://github.com/saahiyo/telecheck-webui"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors font-medium"
+              >
+                <Github size={13} />
+                <span>GitHub</span>
+              </a>
+            </div>
+
+            {/* Right: Made with love */}
+            <div className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500">
+              <span>Made with</span>
+              <Heart size={10} className="text-red-400 fill-red-400" />
+              <span>by</span>
+              <a
+                href="https://github.com/saahiyo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors"
+              >
+                saahiyo
+              </a>
+            </div>
+          </div>
+        </div>
+      </footer>
 
       {showShortcuts && (
         <div

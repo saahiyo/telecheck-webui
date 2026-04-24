@@ -31,6 +31,7 @@ export const metadata: Metadata = {
   description:
     'Validate Telegram links in bulk, review saved links, and browse validation results in a polished dashboard.',
   manifest: '/site.webmanifest',
+  metadataBase: new URL('https://telecheck-pro.vercel.app'),
   icons: {
     icon: [
       { url: '/favicon.ico' },
@@ -39,6 +40,30 @@ export const metadata: Metadata = {
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
     ],
     apple: '/apple-touch-icon.png',
+  },
+  openGraph: {
+    title: 'TeleCheck Pro | Telegram Link Validator',
+    description:
+      'Validate Telegram links in bulk, inspect metadata, and separate valid, invalid, and Mega links — all in a sleek dashboard.',
+    url: 'https://telecheck-pro.vercel.app',
+    siteName: 'TeleCheck Pro',
+    locale: 'en_US',
+    type: 'website',
+    images: [
+      {
+        url: '/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'TeleCheck Pro — Bulk Telegram Link Validator',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'TeleCheck Pro | Telegram Link Validator',
+    description:
+      'Validate Telegram links in bulk, inspect metadata, and separate valid, invalid, and Mega links.',
+    images: ['/og-image.png'],
   },
 };
 
