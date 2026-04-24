@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import debounce from 'lodash.debounce';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { fetchSavedLinks, validateSavedLinks, getCached } from '../services/api';
 import { StoredLink, LinkResult, StoredLinkResponse } from '../types';
 import { toast } from 'sonner';
@@ -268,6 +269,43 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   })), [sortedLinks]);
 
   const hasPagination = total > PAGE_SIZE;
+
+  // ── Virtual scrolling: detect column count from container width ──
+  const [columnCount, setColumnCount] = useState(3);
+
+  useEffect(() => {
+    const container = resultsScrollRef.current;
+    if (!container) return;
+
+    const updateCols = () => {
+      const w = container.clientWidth;
+      // Match Tailwind breakpoints: lg:grid-cols-3, md:grid-cols-2, else 1
+      if (w >= 1024) setColumnCount(3);
+      else if (w >= 768) setColumnCount(2);
+      else setColumnCount(1);
+    };
+
+    updateCols();
+    const observer = new ResizeObserver(updateCols);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [adaptedResults.length > 0]);
+
+  // Group adapted results into rows based on column count
+  const virtualRows = useMemo(() => {
+    const rows: (typeof adaptedResults)[] = [];
+    for (let i = 0; i < adaptedResults.length; i += columnCount) {
+      rows.push(adaptedResults.slice(i, i + columnCount));
+    }
+    return rows;
+  }, [adaptedResults, columnCount]);
+
+  const rowVirtualizer = useVirtualizer({
+    count: virtualRows.length,
+    getScrollElement: () => resultsScrollRef.current,
+    estimateSize: () => 80, // estimated row height in px
+    overscan: 5,
+  });
 
   // Summary text
   const savedLinksSummary = (() => {
@@ -591,11 +629,48 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           <div
             ref={resultsScrollRef}
             onScroll={updateScrollJumpState}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto pb-4 pr-1 custom-scrollbar"
+            className="flex-1 min-h-0 overflow-y-auto pb-4 pr-1 custom-scrollbar"
           >
-            {adaptedResults.map((adapted) => (
-              <ResultCard key={adapted.key} result={adapted.result} />
-            ))}
+            <div
+              style={{
+                height: `${rowVirtualizer.getTotalSize()}px`,
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const rowItems = virtualRows[virtualRow.index];
+                return (
+                  <div
+                    key={virtualRow.key}
+                    data-index={virtualRow.index}
+                    ref={rowVirtualizer.measureElement}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <div
+                      className={`grid gap-3 ${
+                        columnCount === 3
+                          ? 'grid-cols-3'
+                          : columnCount === 2
+                            ? 'grid-cols-2'
+                            : 'grid-cols-1'
+                      }`}
+                      style={{ paddingBottom: '0.75rem' }}
+                    >
+                      {rowItems.map((adapted) => (
+                        <ResultCard key={adapted.key} result={adapted.result} />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {showScrollJump && (

@@ -10,6 +10,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.13.24",
     "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",
     "dotenv": "^17.4.2",

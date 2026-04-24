@@ -70,7 +70,11 @@ export const checkSingleLink = async (link: string): Promise<LinkResult> => {
       link: cleanLink,
       status: data.status?.toLowerCase() || 'unknown',
       reason: data.reason || data.message || undefined,
-      details: data.metadata
+      details: data.metadata ? {
+        ...data.metadata,
+        image: data.metadata.photo || data.metadata.image,
+        memberCountRaw: data.metadata.memberCountRaw || data.metadata.member_count?.toLocaleString(),
+      } : undefined
     };
   } catch (error) {
     return {
@@ -122,12 +126,19 @@ export const checkBulkLinks = async (
       }));
     }
 
-    return results.map(r => ({
-      link: r.link || r.url || 'Unknown Link',
-      status: r.status?.toLowerCase() || 'unknown',
-      reason: r.reason || r.message || undefined,
-      details: r.metadata
-    }));
+    return results.map(r => {
+      const meta = r.metadata || {};
+      return {
+        link: r.link || r.url || 'Unknown Link',
+        status: r.status?.toLowerCase() || 'unknown',
+        reason: r.reason || r.message || undefined,
+        details: {
+          ...meta,
+          image: meta.photo || meta.image,
+          memberCountRaw: meta.memberCountRaw || (meta.memberCount ? meta.memberCount.toLocaleString() : undefined),
+        }
+      };
+    });
   } catch (error) {
     console.error('Bulk check error:', error);
     return links.map(l => ({
