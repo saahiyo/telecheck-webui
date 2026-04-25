@@ -49,15 +49,29 @@ public/          Static assets
 App.tsx          Client-side application shell
 types.ts         Shared TypeScript types
 ```
+## Features
+
+- **Bulk & Single Link Validation** — Check one or thousands of Telegram links at once.
+- **Saved Links Dashboard** — Browse, search, and paginate all stored links from the database.
+- **Global Link Tagging** — Categorize links with predefined tags (Crypto, News, Entertainment, Finance, Gaming, Tech, Education, Music, Sports, Other). Tags are stored globally in PostgreSQL and shared across all users.
+- **Tag Filtering** — Filter saved links by tag using the chip row on the dashboard.
+- **Dark Mode** — System-aware light/dark theme toggle.
+- **Clipboard Helpers** — Copy single or bulk links with one click.
+- **Contributors Leaderboard** — Track who added the most links.
+- **Vercel Analytics** — Built-in analytics integration.
 
 ## API Integration
 
 The frontend calls the TeleCheck API for:
 
-- `GET /stats`
-- `GET /?link=...`
-- `POST /`
-- `GET /links?platform=telegram&limit=...&offset=...`
+- `GET /stats` — Fetch global statistics
+- `GET /?link=...` — Check a single link
+- `POST /` — Batch check multiple links
+- `GET /links?platform=telegram&limit=...&offset=...&search=...&tag=...` — Fetch saved links with optional tag filter
+- `GET /tags` — Fetch all unique tags used across links
+- `POST /links/tags` — Assign tags to a link (`{ url, tags }`)
+- `GET /contributors` — Leaderboard
+- `GET /contributors/me` — Current user profile
 
 ## License
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy } from 'lucide-react';
 import debounce from 'lodash.debounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { fetchSavedLinks, validateSavedLinks, getCached } from '../services/api';
+import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags } from '../services/api';
 import { StoredLink, LinkResult, StoredLinkResponse } from '../types';
 import { formatCompactNumber } from '../utils/helpers';
 import { toast } from 'sonner';
@@ -113,6 +113,9 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [savedFilter, setSavedFilter] = useState<SavedFilter>('all');
   const [savedSort, setSavedSort] = useState<SavedSort>('recently-updated');
+  const PREDEFINED_TAGS = ['Crypto', 'News', 'Entertainment', 'Finance', 'Gaming'];
+  const [availableTags, setAvailableTags] = useState<string[]>(PREDEFINED_TAGS);
+  const [selectedTag, setSelectedTag] = useState<string>('All');
   const [randomSeed, setRandomSeed] = useState(() => Date.now());
   const [showScrollJump, setShowScrollJump] = useState(false);
   const [scrollJumpTarget, setScrollJumpTarget] = useState<'top' | 'bottom'>('bottom');
@@ -152,12 +155,12 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     setPage(1);
   };
 
-  const loadLinks = useCallback(async (currentPage: number, search: string) => {
+  const loadLinks = useCallback(async (currentPage: number, search: string, tag: string) => {
     // Only show full-page spinner if it's initial load (no data), otherwise keep cards visible
     if (!hasDataRef.current) setIsLoading(true);
     try {
       const offset = (currentPage - 1) * PAGE_SIZE;
-      const data = await fetchSavedLinks({ limit: PAGE_SIZE, offset, search });
+      const data = await fetchSavedLinks({ limit: PAGE_SIZE, offset, search, tag });
 
       // If request was aborted (null), skip state update to avoid wiping current data
       if (data === null) return;
@@ -174,12 +177,23 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, []);
 
   useEffect(() => {
-    loadLinks(page, debouncedSearchQuery);
-  }, [page, debouncedSearchQuery]);
+    loadLinks(page, debouncedSearchQuery, selectedTag);
+  }, [page, debouncedSearchQuery, selectedTag]);
+
+  useEffect(() => {
+    // Load tags once on mount
+    fetchTags().then(tags => {
+      if (tags.length > 0) {
+        // Merge predefined and fetched unique tags
+        const merged = Array.from(new Set([...PREDEFINED_TAGS, ...tags]));
+        setAvailableTags(merged);
+      }
+    });
+  }, []);
 
   const handleRefresh = async () => {
     setIsLoading(true);
-    await loadLinks(page, debouncedSearchQuery);
+    await loadLinks(page, debouncedSearchQuery, selectedTag);
   };
 
   const handleSortChange = (nextSort: SavedSort) => {
@@ -208,7 +222,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       );
 
       // Refresh links from DB to reflect deletions
-      await loadLinks(page, debouncedSearchQuery);
+      await loadLinks(page, debouncedSearchQuery, selectedTag);
     } catch (error) {
       toast.error('An error occurred during validation.', { id: toastId });
     } finally {
@@ -238,7 +252,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       );
 
       // Refresh current page
-      await loadLinks(page, debouncedSearchQuery);
+      await loadLinks(page, debouncedSearchQuery, selectedTag);
     } catch (error) {
       toast.error('An error occurred during page validation.', { id: toastId });
     } finally {
@@ -267,7 +281,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         checkedAt: savedLink.checked_at,
         savedStatus: savedLink.status,
         savedId: savedLink.id
-      }
+      },
+      tags: savedLink.tags
     } as LinkResult
   })), [sortedLinks]);
 
@@ -312,8 +327,10 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
   // Summary text
   const savedLinksSummary = (() => {
-    if (debouncedSearchQuery) {
-      return `${filteredLinks.length} results for "${debouncedSearchQuery}" · ${total} matched`;
+    if (debouncedSearchQuery || selectedTag !== 'All') {
+      const queryStr = debouncedSearchQuery ? `"${debouncedSearchQuery}"` : '';
+      const tagStr = selectedTag !== 'All' ? `[${selectedTag}]` : '';
+      return `${filteredLinks.length} results ${queryStr} ${tagStr} · ${total} matched`;
     }
     if (savedFilter !== 'all') {
       return `${filteredLinks.length} filtered · ${links.length} loaded · ${total} total`;
@@ -565,25 +582,31 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       ) : links.length === 0 && !isLoading ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border border-dashed border-gray-200 dark:border-[#333] rounded-xl bg-gray-50/50 dark:bg-[#111]/50">
           <div className="w-14 h-14 bg-white dark:bg-black border border-gray-100 dark:border-[#333] rounded-full flex items-center justify-center mb-4 shadow-sm">
-            {debouncedSearchQuery ? (
+            {(debouncedSearchQuery || selectedTag !== 'All') ? (
               <Search size={24} className="text-gray-300 dark:text-gray-600" />
             ) : (
               <Layers size={24} className="text-gray-300 dark:text-gray-600" />
             )}
           </div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1.5">
-            {debouncedSearchQuery ? 'No Matches Found' : 'No Links Found'}
+            {(debouncedSearchQuery || selectedTag !== 'All') ? 'No Matches Found' : 'No Links Found'}
           </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">
             {debouncedSearchQuery
               ? `No results found for "${debouncedSearchQuery}". Try a different search term.`
-              : 'There are no valid links returned from the database.'}
+              : selectedTag !== 'All'
+                ? `No links tagged as "${selectedTag}". Try selecting a different tag.`
+                : 'There are no valid links returned from the database.'}
           </p>
           <button 
-            onClick={debouncedSearchQuery ? handleClearSearch : handleRefresh}
+            onClick={() => {
+              handleClearSearch();
+              setSelectedTag('All');
+              setSavedFilter('all');
+            }}
             className="mt-6 text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-4 py-2 rounded-md"
           >
-            {debouncedSearchQuery ? 'Clear Search' : 'Refresh Database'}
+            {(debouncedSearchQuery || selectedTag !== 'All') ? 'Clear Filters' : 'Refresh Database'}
           </button>
         </div>
       ) : filteredLinks.length === 0 ? (
@@ -607,26 +630,67 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         </div>
       ) : (
         <div className="flex-1 flex flex-col min-h-0 relative">
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-              Sort
-            </span>
-            {SORT_CHIPS.map((chip) => (
+          <div className="mb-4 flex flex-col gap-3">
+            {/* Tag Filter Chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+                Tags
+              </span>
               <button
-                key={chip.value}
                 type="button"
-                onClick={() => handleSortChange(chip.value)}
-                aria-pressed={savedSort === chip.value}
+                onClick={() => {
+                  setSelectedTag('All');
+                  setPage(1);
+                }}
                 className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-                  savedSort === chip.value
+                  selectedTag === 'All'
                     ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
                     : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
                 }`}
               >
-                <span className="sm:hidden">{chip.shortLabel}</span>
-                <span className="hidden sm:inline">{chip.label}</span>
+                All
               </button>
-            ))}
+              {availableTags.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    setSelectedTag(t);
+                    setPage(1);
+                  }}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                    selectedTag === t
+                      ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+
+            {/* Sort Chips */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+                Sort
+              </span>
+              {SORT_CHIPS.map((chip) => (
+                <button
+                  key={chip.value}
+                  type="button"
+                  onClick={() => handleSortChange(chip.value)}
+                  aria-pressed={savedSort === chip.value}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
+                    savedSort === chip.value
+                      ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
+                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
+                  }`}
+                >
+                  <span className="sm:hidden">{chip.shortLabel}</span>
+                  <span className="hidden sm:inline">{chip.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <div

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LinkResult } from '../types';
-import { X, ExternalLink, Copy, Eye, Users, Hash } from 'lucide-react';
+import { X, ExternalLink, Copy, Eye, Users, Tag as TagIcon, Loader2, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { copyText } from '../utils/clipboard';
+import { updateLinkTags } from '../services/api';
 
 interface ResultCardProps {
   result: LinkResult;
@@ -36,11 +37,21 @@ function getAvatarColor(str: string): string {
 const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
   const status = result.status?.toLowerCase();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
   const details = result.details || {};
   const hasImage = details.image && !imgError;
   const isValid = status === 'valid';
   const hasRichMeta = isValid && (details.title || details.description || details.image);
+  
+  const PREDEFINED_TAGS = ['Crypto', 'News', 'Entertainment', 'Finance', 'Gaming', 'Tech', 'Education', 'Music', 'Sports', 'Other'];
+  const [localTags, setLocalTags] = useState<string[]>(result.tags || []);
+  const [isUpdatingTags, setIsUpdatingTags] = useState(false);
+
+  // Sync tags if result changes from parent
+  useEffect(() => {
+    setLocalTags(result.tags || []);
+  }, [result.tags]);
 
   const previewFields = [
     { label: 'Description', value: details.description },
@@ -74,12 +85,13 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsPreviewOpen(false);
+        setIsTagModalOpen(false);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isPreviewOpen]);
+  }, [isPreviewOpen, isTagModalOpen]);
 
   // Reset image error when result changes
   useEffect(() => {
@@ -92,6 +104,23 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
       toast.success('Link copied');
     } catch {
       toast.error('Failed to copy link');
+    }
+  };
+
+  const handleToggleTag = async (tag: string) => {
+    if (isUpdatingTags) return;
+    setIsUpdatingTags(true);
+    const isSelected = localTags.includes(tag);
+    const updatedTags = isSelected
+      ? localTags.filter(t => t !== tag)
+      : [...localTags, tag];
+    const success = await updateLinkTags(result.link, updatedTags);
+    setIsUpdatingTags(false);
+    
+    if (success) {
+      setLocalTags(updatedTags);
+    } else {
+      toast.error('Failed to update tags');
     }
   };
 
@@ -190,6 +219,24 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
               ))}
             </div>
           )}
+          {/* Tags inside preview */}
+          {localTags.length > 0 && (
+            <div>
+              <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                Tags
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {localTags.map(tag => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-gray-200 dark:border-[#333] bg-gray-100 dark:bg-[#111] px-2.5 py-1 text-[11px] font-medium text-gray-700 dark:text-gray-300"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <button
@@ -209,6 +256,55 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
               Open Link
             </a>
           </div>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  const tagModal = isTagModalOpen ? (
+    <div
+      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={() => setIsTagModalOpen(false)}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
+            <TagIcon size={18} /> Assign Tags
+          </h3>
+          <button onClick={() => setIsTagModalOpen(false)} className="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        
+        {isUpdatingTags && (
+          <div className="flex items-center justify-center py-2 mb-3">
+            <Loader2 size={16} className="animate-spin text-gray-400" />
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2">
+          {PREDEFINED_TAGS.map(tag => {
+            const isActive = localTags.includes(tag);
+            return (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => handleToggleTag(tag)}
+                disabled={isUpdatingTags}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all flex items-center gap-1.5 disabled:opacity-60 ${
+                  isActive
+                    ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400 hover:text-black dark:border-[#333] dark:bg-[#111] dark:text-gray-400 dark:hover:border-[#555] dark:hover:text-white'
+                }`}
+              >
+                {isActive && <Check size={12} strokeWidth={3} />}
+                {tag}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -268,6 +364,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
                 )}
               </div>
             )}
+
           </div>
         </div>
 
@@ -286,10 +383,18 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
           >
             <Copy size={14} />
           </button>
+          <button
+            onClick={() => setIsTagModalOpen(true)}
+            className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
+            title="Edit Tags"
+          >
+            <TagIcon size={14} />
+          </button>
         </div>
       </div>
 
       {isPreviewOpen && previewModal ? createPortal(previewModal, document.body) : null}
+      {isTagModalOpen && tagModal ? createPortal(tagModal, document.body) : null}
     </div>
   );
 });

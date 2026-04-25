@@ -207,15 +207,17 @@ export const fetchSavedLinks = async ({
   limit = 50,
   offset = 0,
   platform = 'telegram',
-  search = ''
+  search = '',
+  tag = ''
 }: {
   limit?: number;
   offset?: number;
   platform?: string;
   search?: string;
+  tag?: string;
 }): Promise<import('../types').StoredLinkResponse | null> => {
   try {
-    const cacheKey = `links:${limit}:${offset}:${platform}:${search}`;
+    const cacheKey = `links:${limit}:${offset}:${platform}:${search}:${tag}`;
     const cached = getCached<import('../types').StoredLinkResponse>(cacheKey);
     if (cached) return cached;
 
@@ -230,6 +232,7 @@ export const fetchSavedLinks = async ({
     });
 
     if (search) params.set('search', search);
+    if (tag && tag !== 'All') params.set('tag', tag);
 
     const response = await fetch(
       `${BASE_URL}/links?${params.toString()}`,
@@ -309,5 +312,47 @@ export const fetchMyProfile = async (): Promise<MyProfileResponse> => {
   } catch (error) {
     console.error('Error fetching my profile:', error);
     return { username: null, links_added: 0, rank: null };
+  }
+};
+
+// --------------------------------------------
+// TAGS
+// --------------------------------------------
+export const fetchTags = async (): Promise<string[]> => {
+  const cacheKey = 'tags';
+  const cached = getCached<{tags: string[]}>(cacheKey);
+  if (cached) return cached.tags;
+
+  try {
+    const response = await fetch(`${BASE_URL}/tags`);
+    if (!response.ok) throw new Error('Failed to fetch tags');
+
+    const data = await response.json();
+    setCache(cacheKey, data);
+    return data.tags || [];
+  } catch (error) {
+    console.error('Error fetching tags:', error);
+    return [];
+  }
+};
+
+export const updateLinkTags = async (url: string, tags: string[]): Promise<boolean> => {
+  try {
+    const response = await fetch(`${BASE_URL}/links/tags`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, tags })
+    });
+    
+    if (!response.ok) throw new Error('Failed to update tags');
+    
+    // Clear links cache since data has changed
+    clearCache('links:');
+    clearCache('tags'); // Clear tags cache in case a new tag was added
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating link tags:', error);
+    return false;
   }
 };

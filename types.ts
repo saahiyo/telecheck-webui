@@ -3,6 +3,7 @@ export interface LinkResult {
   status: 'valid' | 'invalid' | 'mega' | 'unknown' | string;
   reason?: string;
   details?: any; // For any extra data API might return
+  tags?: string[];
 }
 
 export interface StatsData {
@@ -43,6 +44,7 @@ export interface StoredLink {
   image?: string;
   member_count?: number;
   checked_at?: string;
+  tags?: string[];
 }
 
 export interface StoredLinkResponse {
