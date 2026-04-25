@@ -329,12 +329,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
               <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">
                 {statusLabel}
               </span>
-              {/* Type badge for valid links */}
-              {isValid && details.type && (
-                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-[#222] text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-[#333] uppercase tracking-wider shrink-0 hidden sm:inline">
-                  {details.type}
-                </span>
-              )}
+
             </div>
 
             {/* Title / Link */}
