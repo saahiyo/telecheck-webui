@@ -107,6 +107,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [isLoading, setIsLoading] = useState(!initialCache);
   const [isSearching, setIsSearching] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [validationProgress, setValidationProgress] = useState({ current: 0, total: 0 });
   const [total, setTotal] = useState(initialCache?.total || 0);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -205,23 +206,37 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   };
 
   const handleValidate = async () => {
-    if (links.length === 0) return;
+    if (total === 0) return;
     setIsValidating(true);
-    const toastId = toast.loading('Re-validating ALL stored links and removing expired ones...');
+    setValidationProgress({ current: 0, total });
+    const toastId = toast.loading('Re-validating ALL stored links...');
     
     try {
-      const result = await validateSavedLinks({ limit: 'all' });
+      const BATCH_SIZE_VAL = 20;
+      let processed = 0;
+      let kept = 0;
+      let deleted = 0;
+      let currentOffset = 0;
+
+      while (processed < total) {
+        const result = await validateSavedLinks({ 
+          limit: String(BATCH_SIZE_VAL),
+          offset: currentOffset
+        });
+
+        processed += result.processed;
+        kept += result.kept;
+        deleted += result.deleted;
+        
+        // Since links are deleted, the offset only increases by the number of links we KEPT
+        currentOffset += result.kept;
+        
+        setValidationProgress({ current: Math.min(processed, total), total });
+        
+        if (result.processed === 0) break; // Safety break
+      }
       
-      const skipped = result.skipped || 0;
-      const msg = skipped > 0
-        ? `Kept ${result.kept}, removed ${result.deleted}, skipped ${skipped} (unreachable).`
-        : `Kept ${result.kept} links, removed ${result.deleted} expired links.`;
-
-      toast.success(`Validation complete! ${msg}`,
-        { id: toastId }
-      );
-
-      // Refresh links from DB to reflect deletions
+      toast.success(`Validation complete! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
       await loadLinks(page, debouncedSearchQuery, selectedTag);
     } catch (error) {
       toast.error('An error occurred during validation.', { id: toastId });
@@ -233,25 +248,38 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const handleValidatePage = async () => {
     if (links.length === 0) return;
     setIsValidating(true);
-    const offset = (page - 1) * PAGE_SIZE;
-    const toastId = toast.loading(`Validating ${links.length} links on this page...`);
+    const totalToProcess = links.length;
+    setValidationProgress({ current: 0, total: totalToProcess });
+    const startOffset = (page - 1) * PAGE_SIZE;
+    const toastId = toast.loading(`Validating ${totalToProcess} links on this page...`);
     
     try {
-      const result = await validateSavedLinks({
-        limit: String(PAGE_SIZE),
-        offset
-      });
-      
-      const skipped = result.skipped || 0;
-      const msg = skipped > 0
-        ? `Kept ${result.kept}, removed ${result.deleted}, skipped ${skipped} (unreachable).`
-        : `Kept ${result.kept} links, removed ${result.deleted} expired links.`;
+      const BATCH_SIZE_VAL = 20;
+      let processed = 0;
+      let kept = 0;
+      let deleted = 0;
+      let currentOffset = startOffset;
 
-      toast.success(`Page validated! ${msg}`,
-        { id: toastId }
-      );
+      while (processed < totalToProcess) {
+        const limit = Math.min(BATCH_SIZE_VAL, totalToProcess - processed);
+        const result = await validateSavedLinks({
+          limit: String(limit),
+          offset: currentOffset
+        });
 
-      // Refresh current page
+        processed += result.processed;
+        kept += result.kept;
+        deleted += result.deleted;
+        
+        // Advance offset only by links we didn't delete
+        currentOffset += result.kept;
+        
+        setValidationProgress({ current: processed, total: totalToProcess });
+        
+        if (result.processed === 0) break;
+      }
+
+      toast.success(`Page validated! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
       await loadLinks(page, debouncedSearchQuery, selectedTag);
     } catch (error) {
       toast.error('An error occurred during page validation.', { id: toastId });
@@ -572,6 +600,24 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           </select>
         </div>
       </div>
+
+      {isValidating && validationProgress.total > 0 && (
+        <div className="mb-6 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333] p-3 rounded-lg animate-fade-in">
+          <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-2 font-bold uppercase tracking-wider">
+            <span className="flex items-center gap-1.5">
+              <Loader2 size={10} className="animate-spin text-black dark:text-white" /> 
+              Validating Database...
+            </span>
+            <span>{Math.round((validationProgress.current / validationProgress.total) * 100)}% ({validationProgress.current}/{validationProgress.total})</span>
+          </div>
+          <div className="w-full h-1.5 bg-gray-200 dark:bg-[#333] rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-black dark:bg-white rounded-full transition-all duration-300 ease-out shadow-[0_0_8px_rgba(0,0,0,0.1)] dark:shadow-[0_0_8px_rgba(255,255,255,0.1)]"
+              style={{ width: `${(validationProgress.current / validationProgress.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {isLoading && links.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-12 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black min-h-[400px]">
