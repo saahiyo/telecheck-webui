@@ -208,16 +208,18 @@ export const fetchSavedLinks = async ({
   offset = 0,
   platform = 'telegram',
   search = '',
-  tag = ''
+  tag = '',
+  user = ''
 }: {
   limit?: number;
   offset?: number;
   platform?: string;
   search?: string;
   tag?: string;
+  user?: string;
 }): Promise<import('../types').StoredLinkResponse | null> => {
   try {
-    const cacheKey = `links:${limit}:${offset}:${platform}:${search}:${tag}`;
+    const cacheKey = `links:${limit}:${offset}:${platform}:${search}:${tag}:${user}`;
     const cached = getCached<import('../types').StoredLinkResponse>(cacheKey);
     if (cached) return cached;
 
@@ -233,6 +235,7 @@ export const fetchSavedLinks = async ({
 
     if (search) params.set('search', search);
     if (tag && tag !== 'All') params.set('tag', tag);
+    if (user) params.set('username', user);
 
     const response = await fetch(
       `${BASE_URL}/links?${params.toString()}`,

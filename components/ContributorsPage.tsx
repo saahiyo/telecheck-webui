@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Loader2, Users, Trophy, Medal, Award, Activity, Search, RefreshCw, X, ChevronLeft, ChevronRight, Hash, Calendar, Sparkles } from 'lucide-react';
 import debounce from 'lodash.debounce';
 import { fetchContributors, fetchMyProfile, getCached } from '../services/api';
+import { useRouter } from 'next/navigation';
 import { Contributor, MyProfileResponse, ContributorsResponse } from '../types';
 import { toast } from 'sonner';
 
@@ -23,6 +24,7 @@ function formatShortDate(dateValue?: string) {
 const ContributorsPage: React.FC<ContributorsPageProps> = () => {
   const initialContribCache = getCached<ContributorsResponse>(`contributors:${PAGE_SIZE}:0`);
   const initialProfileCache = getCached<MyProfileResponse>('profile');
+  const router = useRouter();
 
   const [contributors, setContributors] = useState<Contributor[]>(initialContribCache?.contributors || []);
   const [profile, setProfile] = useState<MyProfileResponse | null>(initialProfileCache || null);
@@ -157,7 +159,10 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                     <span className="text-xs sm:text-sm font-bold text-black dark:text-white">{profile.rank || '-'}</span>
                   </div>
                 </div>
-                <div className="px-3 sm:px-4 py-1.5 sm:py-2 flex flex-col items-center flex-1 sm:flex-auto">
+                <div 
+                  onClick={() => router.push(`/saved?user=${profile.username}`)}
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 flex flex-col items-center flex-1 sm:flex-auto cursor-pointer hover:bg-gray-100 dark:hover:bg-[#222] transition-colors"
+                >
                   <span className="text-[9px] sm:text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-0.5 sm:mb-1">Links Added</span>
                   <div className="flex items-center gap-1.5">
                     <Activity size={14} className="text-green-500 w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -244,9 +249,12 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                         </div>
                       </td>
                       <td className="py-2.5 sm:py-3 px-3 sm:px-4 text-right">
-                        <span className="text-xs sm:text-sm font-bold text-black dark:text-white tabular-nums">
+                        <button 
+                          onClick={() => router.push(`/saved?user=${contributor.username}`)}
+                          className="text-xs sm:text-sm font-bold text-black dark:text-white tabular-nums hover:underline cursor-pointer bg-transparent border-none p-0"
+                        >
                           {contributor.links_added.toLocaleString()}
-                        </span>
+                        </button>
                       </td>
                       <td className="py-2.5 sm:py-3 px-3 sm:px-4 pr-4 sm:pr-6 w-16 sm:w-32 hidden sm:table-cell">
                         <div className="h-1 sm:h-1.5 bg-gray-100 dark:bg-[#222] rounded-full overflow-hidden w-full flex items-center group-hover:bg-gray-200 dark:group-hover:bg-[#333] transition-colors">

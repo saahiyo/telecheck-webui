@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy } from 'lucide-react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import debounce from 'lodash.debounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags } from '../services/api';
@@ -122,6 +123,10 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [scrollJumpTarget, setScrollJumpTarget] = useState<'top' | 'bottom'>('bottom');
   const [scrollJumpContext, setScrollJumpContext] = useState<'container' | 'window'>('window');
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const userParam = searchParams.get('user') || '';
+  
   const resultsScrollRef = useRef<HTMLDivElement | null>(null);
   const hasDataRef = useRef(false);
 
@@ -156,12 +161,12 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     setPage(1);
   };
 
-  const loadLinks = useCallback(async (currentPage: number, search: string, tag: string) => {
+  const loadLinks = useCallback(async (currentPage: number, search: string, tag: string, user: string) => {
     // Only show full-page spinner if it's initial load (no data), otherwise keep cards visible
     if (!hasDataRef.current) setIsLoading(true);
     try {
       const offset = (currentPage - 1) * PAGE_SIZE;
-      const data = await fetchSavedLinks({ limit: PAGE_SIZE, offset, search, tag });
+      const data = await fetchSavedLinks({ limit: PAGE_SIZE, offset, search, tag, user });
 
       // If request was aborted (null), skip state update to avoid wiping current data
       if (data === null) return;
@@ -178,8 +183,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, []);
 
   useEffect(() => {
-    loadLinks(page, debouncedSearchQuery, selectedTag);
-  }, [page, debouncedSearchQuery, selectedTag]);
+    loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
+  }, [page, debouncedSearchQuery, selectedTag, userParam, loadLinks]);
 
   useEffect(() => {
     // Load tags once on mount
@@ -194,7 +199,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
   const handleRefresh = async () => {
     setIsLoading(true);
-    await loadLinks(page, debouncedSearchQuery, selectedTag);
+    await loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
   };
 
   const handleSortChange = (nextSort: SavedSort) => {
@@ -237,7 +242,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       }
       
       toast.success(`Validation complete! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
-      await loadLinks(page, debouncedSearchQuery, selectedTag);
+      await loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
     } catch (error) {
       toast.error('An error occurred during validation.', { id: toastId });
     } finally {
@@ -280,7 +285,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       }
 
       toast.success(`Page validated! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
-      await loadLinks(page, debouncedSearchQuery, selectedTag);
+      await loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
     } catch (error) {
       toast.error('An error occurred during page validation.', { id: toastId });
     } finally {
@@ -355,10 +360,11 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
   // Summary text
   const savedLinksSummary = (() => {
-    if (debouncedSearchQuery || selectedTag !== 'All') {
+    if (debouncedSearchQuery || selectedTag !== 'All' || userParam) {
       const queryStr = debouncedSearchQuery ? `"${debouncedSearchQuery}"` : '';
       const tagStr = selectedTag !== 'All' ? `[${selectedTag}]` : '';
-      return `${filteredLinks.length} results ${queryStr} ${tagStr} · ${total} matched`;
+      const userStr = userParam ? `@${userParam}` : '';
+      return `${filteredLinks.length} results ${queryStr} ${tagStr} ${userStr} · ${total} matched`;
     }
     if (savedFilter !== 'all') {
       return `${filteredLinks.length} filtered · ${links.length} loaded · ${total} total`;
@@ -642,17 +648,20 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
               ? `No results found for "${debouncedSearchQuery}". Try a different search term.`
               : selectedTag !== 'All'
                 ? `No links tagged as "${selectedTag}". Try selecting a different tag.`
-                : 'There are no valid links returned from the database.'}
+                : userParam
+                  ? `User @${userParam} hasn't added any links matching this filter.`
+                  : 'There are no valid links returned from the database.'}
           </p>
           <button 
             onClick={() => {
               handleClearSearch();
               setSelectedTag('All');
               setSavedFilter('all');
+              router.push('/saved');
             }}
             className="mt-6 text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-4 py-2 rounded-md"
           >
-            {(debouncedSearchQuery || selectedTag !== 'All') ? 'Clear Filters' : 'Refresh Database'}
+            {(debouncedSearchQuery || selectedTag !== 'All' || userParam) ? 'Clear Filters' : 'Refresh Database'}
           </button>
         </div>
       ) : filteredLinks.length === 0 ? (
@@ -668,6 +677,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             onClick={() => {
               handleClearSearch();
               setSavedFilter('all');
+              router.push('/saved');
             }}
             className="mt-6 text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-4 py-2 rounded-md"
           >
@@ -676,6 +686,21 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         </div>
       ) : (
         <div className="flex-1 flex flex-col min-h-0 relative">
+          {userParam && (
+            <div className="mb-4 flex items-center gap-2 p-2 rounded-lg bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 animate-fade-in">
+              <User size={14} className="text-blue-500" />
+              <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                Filtering by user: <span className="font-bold">@{userParam}</span>
+              </span>
+              <button 
+                onClick={() => router.push('/saved')}
+                className="ml-auto p-1 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-full transition-colors"
+                title="Clear user filter"
+              >
+                <X size={14} className="text-blue-500" />
+              </button>
+            </div>
+          )}
           <div className="mb-4 flex flex-col gap-3">
             {/* Tag Filter Chips */}
             <div className="flex items-center gap-4">
