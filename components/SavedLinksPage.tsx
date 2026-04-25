@@ -678,64 +678,68 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         <div className="flex-1 flex flex-col min-h-0 relative">
           <div className="mb-4 flex flex-col gap-3">
             {/* Tag Filter Chips */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-4">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 shrink-0 min-w-[45px]">
                 Tags
               </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedTag('All');
-                  setPage(1);
-                }}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-                  selectedTag === 'All'
-                    ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
-                    : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
-                }`}
-              >
-                All
-              </button>
-              {availableTags.map((t) => (
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
                 <button
-                  key={t}
                   type="button"
                   onClick={() => {
-                    setSelectedTag(t);
+                    setSelectedTag('All');
                     setPage(1);
                   }}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-                    selectedTag === t
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${
+                    selectedTag === 'All'
                       ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
                       : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
                   }`}
                 >
-                  {t}
+                  All
                 </button>
-              ))}
+                {availableTags.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      setSelectedTag(t);
+                      setPage(1);
+                    }}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${
+                      selectedTag === t
+                        ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Sort Chips */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+            <div className="flex items-center gap-4">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 shrink-0 min-w-[45px]">
                 Sort
               </span>
-              {SORT_CHIPS.map((chip) => (
-                <button
-                  key={chip.value}
-                  type="button"
-                  onClick={() => handleSortChange(chip.value)}
-                  aria-pressed={savedSort === chip.value}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-                    savedSort === chip.value
-                      ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
-                  }`}
-                >
-                  <span className="sm:hidden">{chip.shortLabel}</span>
-                  <span className="hidden sm:inline">{chip.label}</span>
-                </button>
-              ))}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+                {SORT_CHIPS.map((chip) => (
+                  <button
+                    key={chip.value}
+                    type="button"
+                    onClick={() => handleSortChange(chip.value)}
+                    aria-pressed={savedSort === chip.value}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${
+                      savedSort === chip.value
+                        ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
+                    }`}
+                  >
+                    <span className="sm:hidden">{chip.shortLabel}</span>
+                    <span className="hidden sm:inline">{chip.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

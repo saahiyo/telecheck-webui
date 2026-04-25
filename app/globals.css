@@ -72,3 +72,12 @@
 .dark .glass-panel {
   background: rgba(15, 23, 42, 0.6);
 }
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
