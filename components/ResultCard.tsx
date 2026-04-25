@@ -372,18 +372,18 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
             <Eye size={14} />
           </button>
           <button
-            onClick={() => void copyToClipboard()}
-            className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
-            title="Copy Link"
-          >
-            <Copy size={14} />
-          </button>
-          <button
             onClick={() => setIsTagModalOpen(true)}
             className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
             title="Edit Tags"
           >
             <TagIcon size={14} />
+          </button>
+          <button
+            onClick={() => void copyToClipboard()}
+            className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
+            title="Copy Link"
+          >
+            <Copy size={14} />
           </button>
         </div>
       </div>

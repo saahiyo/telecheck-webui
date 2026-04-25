@@ -143,56 +143,7 @@ function ValidatorContent() {
     }
   }, [searchParams]);
 
-  // Handle global shortcuts triggered by AppLayout
-  useEffect(() => {
-    const handleRunValidation = () => {
-      runValidation();
-    };
-
-    const handleFocusPrimaryInput = () => {
-      if (mode === 'bulk') {
-        bulkInputRef.current?.focus();
-      } else {
-        singleInputRef.current?.focus();
-      }
-    };
-
-    const handleScrollBoundary = (e: Event) => {
-      const customEvent = e as CustomEvent<string>;
-      const container = homeResultsScrollRef.current;
-      const targetTop = customEvent.detail === 'top' ? 0 : Number.MAX_SAFE_INTEGER;
-
-      if (container && container.scrollHeight - container.clientHeight > 24) {
-        container.scrollTo({ top: targetTop, behavior: 'smooth' });
-      } else {
-        window.scrollTo({ top: targetTop, behavior: 'smooth' });
-      }
-    };
-
-    const handleOpenExport = () => {
-      if (hasChecked && results.length > 0 && document.activeElement !== bulkInputRef.current && document.activeElement !== singleInputRef.current) {
-        exportButtonRef.current?.click();
-      }
-    };
-
-    const handleEscape = () => {
-      setCopyMenuOpen(false);
-    };
-
-    window.addEventListener('app-run-validation', handleRunValidation);
-    window.addEventListener('app-focus-primary-input', handleFocusPrimaryInput);
-    window.addEventListener('app-scroll-boundary', handleScrollBoundary);
-    window.addEventListener('app-open-export', handleOpenExport);
-    window.addEventListener('app-escape', handleEscape);
-
-    return () => {
-      window.removeEventListener('app-run-validation', handleRunValidation);
-      window.removeEventListener('app-focus-primary-input', handleFocusPrimaryInput);
-      window.removeEventListener('app-scroll-boundary', handleScrollBoundary);
-      window.removeEventListener('app-open-export', handleOpenExport);
-      window.removeEventListener('app-escape', handleEscape);
-    };
-  }, [mode, hasChecked, results.length]);
+  // Handle global shortcuts triggered by AppLayout moved below runValidation to fix TDZ
 
   // ── Memoized link count from bulk input ──
   const { detectedLinkCount, detectedDuplicateCount } = useMemo(() => {
@@ -356,6 +307,56 @@ function ValidatorContent() {
     setRefreshStatsTrigger(prev => prev + 1);
     toast.success(`Analysis complete! (${elapsedSeconds}s)`);
   };
+  // Handle global shortcuts triggered by AppLayout
+  useEffect(() => {
+    const handleRunValidation = () => {
+      runValidation();
+    };
+
+    const handleFocusPrimaryInput = () => {
+      if (mode === 'bulk') {
+        bulkInputRef.current?.focus();
+      } else {
+        singleInputRef.current?.focus();
+      }
+    };
+
+    const handleScrollBoundary = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      const container = homeResultsScrollRef.current;
+      const targetTop = customEvent.detail === 'top' ? 0 : Number.MAX_SAFE_INTEGER;
+
+      if (container && container.scrollHeight - container.clientHeight > 24) {
+        container.scrollTo({ top: targetTop, behavior: 'smooth' });
+      } else {
+        window.scrollTo({ top: targetTop, behavior: 'smooth' });
+      }
+    };
+
+    const handleOpenExport = () => {
+      if (hasChecked && results.length > 0 && document.activeElement !== bulkInputRef.current && document.activeElement !== singleInputRef.current) {
+        exportButtonRef.current?.click();
+      }
+    };
+
+    const handleEscape = () => {
+      setCopyMenuOpen(false);
+    };
+
+    window.addEventListener('app-run-validation', handleRunValidation);
+    window.addEventListener('app-focus-primary-input', handleFocusPrimaryInput);
+    window.addEventListener('app-scroll-boundary', handleScrollBoundary);
+    window.addEventListener('app-open-export', handleOpenExport);
+    window.addEventListener('app-escape', handleEscape);
+
+    return () => {
+      window.removeEventListener('app-run-validation', handleRunValidation);
+      window.removeEventListener('app-focus-primary-input', handleFocusPrimaryInput);
+      window.removeEventListener('app-scroll-boundary', handleScrollBoundary);
+      window.removeEventListener('app-open-export', handleOpenExport);
+      window.removeEventListener('app-escape', handleEscape);
+    };
+  }, [mode, hasChecked, results.length, runValidation]);
 
   const clearAll = () => {
     setBulkInput('');
@@ -537,62 +538,67 @@ function ValidatorContent() {
             {/* Input Area */}
             <div className="space-y-3">
               {mode === 'bulk' ? (
-                <div
-                  className={`relative group ${isDragging ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-black rounded-lg' : ''}`}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  <textarea
-                    ref={bulkInputRef}
-                    value={bulkInput}
-                    onChange={(e) => setBulkInput(e.target.value)}
-                    placeholder={`Paste your list here or drag a .txt file...\n\nhttps://t.me/channel1\nhttps://t.me/channel2`}
-                    className="w-full h-48 sm:h-64 p-3 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-colors resize-none text-xs font-mono placeholder:text-gray-400 dark:placeholder:text-gray-600 leading-relaxed text-black dark:text-white"
-                    spellCheck={false}
-                  />
-                  {/* Drag overlay */}
-                  {isDragging && (
-                    <div className="absolute inset-0 bg-blue-500/10 dark:bg-blue-500/5 border-2 border-dashed border-blue-500 rounded-lg flex items-center justify-center pointer-events-none">
-                      <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs font-medium">
-                        <FileUp size={16} />
-                        Drop .txt file here
+                <>
+                  <div
+                    className={`relative group ${isDragging ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-black rounded-lg' : ''}`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                  >
+                    <textarea
+                      ref={bulkInputRef}
+                      value={bulkInput}
+                      onChange={(e) => setBulkInput(e.target.value)}
+                      placeholder={`Paste your list here or drag a .txt file...\n\nhttps://t.me/channel1\nhttps://t.me/channel2`}
+                      className="w-full h-48 sm:h-64 p-3 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-colors resize-none text-xs font-mono placeholder:text-gray-400 dark:placeholder:text-gray-600 leading-relaxed text-black dark:text-white"
+                      spellCheck={false}
+                    />
+                    {/* Drag overlay */}
+                    {isDragging && (
+                      <div className="absolute inset-0 bg-blue-500/10 dark:bg-blue-500/5 border-2 border-dashed border-blue-500 rounded-lg flex items-center justify-center pointer-events-none">
+                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs font-medium">
+                          <FileUp size={16} />
+                          Drop .txt file here
+                        </div>
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 flex gap-1">
+                      <button
+                        onClick={handlePaste}
+                        className="p-1.5 text-gray-400 hover:text-black dark:hover:text-white transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-[#222]"
+                        title="Paste"
+                      >
+                        <Clipboard size={12} />
+                      </button>
+                      {bulkInput && (
+                        <button 
+                          onClick={() => setBulkInput('')}
+                          className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-[#222]"
+                          title="Clear"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Link count badge moved to bottom side */}
+                  {detectedLinkCount > 0 && (
+                    <div className="mt-2 flex items-center gap-2 px-1 animate-fade-in">
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-100/80 dark:bg-[#111]/80 border border-gray-200/50 dark:border-[#333]/50 shadow-sm">
+                        <Link2 size={11} className="text-gray-500 dark:text-gray-400 shrink-0" />
+                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 tabular-nums uppercase tracking-wider">
+                          {detectedLinkCount} link{detectedLinkCount !== 1 ? 's' : ''} detected
+                        </span>
+                        {detectedDuplicateCount > 0 && (
+                          <span className="text-[10px] font-bold text-amber-600 dark:text-amber-500 tabular-nums uppercase tracking-wider">
+                            · {detectedDuplicateCount} dupe{detectedDuplicateCount !== 1 ? 's' : ''}
+                          </span>
+                        )}
                       </div>
                     </div>
                   )}
-                  <div className="absolute top-2 right-2 flex gap-1">
-                    <button
-                      onClick={handlePaste}
-                      className="p-1.5 text-gray-400 hover:text-black dark:hover:text-white transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-[#222]"
-                      title="Paste"
-                    >
-                      <Clipboard size={12} />
-                    </button>
-                    {bulkInput && (
-                      <button 
-                        onClick={() => setBulkInput('')}
-                        className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-[#222]"
-                        title="Clear"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    )}
-                  </div>
-                  {/* Link count badge */}
-                  {detectedLinkCount > 0 && (
-                    <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-100/90 dark:bg-[#222]/90 backdrop-blur-sm border border-gray-200/60 dark:border-[#444]/60 pointer-events-none select-none">
-                      <Link2 size={10} className="text-gray-500 dark:text-gray-400 shrink-0" />
-                      <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300 tabular-nums">
-                        {detectedLinkCount} link{detectedLinkCount !== 1 ? 's' : ''} detected
-                      </span>
-                      {detectedDuplicateCount > 0 && (
-                        <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 tabular-nums">
-                          · {detectedDuplicateCount} dupe{detectedDuplicateCount !== 1 ? 's' : ''}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </div>
+                </>
               ) : (
                 <form onSubmit={handleSingleCheck} className="relative">
                   <div className="relative">
