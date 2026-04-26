@@ -369,19 +369,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </a>
             </div>
 
-            {/* Right: Made with love */}
-            <div className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500">
-              <span>Made with</span>
-              <Heart size={10} className="text-red-400 fill-red-400" />
-              <span>by</span>
-              <a
-                href="https://github.com/saahiyo"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-semibold text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors"
-              >
-                saahiyo
-              </a>
+            {/* Right: Made with love + Legal */}
+            <div className="flex flex-col items-center sm:items-end gap-2">
+              <div className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500">
+                <span>Made with</span>
+                <Heart size={10} className="text-red-400 fill-red-400" />
+                <span>by</span>
+                <a
+                  href="https://github.com/saahiyo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-semibold text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors"
+                >
+                  saahiyo
+                </a>
+              </div>
+              <div className="flex items-center gap-3 text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                <Link href="/privacy" className="hover:text-black dark:hover:text-white transition-colors">Privacy</Link>
+                <Link href="/terms" className="hover:text-black dark:hover:text-white transition-colors">Terms</Link>
+              </div>
             </div>
           </div>
         </div>
