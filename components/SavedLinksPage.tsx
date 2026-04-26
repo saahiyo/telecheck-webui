@@ -806,7 +806,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                       style={{ paddingBottom: '0.75rem' }}
                     >
                       {rowItems.map((adapted) => (
-                        <ResultCard key={adapted.key} result={adapted.result} />
+                        <ResultCard key={adapted.key} result={adapted.result} availableTags={availableTags} />
                       ))}
                     </div>
                   </div>
