@@ -316,9 +316,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
   ) : null;
 
   return (
-    <div className={`group relative bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-[#333] p-2.5 transition-all hover:bg-gray-50 dark:hover:bg-[#111] ${
-      isValid ? 'border-l-2 border-l-emerald-500' : status === 'invalid' ? 'border-l-2 border-l-red-500' : status === 'mega' ? 'border-l-2 border-l-blue-500' : ''
-    }`}>
+    <div className="group relative bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-[#333] p-2.5 transition-all hover:bg-gray-50 dark:hover:bg-[#111]">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0 flex items-start gap-3">
           {/* Avatar: always show for valid links */}
