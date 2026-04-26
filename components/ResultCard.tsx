@@ -164,6 +164,9 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
     >
       <div
         className="w-full max-w-lg rounded-2xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="preview-title"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 p-5 border-b border-gray-100 dark:border-[#222]">
@@ -178,7 +181,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
                   {statusLabel}
                 </span>
               </div>
-              <h3 className="text-lg font-semibold text-black dark:text-white break-words">
+              <h3 id="preview-title" className="text-lg font-semibold text-black dark:text-white break-words">
                 {details.title || 'Link Preview'}
               </h3>
             </div>
@@ -268,11 +271,14 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
     >
       <div
         className="w-full max-w-sm rounded-2xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl p-5"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tag-modal-title"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
-            <TagIcon size={18} /> Assign Tags
+          <h3 id="tag-modal-title" className="text-lg font-semibold text-black dark:text-white flex items-center gap-2">
+            <TagIcon size={18} aria-hidden="true" /> Assign Tags
           </h3>
           <button onClick={() => setIsTagModalOpen(false)} className="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
             <X size={18} />
@@ -325,8 +331,8 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
           <div className="flex-1 min-w-0">
             {/* Status row with badges */}
             <div className="flex items-center gap-2 mb-0.5">
-              <div className={`w-1.5 h-1.5 rounded-full ${statusColor} shrink-0`}></div>
-              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">
+              <div className={`w-1.5 h-1.5 rounded-full ${statusColor} shrink-0`} aria-hidden="true"></div>
+              <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate" aria-label={`Status: ${statusLabel}`}>
                 {statusLabel}
               </span>
 
@@ -368,22 +374,25 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
             onClick={() => setIsPreviewOpen(true)}
             className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
             title="View Details"
+            aria-label={`View details for ${details.title || result.link}`}
           >
-            <Eye size={14} />
+            <Eye size={14} aria-hidden="true" />
           </button>
           <button
             onClick={() => setIsTagModalOpen(true)}
             className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
             title="Edit Tags"
+            aria-label={`Edit tags for ${details.title || result.link}`}
           >
-            <TagIcon size={14} />
+            <TagIcon size={14} aria-hidden="true" />
           </button>
           <button
             onClick={() => void copyToClipboard()}
             className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
             title="Copy Link"
+            aria-label={`Copy link for ${details.title || result.link}`}
           >
-            <Copy size={14} />
+            <Copy size={14} aria-hidden="true" />
           </button>
         </div>
       </div>

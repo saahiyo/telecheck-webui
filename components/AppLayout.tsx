@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Github, Heart } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import GithubBtn from './GithubBtn';
@@ -181,14 +182,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="border-b border-gray-200 dark:border-[#333] sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:h-16 sm:py-0 flex flex-col justify-center gap-3">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 cursor-pointer min-w-0" onClick={() => router.push('/')}>
+            <Link 
+              href="/" 
+              className="flex items-center gap-2 cursor-pointer min-w-0"
+              aria-label="TeleCheck Pro Home"
+            >
               <div className="w-8 h-8 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center shrink-0">
-                <ShieldCheck size={18} strokeWidth={2.5} />
+                <ShieldCheck size={18} strokeWidth={2.5} aria-hidden="true" />
               </div>
               <h1 className="text-lg font-bold tracking-tight text-black dark:text-white truncate">
                 TeleCheck<span className="text-gray-400 dark:text-gray-600">Pro</span>
               </h1>
-            </div>
+            </Link>
 
             <div className="flex items-center gap-3 shrink-0">
               {/* Navigation Links */}
@@ -253,6 +258,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
         <aside
           id="mobile-navigation-drawer"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
           className={`absolute right-0 top-0 h-full w-[280px] max-w-[85vw] border-l border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl transition-transform duration-200 ${isMobileNavOpen ? 'translate-x-0' : 'translate-x-full'}`}
         >
           <div className="flex items-center justify-between border-b border-gray-200 dark:border-[#333] px-4 py-4">
@@ -386,6 +394,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         >
           <div
             className="w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shortcuts-title"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-[#222] px-5 py-4">
@@ -393,7 +404,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
                   Keyboard Shortcuts
                 </p>
-                <h2 className="mt-1 text-lg font-semibold text-black dark:text-white">Move faster around TeleCheck Pro</h2>
+                <h2 id="shortcuts-title" className="mt-1 text-lg font-semibold text-black dark:text-white">Move faster around TeleCheck Pro</h2>
               </div>
               <button
                 type="button"

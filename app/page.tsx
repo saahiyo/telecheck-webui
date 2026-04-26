@@ -547,11 +547,13 @@ function ValidatorContent() {
                   >
                     <textarea
                       ref={bulkInputRef}
+                      id="bulk-link-input"
                       value={bulkInput}
                       onChange={(e) => setBulkInput(e.target.value)}
                       placeholder={`Paste your list here or drag a .txt file...\n\nhttps://t.me/channel1\nhttps://t.me/channel2`}
                       className="w-full h-48 sm:h-64 p-3 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-colors resize-none text-xs font-mono placeholder:text-gray-400 dark:placeholder:text-gray-600 leading-relaxed text-black dark:text-white"
                       spellCheck={false}
+                      aria-label="Bulk Telegram links input"
                     />
                     {/* Drag overlay */}
                     {isDragging && (
@@ -607,11 +609,13 @@ function ValidatorContent() {
                      </div>
                      <input
                        ref={singleInputRef}
+                       id="single-link-input"
                        type="text"
                        value={singleInput}
                        onChange={(e) => setSingleInput(e.target.value)}
                        placeholder="https://t.me/username"
                        className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm font-medium text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
+                       aria-label="Single Telegram link input"
                       />
                      <div className="absolute inset-y-0 right-0 pr-2 flex items-center">
                        <button
@@ -684,12 +688,12 @@ function ValidatorContent() {
            {hasChecked && (
              <div className="flex flex-col h-full">
                {isChecking && checkingProgress.total > 0 && (
-                 <div className="mb-4 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333] p-3 rounded-lg">
+                 <div className="mb-4 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333] p-3 rounded-lg" aria-live="polite">
                    <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-2 font-medium">
-                      <span className="flex items-center gap-1.5"><Loader2 size={10} className="animate-spin" /> Verifying links...{elapsedSeconds > 0 && <span className="tabular-nums"> ({elapsedSeconds}s)</span>}</span>
+                      <span className="flex items-center gap-1.5"><Loader2 size={10} className="animate-spin" aria-hidden="true" /> Verifying links...{elapsedSeconds > 0 && <span className="tabular-nums"> ({elapsedSeconds}s)</span>}</span>
                      <span>{Math.round((checkingProgress.current / checkingProgress.total) * 100)}% ({checkingProgress.current}/{checkingProgress.total})</span>
                    </div>
-                   <div className="w-full h-1.5 bg-gray-200 dark:bg-[#333] rounded-full overflow-hidden">
+                   <div className="w-full h-1.5 bg-gray-200 dark:bg-[#333] rounded-full overflow-hidden" role="progressbar" aria-valuenow={Math.round((checkingProgress.current / checkingProgress.total) * 100)} aria-valuemin={0} aria-valuemax={100}>
                      <div 
                        className="h-full bg-black dark:bg-white rounded-full transition-all duration-300 ease-out"
                        style={{ width: `${(checkingProgress.current / checkingProgress.total) * 100}%` }}
