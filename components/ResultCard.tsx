@@ -8,7 +8,6 @@ import { updateLinkTags } from '../services/api';
 
 interface ResultCardProps {
   result: LinkResult;
-  availableTags?: string[];
 }
 
 /** Extract a display initial from a title or link */
@@ -35,7 +34,7 @@ function getAvatarColor(str: string): string {
   return `hsl(${hue}, 45%, 65%)`;
 }
 
-const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, availableTags = [] }) => {
+const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
   const status = result.status?.toLowerCase();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
@@ -46,17 +45,8 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, availableTag
   const hasRichMeta = isValid && (details.title || details.description || details.image);
   
   const PREDEFINED_TAGS = ['Crypto', 'News', 'Entertainment', 'Finance', 'Gaming', 'Tech', 'Education', 'Music', 'Sports', 'Other'];
-  const [allAvailableTags, setAllAvailableTags] = useState<string[]>([]);
-  
-  useEffect(() => {
-    // Combine predefined, passed available tags, and current link tags for a comprehensive list
-    const combined = Array.from(new Set([...PREDEFINED_TAGS, ...availableTags, ...(result.tags || [])]));
-    setAllAvailableTags(combined.sort());
-  }, [availableTags, result.tags]);
-
   const [localTags, setLocalTags] = useState<string[]>(result.tags || []);
   const [isUpdatingTags, setIsUpdatingTags] = useState(false);
-  const [newTagInput, setNewTagInput] = useState('');
 
   // Sync tags if result changes from parent
   useEffect(() => {
@@ -301,44 +291,8 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, availableTag
           </div>
         )}
 
-        <div className="mb-4">
-          <div className="relative">
-            <input
-              type="text"
-              value={newTagInput}
-              onChange={(e) => setNewTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newTagInput.trim()) {
-                  const tag = newTagInput.trim();
-                  if (!localTags.includes(tag)) {
-                    void handleToggleTag(tag);
-                  }
-                  setNewTagInput('');
-                }
-              }}
-              placeholder="Add custom tag..."
-              className="w-full px-3 py-2 rounded-lg bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white"
-            />
-            {newTagInput.trim() && (
-              <button
-                onClick={() => {
-                  const tag = newTagInput.trim();
-                  if (!localTags.includes(tag)) {
-                    void handleToggleTag(tag);
-                  }
-                  setNewTagInput('');
-                }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-black dark:text-white hover:opacity-70"
-              >
-                <Check size={16} />
-              </button>
-            )}
-          </div>
-          <p className="text-[10px] text-gray-500 mt-1.5 px-1">Press Enter to add</p>
-        </div>
-
-        <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-          {allAvailableTags.map(tag => {
+        <div className="flex flex-wrap gap-2">
+          {PREDEFINED_TAGS.map(tag => {
             const isActive = localTags.includes(tag);
             return (
               <button

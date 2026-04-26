@@ -115,7 +115,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [savedFilter, setSavedFilter] = useState<SavedFilter>('all');
   const [savedSort, setSavedSort] = useState<SavedSort>('recently-updated');
-  const PREDEFINED_TAGS = ['Crypto', 'News', 'Entertainment', 'Finance', 'Gaming'];
+  const PREDEFINED_TAGS = ['Crypto', 'News', 'Entertainment', 'Finance', 'Gaming', 'Tech', 'Education', 'Music', 'Sports', 'Other'];
   const [availableTags, setAvailableTags] = useState<string[]>(PREDEFINED_TAGS);
   const [selectedTag, setSelectedTag] = useState<string>('All');
   const [randomSeed, setRandomSeed] = useState(() => Date.now());
@@ -187,14 +187,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, [page, debouncedSearchQuery, selectedTag, userParam, loadLinks]);
 
   useEffect(() => {
-    // Load tags once on mount
-    fetchTags().then(tags => {
-      if (tags.length > 0) {
-        // Merge predefined and fetched unique tags
-        const merged = Array.from(new Set([...PREDEFINED_TAGS, ...tags]));
-        setAvailableTags(merged);
-      }
-    });
+    // We only use hardcoded tags now, but we keep this effect for structure
+    setAvailableTags(PREDEFINED_TAGS);
   }, []);
 
   const handleRefresh = async () => {
@@ -806,7 +800,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                       style={{ paddingBottom: '0.75rem' }}
                     >
                       {rowItems.map((adapted) => (
-                        <ResultCard key={adapted.key} result={adapted.result} availableTags={availableTags} />
+                        <ResultCard key={adapted.key} result={adapted.result} />
                       ))}
                     </div>
                   </div>
