@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
 import AppLayout from '@/components/AppLayout';
+import SWRegistration from '@/components/SWRegistration';
 
 const themeInitScript = `
   (() => {
@@ -41,6 +42,14 @@ export const metadata: Metadata = {
     ],
     apple: '/apple-touch-icon.png',
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'TeleCheck Pro',
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     title: 'TeleCheck Pro | Telegram Link Validator',
     description:
@@ -70,7 +79,12 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#f8fafc',
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f8fafc' },
+    { media: '(prefers-color-scheme: dark)', color: '#020617' },
+  ],
 };
 
 export default function RootLayout({
@@ -84,6 +98,7 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">
           {themeInitScript}
         </Script>
+        <SWRegistration />
         <AppLayout>
           {children}
         </AppLayout>
