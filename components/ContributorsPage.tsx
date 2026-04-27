@@ -3,6 +3,7 @@ import { Loader2, Users, Trophy, Medal, Award, Activity, Search, RefreshCw, X, C
 import debounce from 'lodash.debounce';
 import { fetchContributors, fetchMyProfile, getCached } from '../services/api';
 import { useRouter } from 'next/navigation';
+import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import { Contributor, MyProfileResponse, ContributorsResponse } from '../types';
 import { toast } from 'sonner';
 
@@ -178,7 +179,9 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
       {/* Empty / Loading state handling */}
       {isLoading && contributors.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-12 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black min-h-[300px]">
-          <Loader2 className="w-8 h-8 text-black dark:text-white animate-spin mb-4" />
+          <div className="mb-6 text-black dark:text-white">
+            <DotmSquare5 size={40} />
+          </div>
           <h3 className="text-sm font-medium text-gray-900 dark:text-white">Loading Leaderboard</h3>
         </div>
       ) : contributors.length === 0 && !isLoading ? (

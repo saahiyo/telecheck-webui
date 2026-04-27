@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, Zap, Clipboard, ChevronDown, FileUp } from 'lucide-react';
+import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import StatsWidget from '@/components/StatsWidget';
 import ResultCard from '@/components/ResultCard';
 import { checkBulkLinks, checkSingleLink } from '@/services/api';
@@ -637,7 +638,9 @@ function ValidatorContent() {
               >
                 {isChecking ? (
                   <>
-                    <Loader2 size={16} className="animate-spin" />
+                    <div className="text-white">
+                      <DotmSquare5 size={18} dotSize={2} />
+                    </div>
                     <span>Processing...{elapsedSeconds > 0 && <span className="ml-1 tabular-nums">{elapsedSeconds}s</span>}</span>
                   </>
                 ) : (
@@ -675,7 +678,9 @@ function ValidatorContent() {
 
            {isChecking && !hasChecked && (
              <div className="flex-1 flex flex-col items-center justify-center p-6 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black">
-               <Loader2 className="w-6 h-6 text-black dark:text-white animate-spin mb-3" />
+               <div className="mb-5 text-black dark:text-white">
+                 <DotmSquare5 size={40} />
+               </div>
                <h3 className="text-xs font-medium text-gray-900 dark:text-white">Verifying Links</h3>
                 {checkingProgress.total > 0 ? (
                   <p className="text-[10px] text-gray-500 mt-1">Starting {checkingProgress.total} links...{elapsedSeconds > 0 && <span className="ml-1 tabular-nums">({elapsedSeconds}s)</span>}</p>

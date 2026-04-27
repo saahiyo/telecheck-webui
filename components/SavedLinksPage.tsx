@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import debounce from 'lodash.debounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags } from '../services/api';
@@ -621,7 +622,9 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
       {isLoading && links.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center p-12 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black min-h-[400px]">
-          <Loader2 className="w-8 h-8 text-black dark:text-white animate-spin mb-4" />
+          <div className="mb-6 text-black dark:text-white">
+            <DotmSquare5 size={40} />
+          </div>
           <h3 className="text-sm font-medium text-gray-900 dark:text-white">Loading Database Links</h3>
           <p className="text-xs text-gray-500 mt-1">Fetching latest links from the server...</p>
         </div>

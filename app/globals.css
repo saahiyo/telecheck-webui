@@ -1,5 +1,5 @@
 @import "tailwindcss";
-
+@import "../components/dotmatrix-loader.css";
 @font-face {
   font-family: 'Inter';
   font-style: normal;
