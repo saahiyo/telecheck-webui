@@ -5,6 +5,7 @@ import { X, ExternalLink, Copy, Eye, Users, Tag as TagIcon, Loader2, Check } fro
 import { toast } from 'sonner';
 import { copyText } from '../utils/clipboard';
 import { updateLinkTags } from '../services/api';
+import { trackLinkCopy, trackLinkPreview, trackTagModalOpen, trackTagToggle } from '../utils/tracking';
 
 interface ResultCardProps {
   result: LinkResult;
@@ -101,6 +102,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
   const copyToClipboard = async () => {
     try {
       await copyText(result.link);
+      trackLinkCopy(result.link, 'result_card');
       toast.success('Link copied');
     } catch {
       toast.error('Failed to copy link');
@@ -119,6 +121,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
     
     if (success) {
       setLocalTags(updatedTags);
+      trackTagToggle(result.link, tag, isSelected ? 'removed' : 'added');
     } else {
       toast.error('Failed to update tags');
     }
@@ -368,7 +371,10 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
 
         <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <button
-            onClick={() => setIsPreviewOpen(true)}
+            onClick={() => {
+              setIsPreviewOpen(true);
+              trackLinkPreview(result.link);
+            }}
             className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
             title="View Details"
             aria-label={`View details for ${details.title || result.link}`}
@@ -376,7 +382,10 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
             <Eye size={14} aria-hidden="true" />
           </button>
           <button
-            onClick={() => setIsTagModalOpen(true)}
+            onClick={() => {
+              setIsTagModalOpen(true);
+              trackTagModalOpen(result.link);
+            }}
             className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
             title="Edit Tags"
             aria-label={`Edit tags for ${details.title || result.link}`}

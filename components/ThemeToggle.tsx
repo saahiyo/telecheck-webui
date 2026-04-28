@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
+import { trackThemeToggle } from '../utils/tracking';
 
 const themeColors = {
   light: '#f8fafc',
@@ -44,11 +45,13 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ buttonRef }) => {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
       syncThemeColor('dark');
+      trackThemeToggle('dark');
     } else {
       setTheme('light');
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
       syncThemeColor('light');
+      trackThemeToggle('light');
     }
   };
 

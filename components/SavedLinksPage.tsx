@@ -10,6 +10,7 @@ import { formatCompactNumber } from '../utils/helpers';
 import { toast } from 'sonner';
 import ResultCard from './ResultCard';
 import LinkCopyModal from './LinkCopyModal';
+import { trackSearchQuery, trackFilterChange, trackSortChange, trackLinksRefresh, trackLinksValidate, trackCopyModalOpen, trackPagination } from '../utils/tracking';
 
 interface SavedLinksPageProps {
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
@@ -136,8 +137,12 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     () => debounce((q: string) => {
       setDebouncedSearchQuery(q);
       setPage(1); // Reset to first page on new search
+      // Track search query when it actually executes
+      if (q.trim()) {
+        trackSearchQuery(q, links.length);
+      }
     }, 300),
-    []
+    [links.length]
   );
 
   // Cleanup debounce timer on unmount
@@ -194,6 +199,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
   const handleRefresh = async () => {
     setIsLoading(true);
+    trackLinksRefresh(links.length);
     await loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
   };
 
@@ -203,10 +209,17 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     }
 
     setSavedSort(nextSort);
+    trackSortChange(nextSort);
+  };
+
+  const handleFilterChange = (nextFilter: SavedFilter) => {
+    setSavedFilter(nextFilter);
+    trackFilterChange(nextFilter, selectedTag);
   };
 
   const handleValidate = async () => {
     if (total === 0) return;
+    trackLinksValidate(total);
     setIsValidating(true);
     setValidationProgress({ current: 0, total });
     const toastId = toast.loading('Re-validating ALL stored links...');
@@ -459,7 +472,10 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         
         <div className="flex items-center gap-2 shrink-0 sm:hidden">
           <button 
-            onClick={() => setIsCopyModalOpen(true)}
+            onClick={() => {
+              setIsCopyModalOpen(true);
+              trackCopyModalOpen(links.length);
+            }}
             disabled={links.length === 0}
             title="Copy links"
             aria-label="Copy links"
@@ -498,7 +514,10 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
         <div className="hidden sm:flex sm:items-center sm:gap-2 shrink-0">
           <button
-            onClick={() => setIsCopyModalOpen(true)}
+            onClick={() => {
+              setIsCopyModalOpen(true);
+              trackCopyModalOpen(links.length);
+            }}
             disabled={links.length === 0}
             className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
           >
@@ -572,7 +591,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             <select
               aria-label="Filter saved links"
               value={savedFilter}
-              onChange={(e) => setSavedFilter(e.target.value as typeof savedFilter)}
+              onChange={(e) => handleFilterChange(e.target.value as typeof savedFilter)}
               className="absolute inset-0 opacity-0 cursor-pointer"
             >
               <option value="all">All links</option>
@@ -590,7 +609,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           </div>
           <select
             value={savedFilter}
-            onChange={(e) => setSavedFilter(e.target.value as typeof savedFilter)}
+            onChange={(e) => handleFilterChange(e.target.value as typeof savedFilter)}
             className="w-full appearance-none pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white"
           >
             <option value="all">All links</option>
@@ -726,6 +745,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                     onClick={() => {
                       setSelectedTag(t);
                       setPage(1);
+                      trackFilterChange(savedFilter, t);
                     }}
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${
                       selectedTag === t
@@ -838,7 +858,11 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
               </span>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  onClick={() => {
+                    const newPage = Math.max(1, page - 1);
+                    setPage(newPage);
+                    trackPagination(newPage, Math.ceil(total / PAGE_SIZE));
+                  }}
                   disabled={page === 1 || isLoading}
                   className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
                 >
@@ -846,7 +870,11 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                   Prev
                 </button>
                 <button
-                  onClick={() => setPage(p => Math.min(Math.ceil(total / PAGE_SIZE), p + 1))}
+                  onClick={() => {
+                    const newPage = Math.min(Math.ceil(total / PAGE_SIZE), page + 1);
+                    setPage(newPage);
+                    trackPagination(newPage, Math.ceil(total / PAGE_SIZE));
+                  }}
                   disabled={page >= Math.ceil(total / PAGE_SIZE) || isLoading}
                   className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
                 >

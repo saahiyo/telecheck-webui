@@ -7,6 +7,7 @@ import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Github, Heart 
 import ThemeToggle from './ThemeToggle';
 import GithubBtn from './GithubBtn';
 import { Toaster } from 'sonner';
+import { trackNavigation } from '../utils/tracking';
 
 const shortcutGroups = [
   {
@@ -199,19 +200,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {/* Navigation Links */}
               <div className="hidden sm:flex items-center gap-1 bg-gray-100/50 dark:bg-[#111]/50 p-1 rounded-lg border border-gray-200 dark:border-[#333]">
                 <button
-                  onClick={() => router.push('/')}
+                  onClick={() => {
+                    router.push('/');
+                    trackNavigation('home');
+                  }}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${pathname === '/' ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
                 >
                   <Layers size={14} /> Validator
                 </button>
                 <button
-                  onClick={() => router.push('/saved')}
+                  onClick={() => {
+                    router.push('/saved');
+                    trackNavigation('saved');
+                  }}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${pathname === '/saved' ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
                 >
                   <Database size={14} /> Saved Links
                 </button>
                 <button
-                  onClick={() => router.push('/contributors')}
+                  onClick={() => {
+                    router.push('/contributors');
+                    trackNavigation('contributors');
+                  }}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${pathname === '/contributors' ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
                 >
                   <Users size={14} /> Contributors
@@ -281,7 +291,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="flex flex-col gap-3 p-4 bg-transparent shadow-none">
             <button
               type="button"
-              onClick={() => router.push('/')}
+              onClick={() => {
+                router.push('/');
+                setIsMobileNavOpen(false);
+                trackNavigation('home');
+              }}
               className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all shadow-none appearance-none ${pathname === '/' ? 'border-black/10 bg-gray-100 text-black dark:border-white/10 dark:bg-[#111] dark:text-white' : 'border-gray-200 text-gray-600 hover:text-black dark:border-[#333] dark:text-gray-400 dark:hover:text-white'}`}
             >
               <div className="mt-0.5 shrink-0">
@@ -295,7 +309,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             <button
               type="button"
-              onClick={() => router.push('/saved')}
+              onClick={() => {
+                router.push('/saved');
+                setIsMobileNavOpen(false);
+                trackNavigation('saved');
+              }}
               className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all shadow-none appearance-none ${pathname === '/saved' ? 'border-black/10 bg-gray-100 text-black dark:border-white/10 dark:bg-[#111] dark:text-white' : 'border-gray-200 text-gray-600 hover:text-black dark:border-[#333] dark:text-gray-400 dark:hover:text-white'}`}
             >
               <div className="mt-0.5 shrink-0">
@@ -309,7 +327,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             <button
               type="button"
-              onClick={() => router.push('/contributors')}
+              onClick={() => {
+                router.push('/contributors');
+                setIsMobileNavOpen(false);
+                trackNavigation('contributors');
+              }}
               className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all shadow-none appearance-none ${pathname === '/contributors' ? 'border-black/10 bg-gray-100 text-black dark:border-white/10 dark:bg-[#111] dark:text-white' : 'border-gray-200 text-gray-600 hover:text-black dark:border-[#333] dark:text-gray-400 dark:hover:text-white'}`}
             >
               <div className="mt-0.5 shrink-0">

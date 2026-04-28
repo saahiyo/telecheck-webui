@@ -10,6 +10,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@databuddy/sdk": "^2.4.11",
     "@tanstack/react-virtual": "^3.13.24",
     "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",

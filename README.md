@@ -32,10 +32,11 @@ The app will be available at `http://localhost:3000`.
 
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` if you want to override the default API origin.
+Copy `.env.example` to `.env.local` if you want to override the default API origin and enable Databuddy analytics.
 
 ```bash
 NEXT_PUBLIC_TELECHECK_API_URL=https://telecheck.vercel.app
+NEXT_PUBLIC_DATABUDDY_CLIENT_ID=84583c87-c0c1-48bf-9d1b-1290c931d183
 ```
 
 ## Project Structure

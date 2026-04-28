@@ -13,6 +13,7 @@ import { copyText } from '@/utils/clipboard';
 import { useSearchParams } from 'next/navigation';
 import { saveResults, getResults, clearResults } from '@/utils/db';
 import confetti from 'canvas-confetti';
+import { trackBulkValidation, trackSingleValidation, trackValidationComplete, trackModeSwitch } from '@/utils/tracking';
 
 
 /** Contextual empty-state messages per filter tab */
@@ -215,6 +216,9 @@ function ValidatorContent() {
       worker.postMessage(bulkInput);
     });
 
+    // Track bulk validation start
+    trackBulkValidation(links.length, duplicateCount > 0);
+
     if (duplicateCount > 0) {
       toast.info(`Removed ${duplicateCount} duplicate${duplicateCount > 1 ? 's' : ''}`);
     }
@@ -277,6 +281,10 @@ function ValidatorContent() {
 
     setIsChecking(false);
     setRefreshStatsTrigger(prev => prev + 1);
+
+    // Track validation completion
+    trackValidationComplete(allResults);
+
     toast.success(`Analysis complete! (${elapsedSeconds}s)`);
 
     if (allResults.length >= 3 && allResults.every(r => r.status === 'valid' || r.status === 'mega')) {
@@ -287,6 +295,10 @@ function ValidatorContent() {
   const handleSingleCheck = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!singleInput.trim()) return;
+
+    // Track single validation start
+    trackSingleValidation(singleInput.trim());
+
     setIsChecking(true);
     setHasChecked(false);
     setResults([]);
@@ -306,6 +318,10 @@ function ValidatorContent() {
     setHasChecked(true);
     setIsChecking(false);
     setRefreshStatsTrigger(prev => prev + 1);
+
+    // Track validation completion
+    trackValidationComplete([{ status: finalStatus }]);
+
     toast.success(`Analysis complete! (${elapsedSeconds}s)`);
   };
   // Handle global shortcuts triggered by AppLayout
@@ -513,7 +529,10 @@ function ValidatorContent() {
             {/* Segmented Control */}
             <div className="inline-flex p-1 bg-gray-100 dark:bg-[#111] rounded-lg border border-gray-200 dark:border-[#333] w-full">
               <button
-                onClick={() => setMode('bulk')}
+                onClick={() => {
+                  setMode('bulk');
+                  trackModeSwitch('bulk');
+                }}
                 className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                   mode === 'bulk'
                     ? 'bg-white dark:bg-[#333] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
@@ -524,7 +543,10 @@ function ValidatorContent() {
                 Bulk Validator
               </button>
               <button
-                onClick={() => setMode('single')}
+                onClick={() => {
+                  setMode('single');
+                  trackModeSwitch('single');
+                }}
                 className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
                   mode === 'single'
                     ? 'bg-white dark:bg-[#333] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'

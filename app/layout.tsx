@@ -3,6 +3,7 @@ import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
 import AppLayout from '@/components/AppLayout';
+import DatabuddyAnalytics from '@/components/DatabuddyAnalytics';
 import SWRegistration from '@/components/SWRegistration';
 
 const themeInitScript = `
@@ -99,6 +100,7 @@ export default function RootLayout({
           {themeInitScript}
         </Script>
         <SWRegistration />
+        <DatabuddyAnalytics />
         <AppLayout>
           {children}
         </AppLayout>
