@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, Zap, Clipboard, ChevronDown, FileUp } from 'lucide-react';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import StatsWidget from '@/components/StatsWidget';
@@ -22,6 +23,62 @@ const emptyMessages: Record<string, string> = {
   valid: 'No valid links found.',
   invalid: 'All links are valid! 🎉',
   mega: 'No Mega.nz links detected.',
+};
+
+const cardEnterVariants = {
+  hidden: { opacity: 0, y: 14, filter: 'blur(10px)' },
+  show: (index: number) => ({
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: {
+      duration: 0.28,
+      ease: 'easeOut' as const,
+      delay: Math.min((index % 12) * 0.035, 0.24),
+    },
+  }),
+  exit: {
+    opacity: 0,
+    y: -8,
+    filter: 'blur(8px)',
+    transition: { duration: 0.16, ease: 'easeIn' as const },
+  },
+};
+
+const homeSectionVariants = {
+  hidden: { opacity: 0, y: 16, filter: 'blur(10px)' },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.32, ease: 'easeOut' as const },
+  },
+};
+
+const homeGroupVariants = {
+  hidden: {},
+  show: {
+    transition: {
+      staggerChildren: 0.07,
+      delayChildren: 0.04,
+    },
+  },
+};
+
+const homeSwapVariants = {
+  hidden: { opacity: 0, y: 12, filter: 'blur(10px)' },
+  show: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: { duration: 0.24, ease: 'easeOut' as const },
+  },
+  exit: {
+    opacity: 0,
+    y: -8,
+    filter: 'blur(8px)',
+    transition: { duration: 0.16, ease: 'easeIn' as const },
+  },
 };
 
 const triggerSuccessConfetti = () => {
@@ -517,51 +574,90 @@ function ValidatorContent() {
   }, []);
 
   return (
-    <div className="block animate-fade-in">
+    <motion.div
+      className="block"
+      initial="hidden"
+      animate="show"
+      variants={homeGroupVariants}
+    >
       {/* Stats Section */}
-      <StatsWidget refreshTrigger={refreshStatsTrigger} />
+      <motion.div variants={homeSectionVariants}>
+        <StatsWidget refreshTrigger={refreshStatsTrigger} />
+      </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-6">
+      <motion.div
+        className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start mt-6"
+        variants={homeGroupVariants}
+      >
         
         {/* Left Panel: Input */}
-        <div className="lg:col-span-5 flex flex-col gap-4">
-          <div className="flex flex-col gap-3">
+        <motion.div className="lg:col-span-5 flex flex-col gap-4" variants={homeSectionVariants}>
+          <motion.div className="flex flex-col gap-3" variants={homeGroupVariants}>
             {/* Segmented Control */}
-            <div className="inline-flex p-1 bg-gray-100 dark:bg-[#111] rounded-lg border border-gray-200 dark:border-[#333] w-full">
+            <motion.div
+              className="inline-flex p-1 bg-gray-100 dark:bg-[#111] rounded-lg border border-gray-200 dark:border-[#333] w-full"
+              variants={homeSectionVariants}
+            >
               <button
                 onClick={() => {
                   setMode('bulk');
                   trackModeSwitch('bulk');
                 }}
-                className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                className={`relative flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 overflow-hidden ${
                   mode === 'bulk'
-                    ? 'bg-white dark:bg-[#333] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                    ? 'text-black dark:text-white'
                     : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
-                <Layers size={14} />
-                Bulk Validator
+                {mode === 'bulk' && (
+                  <motion.span
+                    layoutId="home-mode-active"
+                    className="absolute inset-0 rounded-md bg-white dark:bg-[#333] shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.8 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  <Layers size={14} />
+                  Bulk Validator
+                </span>
               </button>
               <button
                 onClick={() => {
                   setMode('single');
                   trackModeSwitch('single');
                 }}
-                className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
+                className={`relative flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 overflow-hidden ${
                   mode === 'single'
-                    ? 'bg-white dark:bg-[#333] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                    ? 'text-black dark:text-white'
                     : 'text-gray-500 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
-                <Zap size={14} />
-                Quick Check
+                {mode === 'single' && (
+                  <motion.span
+                    layoutId="home-mode-active"
+                    className="absolute inset-0 rounded-md bg-white dark:bg-[#333] shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.8 }}
+                  />
+                )}
+                <span className="relative z-10 flex items-center gap-2">
+                  <Zap size={14} />
+                  Quick Check
+                </span>
               </button>
-            </div>
+            </motion.div>
 
             {/* Input Area */}
-            <div className="space-y-3">
+            <motion.div className="space-y-3" variants={homeSectionVariants}>
+              <AnimatePresence mode="wait" initial={false}>
               {mode === 'bulk' ? (
-                <>
+                <motion.div
+                  key="bulk-input"
+                  variants={homeSwapVariants}
+                  initial="hidden"
+                  animate="show"
+                  exit="exit"
+                  className="space-y-3"
+                >
                   <div
                     className={`relative group ${isDragging ? 'ring-2 ring-blue-500 ring-offset-2 dark:ring-offset-black rounded-lg' : ''}`}
                     onDragOver={handleDragOver}
@@ -609,7 +705,13 @@ function ValidatorContent() {
                   
                   {/* Link count badge moved to bottom side */}
                   {detectedLinkCount > 0 && (
-                    <div className="mt-2 flex items-center gap-2 px-1 animate-fade-in">
+                    <motion.div
+                      className="mt-2 flex items-center gap-2 px-1"
+                      initial={{ opacity: 0, y: 8, filter: 'blur(8px)' }}
+                      animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                      exit={{ opacity: 0, y: -6, filter: 'blur(8px)' }}
+                      transition={{ duration: 0.2, ease: 'easeOut' }}
+                    >
                       <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-gray-100/80 dark:bg-[#111]/80 border border-gray-200/50 dark:border-[#333]/50 shadow-sm">
                         <Link2 size={11} className="text-gray-500 dark:text-gray-400 shrink-0" />
                         <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300 tabular-nums uppercase tracking-wider">
@@ -621,11 +723,19 @@ function ValidatorContent() {
                           </span>
                         )}
                       </div>
-                    </div>
+                    </motion.div>
                   )}
-                </>
+                </motion.div>
               ) : (
-                <form onSubmit={handleSingleCheck} className="relative">
+                <motion.form
+                  key="single-input"
+                  onSubmit={handleSingleCheck}
+                  className="relative"
+                  variants={homeSwapVariants}
+                  initial="hidden"
+                  animate="show"
+                  exit="exit"
+                >
                   <div className="relative">
                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                        <Link2 className="text-gray-400" size={16} />
@@ -650,13 +760,15 @@ function ValidatorContent() {
                        </button>
                      </div>
                   </div>
-                </form>
+                </motion.form>
               )}
+              </AnimatePresence>
 
-              <button
+              <motion.button
                 onClick={mode === 'bulk' ? handleBulkCheck : (e) => handleSingleCheck(e)}
                 disabled={isChecking || (mode === 'bulk' ? !bulkInput.trim() : !singleInput.trim())}
                 className="w-full py-2.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex justify-center items-center gap-2 text-xs shadow-sm"
+                whileTap={{ scale: 0.985 }}
               >
                 {isChecking ? (
                   <>
@@ -671,23 +783,31 @@ function ValidatorContent() {
                     <ArrowRight size={16} />
                   </>
                 )}
-              </button>
-            </div>
-          </div>
+              </motion.button>
+            </motion.div>
+          </motion.div>
           
           {/* Disclaimer / Info */}
-          <div className="p-4 rounded-lg bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333]">
+          <motion.div className="p-4 rounded-lg bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333]" variants={homeSectionVariants}>
             <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-1">Pro Tip</h4>
             <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
               Use the bulk validator to check lists of channels. We&apos;ll automatically filter out duplicate links for you. You can also drag &amp; drop a <code className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">.txt</code> file, press <kbd className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">Ctrl/Cmd+Enter</kbd> to validate, tap <kbd className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">/</kbd> to jump to the main input, or press <kbd className="text-[10px] bg-gray-200 dark:bg-[#222] px-1 py-0.5 rounded">?</kbd> for the full shortcut list.
             </p>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
 
         {/* Right Panel: Results */}
-        <div className="lg:col-span-7 h-full min-h-[400px] flex flex-col">
+        <motion.div className="lg:col-span-7 h-full min-h-[400px] flex flex-col" variants={homeSectionVariants}>
+          <AnimatePresence mode="wait" initial={false}>
            {!hasChecked && !isChecking && results.length === 0 && (
-             <div className="flex-1 flex flex-col items-center justify-center text-center p-6 border border-dashed border-gray-200 dark:border-[#333] rounded-xl bg-gray-50/50 dark:bg-[#111]/50">
+             <motion.div
+               key="home-empty"
+               className="flex-1 flex flex-col items-center justify-center text-center p-6 border border-dashed border-gray-200 dark:border-[#333] rounded-xl bg-gray-50/50 dark:bg-[#111]/50"
+               variants={homeSwapVariants}
+               initial="hidden"
+               animate="show"
+               exit="exit"
+             >
                <div className="w-12 h-12 bg-white dark:bg-black border border-gray-100 dark:border-[#333] rounded-full flex items-center justify-center mb-3 shadow-sm">
                  <Layers size={20} className="text-gray-300 dark:text-gray-600" />
                </div>
@@ -695,11 +815,18 @@ function ValidatorContent() {
                <p className="text-[10px] text-gray-500 dark:text-gray-400 max-w-xs leading-relaxed">
                  Enter your Telegram links on the left to confirm their validity instantly.
                </p>
-             </div>
+             </motion.div>
            )}
 
            {isChecking && !hasChecked && (
-             <div className="flex-1 flex flex-col items-center justify-center p-6 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black">
+             <motion.div
+               key="home-checking"
+               className="flex-1 flex flex-col items-center justify-center p-6 border border-gray-200 dark:border-[#333] rounded-xl bg-white dark:bg-black"
+               variants={homeSwapVariants}
+               initial="hidden"
+               animate="show"
+               exit="exit"
+             >
                <div className="mb-5 text-black dark:text-white">
                  <DotmSquare5 size={40} />
                </div>
@@ -709,27 +836,47 @@ function ValidatorContent() {
                 ) : (
                   <p className="text-[10px] text-gray-500 mt-1">Please wait...{elapsedSeconds > 0 && <span className="ml-1 tabular-nums">({elapsedSeconds}s)</span>}</p>
                 )}
-             </div>
+             </motion.div>
            )}
 
            {hasChecked && (
-             <div className="flex flex-col h-full">
+             <motion.div
+               key="home-results"
+               className="flex flex-col h-full"
+               variants={homeSwapVariants}
+               initial="hidden"
+               animate="show"
+               exit="exit"
+             >
                {isChecking && checkingProgress.total > 0 && (
-                 <div className="mb-4 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333] p-3 rounded-lg" aria-live="polite">
+                 <motion.div
+                   className="mb-4 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333] p-3 rounded-lg"
+                   aria-live="polite"
+                   initial={{ opacity: 0, y: 10, filter: 'blur(8px)' }}
+                   animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                   transition={{ duration: 0.22, ease: 'easeOut' }}
+                 >
                    <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-2 font-medium">
                       <span className="flex items-center gap-1.5"><Loader2 size={10} className="animate-spin" aria-hidden="true" /> Verifying links...{elapsedSeconds > 0 && <span className="tabular-nums"> ({elapsedSeconds}s)</span>}</span>
                      <span>{Math.round((checkingProgress.current / checkingProgress.total) * 100)}% ({checkingProgress.current}/{checkingProgress.total})</span>
                    </div>
                    <div className="w-full h-1.5 bg-gray-200 dark:bg-[#333] rounded-full overflow-hidden" role="progressbar" aria-valuenow={Math.round((checkingProgress.current / checkingProgress.total) * 100)} aria-valuemin={0} aria-valuemax={100}>
-                     <div 
+                     <motion.div
                        className="h-full bg-black dark:bg-white rounded-full transition-all duration-300 ease-out"
-                       style={{ width: `${(checkingProgress.current / checkingProgress.total) * 100}%` }}
+                       initial={{ width: 0 }}
+                       animate={{ width: `${(checkingProgress.current / checkingProgress.total) * 100}%` }}
+                       transition={{ duration: 0.3, ease: 'easeOut' }}
                      />
                    </div>
-                 </div>
+                 </motion.div>
                )}
 
-               <div className="flex items-center justify-between mb-4">
+               <motion.div
+                 className="relative z-[80] flex items-center justify-between mb-4"
+                 initial={{ opacity: 0, y: 10, filter: 'blur(8px)' }}
+                 animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                 transition={{ duration: 0.24, ease: 'easeOut' }}
+               >
                  <div className="flex items-baseline gap-2">
                    <h2 className="text-base font-semibold text-black dark:text-white">Results</h2>
                    <span className="text-xs text-gray-500 font-mono">
@@ -750,8 +897,15 @@ function ValidatorContent() {
                       <ChevronDown size={10} className={`transform transition-transform ${copyMenuOpen ? 'rotate-180' : ''}`} />
                     </button>
                     
+                    <AnimatePresence>
                     {copyMenuOpen && (
-                      <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-black rounded-lg shadow-xl border border-gray-200 dark:border-[#333] py-1 z-50 overflow-hidden ring-1 ring-black/5">
+                      <motion.div
+                        className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-black rounded-lg shadow-xl border border-gray-200 dark:border-[#333] py-1 z-[90] overflow-hidden ring-1 ring-black/5"
+                        initial={{ opacity: 0, y: 8, scale: 0.98, filter: 'blur(8px)' }}
+                        animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, y: 6, scale: 0.98, filter: 'blur(8px)' }}
+                        transition={{ duration: 0.18, ease: 'easeOut' }}
+                      >
                         <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-[#111] border-b border-gray-100 dark:border-[#333]">
                           Format
                         </div>
@@ -771,8 +925,9 @@ function ValidatorContent() {
                             {item.label}
                           </button>
                         ))}
-                      </div>
+                      </motion.div>
                     )}
+                    </AnimatePresence>
                   </div>
                    <button 
                     onClick={clearAll} 
@@ -781,10 +936,15 @@ function ValidatorContent() {
                      Clear
                    </button>
                  </div>
-               </div>
+               </motion.div>
 
                {/* Filters */}
-               <div className="flex gap-2 mb-4 flex-wrap">
+               <motion.div
+                 className="relative z-10 flex gap-2 mb-4 flex-wrap"
+                 initial="hidden"
+                 animate="show"
+                 variants={homeGroupVariants}
+               >
                   {[
                     { id: 'all', label: 'All', count: results.length, color: 'gray' },
                     { id: 'valid', label: 'Valid', count: validCount, color: 'black' },
@@ -796,43 +956,68 @@ function ValidatorContent() {
                     const isActive = filter === f.id;
                     
                     return (
-                      <button 
+                      <motion.button
                          key={f.id}
                          onClick={() => setFilter(f.id as any)}
-                         className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
+                         variants={homeSectionVariants}
+                         layout
+                         className={`relative flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors overflow-hidden ${
                            isActive 
-                             ? 'bg-black dark:bg-white text-white dark:text-black border-black dark:border-white' 
+                             ? 'text-white dark:text-black border-black dark:border-white' 
                              : 'bg-white dark:bg-black text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#333] hover:border-gray-300 dark:hover:border-[#555]'
                          }`}
                        >
-                         {f.label}
-                         <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                         {isActive && (
+                           <motion.span
+                             layoutId="home-results-filter-active"
+                             className="absolute inset-0 rounded-full bg-black dark:bg-white"
+                             transition={{ type: 'spring', stiffness: 420, damping: 34, mass: 0.8 }}
+                           />
+                         )}
+                         <span className="relative z-10">{f.label}</span>
+                         <span className={`relative z-10 px-1.5 py-0.5 rounded-full text-[10px] ${
                             isActive
                               ? 'bg-white/20 text-white dark:text-black'
                               : 'bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400'
                          }`}>
                            {f.count}
                          </span>
-                       </button>
+                       </motion.button>
                     )
                   })}
-               </div>
+               </motion.div>
 
-                <div ref={homeResultsScrollRef} className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2 pb-10">
-                 {filteredResults.map((result, idx) => (
-                   <ResultCard key={idx} result={result} />
-                 ))}
+                <motion.div
+                  ref={homeResultsScrollRef}
+                  className="relative z-0 flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2 pb-10"
+                >
+                 <AnimatePresence initial={false}>
+                   {filteredResults.map((result, idx) => (
+                     <motion.div
+                       key={`${result.link}-${idx}`}
+                       layout
+                       variants={cardEnterVariants}
+                       custom={idx}
+                       initial="hidden"
+                       animate="show"
+                       exit="exit"
+                     >
+                       <ResultCard result={result} />
+                     </motion.div>
+                   ))}
+                 </AnimatePresence>
                  {filteredResults.length === 0 && (
                    <div className="text-center py-12 text-gray-400 text-xs">
                      {emptyMessages[filter] || 'No links matching this filter.'}
                    </div>
                  )}
-               </div>
-             </div>
+               </motion.div>
+             </motion.div>
            )}
-        </div>
-      </div>
-    </div>
+          </AnimatePresence>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 }
 

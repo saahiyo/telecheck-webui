@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { AnimatePresence, motion } from 'motion/react';
 import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Github, Heart } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import GithubBtn from './GithubBtn';
@@ -46,6 +47,9 @@ const API_URL =
   process.env.NEXT_PUBLIC_TELECHECK_API_URL?.replace(/\/$/, '') ||
   'https://telecheck.vercel.app';
 
+const springTransition = { type: 'spring' as const, stiffness: 520, damping: 42, mass: 0.7 };
+const navIndicatorTransition = { duration: 0.14, ease: 'easeOut' as const };
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -54,6 +58,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const pathname = usePathname();
   const router = useRouter();
+
+  const navigateTo = (href: string, target: 'home' | 'saved' | 'contributors') => {
+    if (pathname !== href) {
+      router.push(href);
+    }
+    trackNavigation(target);
+  };
 
   useEffect(() => {
     setIsMobileNavOpen(false);
@@ -200,31 +211,49 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {/* Navigation Links */}
               <div className="hidden sm:flex items-center gap-1 bg-gray-100/50 dark:bg-[#111]/50 p-1 rounded-lg border border-gray-200 dark:border-[#333]">
                 <button
-                  onClick={() => {
-                    router.push('/');
-                    trackNavigation('home');
-                  }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${pathname === '/' ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
+                  onClick={() => navigateTo('/', 'home')}
+                  className={`relative px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 overflow-hidden ${pathname === '/' ? 'text-black dark:text-white' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
                 >
-                  <Layers size={14} /> Validator
+                  {pathname === '/' && (
+                    <motion.span
+                      layoutId="desktop-nav-active"
+                      className="absolute inset-0 rounded-md bg-white dark:bg-[#222] shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                      transition={navIndicatorTransition}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Layers size={14} /> Validator
+                  </span>
                 </button>
                 <button
-                  onClick={() => {
-                    router.push('/saved');
-                    trackNavigation('saved');
-                  }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${pathname === '/saved' ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
+                  onClick={() => navigateTo('/saved', 'saved')}
+                  className={`relative px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 overflow-hidden ${pathname === '/saved' ? 'text-black dark:text-white' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
                 >
-                  <Database size={14} /> Saved Links
+                  {pathname === '/saved' && (
+                    <motion.span
+                      layoutId="desktop-nav-active"
+                      className="absolute inset-0 rounded-md bg-white dark:bg-[#222] shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                      transition={navIndicatorTransition}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Database size={14} /> Saved Links
+                  </span>
                 </button>
                 <button
-                  onClick={() => {
-                    router.push('/contributors');
-                    trackNavigation('contributors');
-                  }}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-2 ${pathname === '/contributors' ? 'bg-white dark:bg-[#222] text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
+                  onClick={() => navigateTo('/contributors', 'contributors')}
+                  className={`relative px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 overflow-hidden ${pathname === '/contributors' ? 'text-black dark:text-white' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
                 >
-                  <Users size={14} /> Contributors
+                  {pathname === '/contributors' && (
+                    <motion.span
+                      layoutId="desktop-nav-active"
+                      className="absolute inset-0 rounded-md bg-white dark:bg-[#222] shadow-sm ring-1 ring-black/5 dark:ring-white/10"
+                      transition={navIndicatorTransition}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Users size={14} /> Contributors
+                  </span>
                 </button>
               </div>
 
@@ -256,22 +285,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <div
-        className={`sm:hidden fixed inset-0 z-[60] transition-opacity duration-200 ${isMobileNavOpen ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'}`}
-        aria-hidden={!isMobileNavOpen}
-      >
-        <button
+      <AnimatePresence>
+        {isMobileNavOpen && (
+          <motion.div
+            className="sm:hidden fixed inset-0 z-[60]"
+            aria-hidden={!isMobileNavOpen}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
+        <motion.button
           type="button"
           className="absolute inset-0 bg-black/60 backdrop-blur-sm shadow-none appearance-none border-none"
           onClick={() => setIsMobileNavOpen(false)}
           aria-label="Close navigation menu"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
         />
-        <aside
+        <motion.aside
           id="mobile-navigation-drawer"
           role="dialog"
           aria-modal="true"
           aria-label="Navigation menu"
-          className={`absolute right-0 top-0 h-full w-[280px] max-w-[85vw] border-l border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl transition-transform duration-200 ${isMobileNavOpen ? 'translate-x-0' : 'translate-x-full'}`}
+          className="absolute right-0 top-0 h-full w-[280px] max-w-[85vw] border-l border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl"
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={springTransition}
         >
           <div className="flex items-center justify-between border-b border-gray-200 dark:border-[#333] px-4 py-4">
             <div>
@@ -288,15 +330,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
           </div>
 
-          <div className="flex flex-col gap-3 p-4 bg-transparent shadow-none">
-            <button
+          <motion.div
+            className="flex flex-col gap-3 p-4 bg-transparent shadow-none"
+            initial="hidden"
+            animate="show"
+            variants={{
+              hidden: {},
+              show: { transition: { staggerChildren: 0.05, delayChildren: 0.06 } },
+            }}
+          >
+            <motion.button
               type="button"
               onClick={() => {
-                router.push('/');
+                navigateTo('/', 'home');
                 setIsMobileNavOpen(false);
-                trackNavigation('home');
               }}
               className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all shadow-none appearance-none ${pathname === '/' ? 'border-black/10 bg-gray-100 text-black dark:border-white/10 dark:bg-[#111] dark:text-white' : 'border-gray-200 text-gray-600 hover:text-black dark:border-[#333] dark:text-gray-400 dark:hover:text-white'}`}
+              variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               <div className="mt-0.5 shrink-0">
                 <Layers size={18} />
@@ -305,16 +356,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="text-sm font-medium">Validator</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">Run bulk checks and quick checks</div>
               </div>
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
               type="button"
               onClick={() => {
-                router.push('/saved');
+                navigateTo('/saved', 'saved');
                 setIsMobileNavOpen(false);
-                trackNavigation('saved');
               }}
               className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all shadow-none appearance-none ${pathname === '/saved' ? 'border-black/10 bg-gray-100 text-black dark:border-white/10 dark:bg-[#111] dark:text-white' : 'border-gray-200 text-gray-600 hover:text-black dark:border-[#333] dark:text-gray-400 dark:hover:text-white'}`}
+              variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               <div className="mt-0.5 shrink-0">
                 <Database size={18} />
@@ -323,16 +375,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="text-sm font-medium">Saved Links</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">Open your saved results and stored links</div>
               </div>
-            </button>
+            </motion.button>
 
-            <button
+            <motion.button
               type="button"
               onClick={() => {
-                router.push('/contributors');
+                navigateTo('/contributors', 'contributors');
                 setIsMobileNavOpen(false);
-                trackNavigation('contributors');
               }}
               className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all shadow-none appearance-none ${pathname === '/contributors' ? 'border-black/10 bg-gray-100 text-black dark:border-white/10 dark:bg-[#111] dark:text-white' : 'border-gray-200 text-gray-600 hover:text-black dark:border-[#333] dark:text-gray-400 dark:hover:text-white'}`}
+              variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               <div className="mt-0.5 shrink-0">
                 <Users size={18} />
@@ -341,10 +394,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="text-sm font-medium">Contributors</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">View the community leaderboard</div>
               </div>
-            </button>
-          </div>
-        </aside>
-      </div>
+            </motion.button>
+          </motion.div>
+        </motion.aside>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {children}
@@ -415,17 +470,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
 
-      {showShortcuts && (
-        <div
+      <AnimatePresence>
+        {showShortcuts && (
+        <motion.div
           className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setShowShortcuts(false)}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: 'easeOut' }}
         >
-          <div
+          <motion.div
             className="w-full max-w-2xl rounded-2xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="shortcuts-title"
             onClick={(event) => event.stopPropagation()}
+            initial={{ opacity: 0, y: 18, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.98 }}
+            transition={springTransition}
           >
             <div className="flex items-start justify-between gap-4 border-b border-gray-100 dark:border-[#222] px-5 py-4">
               <div>
@@ -473,9 +537,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
               ))}
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

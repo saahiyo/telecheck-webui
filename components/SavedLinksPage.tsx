@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { motion } from 'motion/react';
 import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
@@ -28,6 +29,15 @@ const SORT_CHIPS: Array<{ value: SavedSort; label: string; shortLabel: string }>
   { value: 'recently-added', label: 'Recently Added', shortLabel: 'Added' },
   { value: 'random', label: 'Random', shortLabel: 'Random' },
 ];
+
+const savedCardTransition = {
+  duration: 0.28,
+  ease: 'easeOut' as const,
+};
+
+function getSavedCardDelay(index: number) {
+  return Math.min((index % 12) * 0.025, 0.18);
+}
 
 // Client-side filter for metadata attributes (not search — search is server-side)
 function filterByMetadata(sourceLinks: StoredLink[], savedFilter: SavedFilter) {
@@ -822,9 +832,24 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                       }`}
                       style={{ paddingBottom: '0.75rem' }}
                     >
-                      {rowItems.map((adapted) => (
-                        <ResultCard key={adapted.key} result={adapted.result} />
-                      ))}
+                      {rowItems.map((adapted, itemIndex) => {
+                        const cardIndex = virtualRow.index * columnCount + itemIndex;
+
+                        return (
+                          <motion.div
+                            key={adapted.key}
+                            layout
+                            initial={{ opacity: 0, y: 14, filter: 'blur(10px)' }}
+                            animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                            transition={{
+                              ...savedCardTransition,
+                              delay: getSavedCardDelay(cardIndex),
+                            }}
+                          >
+                            <ResultCard result={adapted.result} />
+                          </motion.div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
