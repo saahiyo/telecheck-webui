@@ -29,6 +29,7 @@ const shortcutGroups = [
       { keys: ['Ctrl', 'ArrowUp'], description: 'Scroll to the top' },
       { keys: ['Ctrl', 'ArrowDown'], description: 'Scroll to the bottom' },
       { keys: ['E'], description: 'Open export when results are visible' },
+      { keys: ['Alt', 'C'], description: 'Clear inputs and results' },
       { keys: ['T'], description: 'Toggle theme' },
       { keys: ['?'], description: 'Show or hide this shortcut list' },
       { keys: ['Esc'], description: 'Close open menus and panels' },
@@ -141,6 +142,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (key === 'q') {
           event.preventDefault();
           router.push('/?mode=single');
+          return;
+        }
+
+        if (key === 'c') {
+          event.preventDefault();
+          window.dispatchEvent(new Event('app-clear-all'));
           return;
         }
       }

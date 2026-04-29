@@ -381,6 +381,20 @@ function ValidatorContent() {
 
     toast.success(`Analysis complete! (${elapsedSeconds}s)`);
   };
+
+  const [filter, setFilter] = useState<'all' | 'valid' | 'invalid' | 'mega'>('all');
+
+  const clearAll = useCallback(() => {
+    setBulkInput('');
+    setSingleInput('');
+    setResults([]);
+    setHasChecked(false);
+    setCheckingProgress({ current: 0, total: 0 });
+    setCopyMenuOpen(false);
+    setFilter('all');
+    void clearResults();
+  }, []);
+
   // Handle global shortcuts triggered by AppLayout
   useEffect(() => {
     const handleRunValidation = () => {
@@ -417,11 +431,16 @@ function ValidatorContent() {
       setCopyMenuOpen(false);
     };
 
+    const handleClearAll = () => {
+      clearAll();
+    };
+
     window.addEventListener('app-run-validation', handleRunValidation);
     window.addEventListener('app-focus-primary-input', handleFocusPrimaryInput);
     window.addEventListener('app-scroll-boundary', handleScrollBoundary);
     window.addEventListener('app-open-export', handleOpenExport);
     window.addEventListener('app-escape', handleEscape);
+    window.addEventListener('app-clear-all', handleClearAll);
 
     return () => {
       window.removeEventListener('app-run-validation', handleRunValidation);
@@ -429,19 +448,9 @@ function ValidatorContent() {
       window.removeEventListener('app-scroll-boundary', handleScrollBoundary);
       window.removeEventListener('app-open-export', handleOpenExport);
       window.removeEventListener('app-escape', handleEscape);
+      window.removeEventListener('app-clear-all', handleClearAll);
     };
-  }, [mode, hasChecked, results.length, runValidation]);
-
-  const clearAll = () => {
-    setBulkInput('');
-    setSingleInput('');
-    setResults([]);
-    setHasChecked(false);
-    setCheckingProgress({ current: 0, total: 0 });
-    void clearResults();
-  };
-
-  const [filter, setFilter] = useState<'all' | 'valid' | 'invalid' | 'mega'>('all');
+  }, [mode, hasChecked, results.length, runValidation, clearAll]);
 
   const filteredResults = useMemo(() => {
     if (filter === 'all') return results;
