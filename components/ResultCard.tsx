@@ -162,7 +162,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
 
   const previewModal = isPreviewOpen ? (
     <div
-      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-100 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={() => setIsPreviewOpen(false)}
     >
       <div
@@ -184,7 +184,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
                   {statusLabel}
                 </span>
               </div>
-              <h3 id="preview-title" className="text-lg font-semibold text-black dark:text-white break-words">
+              <h3 id="preview-title" className="text-lg font-semibold text-black dark:text-white wrap-break-word">
                 {details.title || 'Link Preview'}
               </h3>
             </div>
@@ -218,7 +218,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
                   <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider sm:w-28 shrink-0">
                     {field.label}
                   </p>
-                  <p className="text-sm text-black dark:text-white break-words sm:text-right">
+                  <p className="text-sm text-black dark:text-white wrap-break-word sm:text-right">
                     {String(field.value)}
                   </p>
                 </div>
@@ -269,7 +269,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
 
   const tagModal = isTagModalOpen ? (
     <div
-      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-100 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={() => setIsTagModalOpen(false)}
     >
       <div
