@@ -1,5 +1,12 @@
 import { LinkResult, StatsData, ContributorsResponse, MyProfileResponse } from '../types';
 import { formatCompactNumber } from '../utils/helpers';
+import {
+  appendContributorIdentity,
+  getContributorIdentity,
+  getContributorHeaders,
+  getContributorPayload,
+  rememberContributorProfile,
+} from '../utils/contributorIdentity';
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_TELECHECK_API_URL?.replace(/\/$/, '') ||
@@ -19,6 +26,10 @@ export function getCached<T>(key: string): T | null {
 
 function setCache(key: string, data: any) {
   cache.set(key, { data, timestamp: Date.now() });
+}
+
+export function getMyProfileCacheKey() {
+  return `profile:${getContributorIdentity().deviceId}`;
 }
 
 export function clearCache(prefix?: string) {
@@ -58,14 +69,21 @@ export const fetchStats = async (): Promise<StatsData> => {
 export const checkSingleLink = async (link: string): Promise<LinkResult> => {
   try {
     const cleanLink = link.trim();
+    const params = appendContributorIdentity(
+      new URLSearchParams({ link: cleanLink })
+    );
 
     const response = await fetch(
-      `${BASE_URL}/?link=${encodeURIComponent(cleanLink)}`
+      `${BASE_URL}/?${params.toString()}`,
+      { headers: getContributorHeaders() }
     );
 
     if (!response.ok) throw new Error('Failed to check link');
 
     const data = await response.json();
+    clearCache('contributors:');
+    clearCache('profile:');
+    clearCache('links:');
 
     return {
       link: cleanLink,
@@ -100,13 +118,19 @@ export const checkBulkLinks = async (
 
     const response = await fetch(`${BASE_URL}/`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ links: cleanLinks })
+      headers: getContributorHeaders('application/json'),
+      body: JSON.stringify({
+        links: cleanLinks,
+        ...getContributorPayload(),
+      })
     });
 
     if (!response.ok) throw new Error('Failed to validate links');
 
     const data = await response.json();
+    clearCache('contributors:');
+    clearCache('profile:');
+    clearCache('links:');
 
     let results: any[] = [];
 
@@ -179,15 +203,19 @@ export const validateSavedLinks = async ({
     });
 
     if (platform) params.set('platform', platform);
+    appendContributorIdentity(params);
 
     const response = await fetch(`${BASE_URL}/links/validate?${params.toString()}`, {
-      method: 'POST'
+      method: 'POST',
+      headers: getContributorHeaders()
     });
 
     if (!response.ok) throw new Error('Failed to validate links');
 
     // After mutation, clear the links cache so we don't serve stale invalid links
     clearCache('links:');
+    clearCache('contributors:');
+    clearCache('profile:');
 
     return await response.json();
   } catch (error) {
@@ -239,7 +267,7 @@ export const fetchSavedLinks = async ({
 
     const response = await fetch(
       `${BASE_URL}/links?${params.toString()}`,
-      { signal: controller.signal }
+      { signal: controller.signal, headers: getContributorHeaders() }
     );
 
     if (!response.ok) throw new Error('Failed to fetch saved links');
@@ -301,15 +329,18 @@ export const fetchContributors = async ({
 // MY PROFILE
 // --------------------------------------------
 export const fetchMyProfile = async (): Promise<MyProfileResponse> => {
-  const cacheKey = 'profile';
+  const profileParams = appendContributorIdentity(new URLSearchParams());
+  const cacheKey = getMyProfileCacheKey();
   const cached = getCached<MyProfileResponse>(cacheKey);
   if (cached) return cached;
 
   try {
-    const response = await fetch(`${BASE_URL}/contributors/me`);
+    const response = await fetch(`${BASE_URL}/contributors/me?${profileParams.toString()}`, {
+      headers: getContributorHeaders()
+    });
     if (!response.ok) throw new Error('Failed to fetch my profile');
 
-    const data = await response.json();
+    const data = rememberContributorProfile(await response.json());
     setCache(cacheKey, data);
     return data;
   } catch (error) {

@@ -58,7 +58,7 @@ types.ts         Shared TypeScript types
 - **Tag Filtering** — Filter saved links by tag using the chip row on the dashboard.
 - **Dark Mode** — System-aware light/dark theme toggle.
 - **Clipboard Helpers** — Copy single or bulk links with one click.
-- **Contributors Leaderboard** — Track who added the most links.
+- **Contributors Leaderboard** — Track who added the most links with a stable anonymous contributor identity per browser/device.
 - **Vercel Analytics** — Built-in analytics integration.
 
 ## API Integration
@@ -73,6 +73,8 @@ The frontend calls the TeleCheck API for:
 - `POST /links/tags` — Assign tags to a link (`{ url, tags }`)
 - `GET /contributors` — Leaderboard
 - `GET /contributors/me` — Current user profile
+
+Contributor-aware requests include an anonymous `contributor_id` plus the API-provided `recovery_key` when available. These values are stored in browser `localStorage` so the same device keeps the same leaderboard identity across network changes.
 
 ## License
 

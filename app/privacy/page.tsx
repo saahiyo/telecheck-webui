@@ -11,7 +11,7 @@ export default function PrivacyPolicy() {
     {
       title: 'Data Collection',
       icon: <EyeOff className="text-blue-500" size={24} />,
-      content: 'We do not collect or store the Telegram links you validate on our servers. All validation processes are performed in real-time. Any temporary storage used during the session (like your "Saved Links") is stored locally on your device using IndexedDB and is never transmitted to us.'
+      content: 'We do not collect personal account details. The app stores an anonymous contributor identity and recovery key in your browser so your leaderboard name can stay stable on the same device. Temporary local data, such as recent validation results, is stored on your device.'
     },
     {
       title: 'Processing',
@@ -21,7 +21,7 @@ export default function PrivacyPolicy() {
     {
       title: 'Cookies & Analytics',
       icon: <Shield className="text-purple-500" size={24} />,
-      content: 'We use Vercel Analytics to understand how users interact with our site. This data is anonymous and helps us improve the user interface and performance. We do not use tracking cookies for advertising purposes.'
+      content: 'We use Vercel Analytics to understand how users interact with our site. This data is anonymous and helps us improve the user interface and performance. We do not use tracking cookies for advertising purposes; contributor identity is kept in browser storage for the leaderboard.'
     },
     {
       title: 'Security',
@@ -34,7 +34,7 @@ export default function PrivacyPolicy() {
     <div className="max-w-3xl mx-auto py-12 px-4 animate-fade-in">
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold text-black dark:text-white mb-4 tracking-tight">Privacy Policy</h1>
-        <p className="text-gray-500 dark:text-gray-400">Last updated: April 26, 2026</p>
+        <p className="text-gray-500 dark:text-gray-400">Last updated: May 3, 2026</p>
       </div>
 
       <div className="space-y-12">

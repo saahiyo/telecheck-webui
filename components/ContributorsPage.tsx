@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Loader2, Users, Trophy, Medal, Award, Activity, Search, RefreshCw, X, ChevronLeft, ChevronRight, Hash, Calendar, Sparkles } from 'lucide-react';
 import debounce from 'lodash.debounce';
-import { fetchContributors, fetchMyProfile, getCached } from '../services/api';
+import { clearCache, fetchContributors, fetchMyProfile, getCached, getMyProfileCacheKey } from '../services/api';
 import { useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import { Contributor, MyProfileResponse, ContributorsResponse } from '../types';
@@ -24,7 +24,7 @@ function formatShortDate(dateValue?: string) {
 
 const ContributorsPage: React.FC<ContributorsPageProps> = () => {
   const initialContribCache = getCached<ContributorsResponse>(`contributors:${PAGE_SIZE}:0`);
-  const initialProfileCache = getCached<MyProfileResponse>('profile');
+  const initialProfileCache = getCached<MyProfileResponse>(getMyProfileCacheKey());
   const router = useRouter();
 
   const [contributors, setContributors] = useState<Contributor[]>(initialContribCache?.contributors || []);
@@ -61,6 +61,8 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
   }, [page, loadData]);
 
   const handleRefresh = async () => {
+    clearCache('contributors:');
+    clearCache('profile:');
     setIsLoading(true);
     await loadData(page);
   };

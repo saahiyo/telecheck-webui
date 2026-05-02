@@ -71,6 +71,7 @@ export interface ContributorsResponse {
 
 export interface MyProfileResponse {
   username: string | null;
+  recovery_key?: string;
   links_added: number;
   rank: number | null;
   first_seen?: string;
