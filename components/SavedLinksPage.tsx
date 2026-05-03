@@ -331,7 +331,11 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         memberCountRaw: savedLink.member_count?.toLocaleString(),
         checkedAt: savedLink.checked_at,
         savedStatus: savedLink.status,
-        savedId: savedLink.id
+        savedId: savedLink.id,
+        contributorUsername: savedLink.contributor_username,
+        contributorLinksAdded: savedLink.contributor_links_added,
+        contributorFirstSeen: savedLink.contributor_first_seen,
+        contributorLastSeen: savedLink.contributor_last_seen
       },
       tags: savedLink.tags
     } as LinkResult

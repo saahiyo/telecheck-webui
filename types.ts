@@ -45,6 +45,10 @@ export interface StoredLink {
   member_count?: number;
   checked_at?: string;
   tags?: string[];
+  contributor_username?: string | null;
+  contributor_links_added?: number | string | null;
+  contributor_first_seen?: string | null;
+  contributor_last_seen?: string | null;
 }
 
 export interface StoredLinkResponse {

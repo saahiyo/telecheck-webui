@@ -48,6 +48,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
   const PREDEFINED_TAGS = ['Crypto', 'News', 'Entertainment', 'Finance', 'Gaming', 'Tech', 'Education', 'Music', 'Sports', 'Other'];
   const [localTags, setLocalTags] = useState<string[]>(result.tags || []);
   const [isUpdatingTags, setIsUpdatingTags] = useState(false);
+  const contributorLinksAdded = Number(details.contributorLinksAdded);
 
   // Sync tags if result changes from parent
   useEffect(() => {
@@ -63,6 +64,15 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
       value: details.checkedAt ? new Date(details.checkedAt).toLocaleString() : undefined
     },
     { label: 'Status', value: details.savedStatus || result.status },
+    { label: 'Contributor', value: details.contributorUsername },
+    {
+      label: 'Contributed',
+      value: Number.isFinite(contributorLinksAdded) ? `${contributorLinksAdded.toLocaleString()} links` : undefined
+    },
+    {
+      label: 'First Seen',
+      value: details.contributorFirstSeen ? new Date(details.contributorFirstSeen).toLocaleString() : undefined
+    },
     { label: 'ID', value: details.savedId }
   ].filter((field) => field.value !== undefined && field.value !== null && `${field.value}`.trim() !== '');
 
