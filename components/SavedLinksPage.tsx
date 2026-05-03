@@ -9,9 +9,9 @@ import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags } from '../se
 import { StoredLink, LinkResult, StoredLinkResponse } from '../types';
 import { formatCompactNumber } from '../utils/helpers';
 import { toast } from 'sonner';
+import { copyText } from '../utils/clipboard';
 import ResultCard from './ResultCard';
-import LinkCopyModal from './LinkCopyModal';
-import { trackSearchQuery, trackFilterChange, trackSortChange, trackLinksRefresh, trackLinksValidate, trackCopyModalOpen, trackPagination } from '../utils/tracking';
+import { trackSearchQuery, trackFilterChange, trackSortChange, trackLinksRefresh, trackLinksValidate, trackPagination } from '../utils/tracking';
 
 interface SavedLinksPageProps {
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
@@ -120,6 +120,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [isLoading, setIsLoading] = useState(!initialCache);
   const [isSearching, setIsSearching] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
+  const [isCopyingAll, setIsCopyingAll] = useState(false);
   const [validationProgress, setValidationProgress] = useState({ current: 0, total: 0 });
   const [total, setTotal] = useState(initialCache?.total || 0);
   const [page, setPage] = useState(1);
@@ -134,7 +135,6 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [showScrollJump, setShowScrollJump] = useState(false);
   const [scrollJumpTarget, setScrollJumpTarget] = useState<'top' | 'bottom'>('bottom');
   const [scrollJumpContext, setScrollJumpContext] = useState<'container' | 'window'>('window');
-  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const userParam = searchParams.get('user') || '';
@@ -315,6 +315,55 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const filteredLinks = useMemo(() => filterByMetadata(links, savedFilter), [links, savedFilter]);
   const sortedLinks = useMemo(() => sortSavedLinks(filteredLinks, savedSort, randomSeed), [filteredLinks, savedSort, randomSeed]);
 
+  const handleCopyAllLinks = useCallback(async () => {
+    const expectedCount = Math.max(total, sortedLinks.length);
+    if (expectedCount === 0) {
+      toast.error('No saved links to copy.');
+      return;
+    }
+
+    setIsCopyingAll(true);
+    const toastId = toast.loading(`Preparing ${expectedCount.toLocaleString()} saved links...`);
+
+    try {
+      let linksToCopy = sortedLinks;
+
+      if (expectedCount > sortedLinks.length || page !== 1) {
+        const data = await fetchSavedLinks({
+          limit: Math.min(Math.max(expectedCount, PAGE_SIZE), 100000),
+          offset: 0,
+          search: debouncedSearchQuery,
+          tag: selectedTag,
+          user: userParam
+        });
+
+        if (data?.links?.length) {
+          linksToCopy = sortSavedLinks(
+            filterByMetadata(data.links, savedFilter),
+            savedSort,
+            randomSeed
+          );
+        }
+      }
+
+      const urls = Array.from(
+        new Set(linksToCopy.map((link) => link.url).filter(Boolean))
+      );
+
+      if (urls.length === 0) {
+        toast.error('No saved links to copy.', { id: toastId });
+        return;
+      }
+
+      await copyText(urls.join('\n'));
+      toast.success(`Copied ${urls.length.toLocaleString()} link${urls.length === 1 ? '' : 's'}.`, { id: toastId });
+    } catch {
+      toast.error('Failed to copy saved links.', { id: toastId });
+    } finally {
+      setIsCopyingAll(false);
+    }
+  }, [PAGE_SIZE, debouncedSearchQuery, page, randomSeed, savedFilter, savedSort, selectedTag, sortedLinks, total, userParam]);
+
   // Pre-compute adapted results so React.memo'd ResultCards receive stable object references
   const adaptedResults = useMemo(() => sortedLinks.map((savedLink, idx) => ({
     key: savedLink.id || idx,
@@ -486,16 +535,13 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         
         <div className="flex items-center gap-2 shrink-0 sm:hidden">
           <button 
-            onClick={() => {
-              setIsCopyModalOpen(true);
-              trackCopyModalOpen(links.length);
-            }}
-            disabled={links.length === 0}
-            title="Copy links"
-            aria-label="Copy links"
+            onClick={() => void handleCopyAllLinks()}
+            disabled={isCopyingAll || total === 0}
+            title="Copy all links"
+            aria-label="Copy all links"
             className="h-10 w-10 bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
           >
-            <Copy size={15} />
+            {isCopyingAll ? <Loader2 size={15} className="animate-spin" /> : <Copy size={15} />}
           </button>
           <button 
             onClick={handleRefresh}
@@ -528,15 +574,12 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
         <div className="hidden sm:flex sm:items-center sm:gap-2 shrink-0">
           <button
-            onClick={() => {
-              setIsCopyModalOpen(true);
-              trackCopyModalOpen(links.length);
-            }}
-            disabled={links.length === 0}
+            onClick={() => void handleCopyAllLinks()}
+            disabled={isCopyingAll || total === 0}
             className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
           >
-            <Copy size={14} />
-            <span>Copy Links</span>
+            {isCopyingAll ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
+            <span>{isCopyingAll ? 'Copying...' : 'Copy All'}</span>
           </button>
           <button
             onClick={handleRefresh}
@@ -916,12 +959,6 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         </div>
       )}
 
-      <LinkCopyModal
-        isOpen={isCopyModalOpen}
-        onClose={() => setIsCopyModalOpen(false)}
-        links={sortedLinks}
-        totalInDb={total}
-      />
     </div>
   );
 });
