@@ -43,7 +43,7 @@ function isTypingTarget(target: EventTarget | null) {
   return element.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName);
 }
 
-const APP_VERSION = '0.0.0';
+const APP_VERSION = '0.0.1';
 const API_URL =
   process.env.NEXT_PUBLIC_TELECHECK_API_URL?.replace(/\/$/, '') ||
   'https://telecheck.vercel.app';
