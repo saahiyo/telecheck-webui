@@ -1,6 +1,6 @@
 # TeleCheck Pro
 
-TeleCheck Pro is a Next.js 16 app for validating Telegram links in bulk or one at a time. It keeps the existing client-side workflow, talks to the TeleCheck API, and includes dark mode, saved-link browsing, clipboard helpers, and Vercel Analytics.
+TeleCheck Pro is the Next.js web UI for the TeleCheck API. It validates Telegram and MEGA links, shows metadata-rich results, browses saved database links, and tracks anonymous contributor activity with a stable browser/device identity.
 
 ![TeleCheck Pro Dashboard](public/preview.png)
 
@@ -10,9 +10,12 @@ TeleCheck Pro is a Next.js 16 app for validating Telegram links in bulk or one a
 - React 19
 - TypeScript
 - Tailwind CSS v4
+- Motion
 - Lucide React
 - Sonner
+- TanStack React Virtual
 - Vercel Analytics
+- Optional Databuddy analytics
 
 ## Getting Started
 
@@ -28,53 +31,89 @@ npm install
 npm run dev
 ```
 
-The app will be available at `http://localhost:3000`.
+The app runs at `http://localhost:3000`.
+
+On Windows PowerShell, use `npm.cmd` if script execution policy blocks `npm`:
+
+```powershell
+npm.cmd install
+npm.cmd run dev
+```
 
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` if you want to override the default API origin and enable Databuddy analytics.
+Copy `.env.example` to `.env.local` when you want to override the API origin or enable Databuddy:
+
+```env
+NEXT_PUBLIC_TELECHECK_API_URL=https://telecheck.vercel.app
+NEXT_PUBLIC_DATABUDDY_CLIENT_ID=
+```
+
+If `NEXT_PUBLIC_TELECHECK_API_URL` is empty, the frontend falls back to `https://telecheck.vercel.app`.
+
+## Scripts
 
 ```bash
-NEXT_PUBLIC_TELECHECK_API_URL=https://telecheck.vercel.app
-NEXT_PUBLIC_DATABUDDY_CLIENT_ID=84583c87-c0c1-48bf-9d1b-1290c931d183
+npm run dev
+npm run build
+npm run start
 ```
+
+## Features
+
+- Single-link validation through `GET /?link=...`.
+- Bulk validation through `POST /`.
+- URL extraction, normalization, and deduplication before bulk checks.
+- Saved links dashboard with pagination, search, platform filtering, tag filtering, and contributor filtering.
+- Saved-link detail cards with Telegram/MEGA metadata, member counts, status, database id, saved date, and contributor details.
+- Copy helpers for individual results, filtered result groups, all saved links, and the saved-link copy modal.
+- Saved-link revalidation through `/links/validate`; invalid or expired database links are removed by the backend.
+- Global tags stored on saved links with `/tags` and `/links/tags`.
+- Contributors leaderboard based on currently active valid links.
+- Stable anonymous contributor identity stored in browser `localStorage` with recovery-key support.
+- Theme toggle, keyboard navigation shortcuts, installable PWA assets, and mobile zoom support.
+
+## API Integration
+
+The frontend API layer is in `services/api.ts`. It calls:
+
+- `GET /stats?period=24h` for rolling statistics.
+- `GET /?link=...` for one link.
+- `POST /` for bulk checks.
+- `GET /links?platform=...&limit=...&offset=...&search=...&tag=...&username=...` for saved links.
+- `POST /links/validate?limit=...&offset=...&platform=...` to re-check saved links and clean invalid ones.
+- `GET /links/stats` for saved-link totals.
+- `GET /tags` for available tags.
+- `POST /links/tags` to update tags for a saved link.
+- `GET /contributors` for the leaderboard.
+- `GET /contributors/me` for the current browser/device contributor profile.
+- `POST /contributors/recover` for recovery-key based profile recovery.
+
+Contributor identity is sent through query parameters or JSON body fields using `contributor_id`, `device_id`, `recovery_key`, and `contributor_username`. The browser stores identity data under `telecheck_contributor_identity`.
 
 ## Project Structure
 
 ```text
-app/             Next.js App Router files
-components/      Reusable UI components
-services/        API service helpers
-utils/           Utility functions
-public/          Static assets
-App.tsx          Client-side application shell
-types.ts         Shared TypeScript types
+app/                     Next.js App Router pages and metadata
+app/page.tsx             Main single/bulk validation UI
+app/saved/               Saved links route
+app/contributors/        Contributors route
+components/              Shared UI and route components
+components/SavedLinksPage.tsx
+components/ContributorsPage.tsx
+components/ResultCard.tsx
+components/LinkCopyModal.tsx
+services/api.ts          TeleCheck API client helpers and cache
+utils/                   Clipboard, tracking, DB, identity, and link helpers
+public/                  Icons, manifest, service worker, and preview assets
+types.ts                 Shared frontend TypeScript types
 ```
-## Features
 
-- **Bulk & Single Link Validation** — Check one or thousands of Telegram links at once.
-- **Saved Links Dashboard** — Browse, search, and paginate all stored links from the database.
-- **Global Link Tagging** — Categorize links with predefined tags (Crypto, News, Entertainment, Finance, Gaming, Tech, Education, Music, Sports, Other). Tags are stored globally in PostgreSQL and shared across all users.
-- **Tag Filtering** — Filter saved links by tag using the chip row on the dashboard.
-- **Dark Mode** — System-aware light/dark theme toggle.
-- **Clipboard Helpers** — Copy single or bulk links with one click.
-- **Contributors Leaderboard** — Track who added the most links with a stable anonymous contributor identity per browser/device.
-- **Vercel Analytics** — Built-in analytics integration.
+## Notes
 
-## API Integration
-
-The frontend calls the TeleCheck API for:
-
-- `GET /stats` — Fetch global statistics
-- `GET /?link=...` — Check a single link
-- `POST /` — Batch check multiple links
-- `GET /links?platform=telegram&limit=...&offset=...&search=...&tag=...` — Fetch saved links with optional tag filter
-- `GET /tags` — Fetch all unique tags used across links
-- `POST /links/tags` — Assign tags to a link (`{ url, tags }`)
-- `GET /contributors` — Leaderboard
-- `GET /contributors/me` — Current user profile
-
-Contributor-aware requests include an anonymous `contributor_id` plus the API-provided `recovery_key` when available. These values are stored in browser `localStorage` so the same device keeps the same leaderboard identity across network changes.
+- Saved-link fetching uses a short in-memory cache and aborts older saved-link requests while search input changes.
+- The saved-link validation UI currently calls the backend by page-sized chunks from the client. For very large databases, a backend job endpoint with progress would be faster and more resilient.
+- The service worker is intentionally small and only supports app shell/static asset caching.
 
 ## License
 
