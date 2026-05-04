@@ -11,7 +11,8 @@ import { formatCompactNumber } from '../utils/helpers';
 import { toast } from 'sonner';
 import { copyText } from '../utils/clipboard';
 import ResultCard from './ResultCard';
-import { trackSearchQuery, trackFilterChange, trackSortChange, trackLinksRefresh, trackLinksValidate, trackPagination } from '../utils/tracking';
+import LinkCopyModal from './LinkCopyModal';
+import { trackSearchQuery, trackFilterChange, trackSortChange, trackLinksRefresh, trackLinksValidate, trackCopyModalOpen, trackPagination } from '../utils/tracking';
 
 interface SavedLinksPageProps {
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
@@ -135,6 +136,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [showScrollJump, setShowScrollJump] = useState(false);
   const [scrollJumpTarget, setScrollJumpTarget] = useState<'top' | 'bottom'>('bottom');
   const [scrollJumpContext, setScrollJumpContext] = useState<'container' | 'window'>('window');
+  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
   const userParam = searchParams.get('user') || '';
@@ -533,7 +535,19 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           </div>
         </div>
         
-        <div className="flex items-center gap-2 shrink-0 sm:hidden">
+        <div className="flex flex-wrap items-center justify-end gap-2 shrink-0 sm:hidden max-w-[232px]">
+          <button
+            onClick={() => {
+              setIsCopyModalOpen(true);
+              trackCopyModalOpen(links.length);
+            }}
+            disabled={links.length === 0}
+            title="Copy link options"
+            aria-label="Copy link options"
+            className="h-10 w-10 bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
+          >
+            <Layers size={15} />
+          </button>
           <button 
             onClick={() => void handleCopyAllLinks()}
             disabled={isCopyingAll || total === 0}
@@ -573,6 +587,17 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         </div>
 
         <div className="hidden sm:flex sm:items-center sm:gap-2 shrink-0">
+          <button
+            onClick={() => {
+              setIsCopyModalOpen(true);
+              trackCopyModalOpen(links.length);
+            }}
+            disabled={links.length === 0}
+            className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
+          >
+            <Layers size={14} />
+            <span>Copy Links</span>
+          </button>
           <button
             onClick={() => void handleCopyAllLinks()}
             disabled={isCopyingAll || total === 0}
@@ -959,6 +984,12 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         </div>
       )}
 
+      <LinkCopyModal
+        isOpen={isCopyModalOpen}
+        onClose={() => setIsCopyModalOpen(false)}
+        links={sortedLinks}
+        totalInDb={total}
+      />
     </div>
   );
 });
