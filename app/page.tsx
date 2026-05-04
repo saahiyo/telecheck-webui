@@ -115,7 +115,6 @@ function ValidatorContent() {
   const [checkingProgress, setCheckingProgress] = useState({ current: 0, total: 0 });
   const [refreshStatsTrigger, setRefreshStatsTrigger] = useState(0);
   const [results, setResults] = useState<LinkResult[]>([]);
-  const [currentRunUniqueCount, setCurrentRunUniqueCount] = useState(0);
   const [hasChecked, setHasChecked] = useState(false);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -263,7 +262,6 @@ function ValidatorContent() {
     setIsChecking(true);
     setHasChecked(false);
     setResults([]);
-    setCurrentRunUniqueCount(0);
     setCheckingProgress({ current: 0, total: 0 });
 
     const { unique: links, duplicateCount } = await new Promise<{ unique: string[]; duplicateCount: number }>((resolve) => {
@@ -277,7 +275,6 @@ function ValidatorContent() {
 
     // Track bulk validation start
     trackBulkValidation(links.length, duplicateCount > 0);
-    setCurrentRunUniqueCount(links.length);
 
     if (duplicateCount > 0) {
       toast.info(`Removed ${duplicateCount} duplicate${duplicateCount > 1 ? 's' : ''}`);
@@ -362,7 +359,6 @@ function ValidatorContent() {
     setIsChecking(true);
     setHasChecked(false);
     setResults([]);
-    setCurrentRunUniqueCount(1);
     setCheckingProgress({ current: 0, total: 1 });
 
     let finalStatus = '';
@@ -392,7 +388,6 @@ function ValidatorContent() {
     setBulkInput('');
     setSingleInput('');
     setResults([]);
-    setCurrentRunUniqueCount(0);
     setHasChecked(false);
     setCheckingProgress({ current: 0, total: 0 });
     setCopyMenuOpen(false);
@@ -959,20 +954,6 @@ function ValidatorContent() {
                  animate="show"
                  variants={homeGroupVariants}
                >
-                  {currentRunUniqueCount > 0 && (
-                    <motion.div
-                      variants={homeSectionVariants}
-                      layout
-                      title="Unique links in the current check results"
-                      className="relative flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border bg-white dark:bg-black text-gray-600 dark:text-gray-400 border-gray-200 dark:border-[#333]"
-                    >
-                      <Link2 size={12} className="text-gray-500 dark:text-gray-400" />
-                      <span>Unique</span>
-                      <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-gray-100 dark:bg-[#222] text-gray-600 dark:text-gray-400">
-                        {currentRunUniqueCount}
-                      </span>
-                    </motion.div>
-                  )}
                   {[
                     { id: 'all', label: 'All', count: results.length, color: 'gray' },
                     { id: 'valid', label: 'Valid', count: validCount, color: 'black' },
