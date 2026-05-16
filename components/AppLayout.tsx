@@ -209,9 +209,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="w-8 h-8 bg-black dark:bg-white text-white dark:text-black rounded-full flex items-center justify-center shrink-0">
                 <ShieldCheck size={18} strokeWidth={2.5} aria-hidden="true" />
               </div>
-              <h1 className="text-lg font-bold tracking-tight text-black dark:text-white truncate">
+              <div className="text-lg font-bold tracking-tight text-black dark:text-white truncate">
                 TeleCheck<span className="text-gray-400 dark:text-gray-600">Pro</span>
-              </h1>
+              </div>
             </Link>
 
             <div className="flex items-center gap-3 shrink-0">

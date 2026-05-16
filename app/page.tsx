@@ -589,6 +589,7 @@ function ValidatorContent() {
       animate="show"
       variants={homeGroupVariants}
     >
+      <h1 className="sr-only">Bulk Telegram Link Validator</h1>
       {/* Stats Section */}
       <motion.div variants={homeSectionVariants}>
         <StatsWidget refreshTrigger={refreshStatsTrigger} />

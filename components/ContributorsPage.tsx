@@ -111,7 +111,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
             <Users className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-gray-700 dark:text-gray-300" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-black dark:text-white leading-tight">Contributors</h2>
+            <h1 className="text-base sm:text-lg font-bold text-black dark:text-white leading-tight">Contributors</h1>
             <p className="text-[10px] sm:text-xs text-gray-500 font-medium">{total} total members helping out</p>
           </div>
         </div>

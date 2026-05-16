@@ -530,7 +530,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             <Database size={18} className="text-gray-700 dark:text-gray-300" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-black dark:text-white">Saved Links</h2>
+            <h1 className="text-lg font-bold text-black dark:text-white">Saved Links</h1>
             <p className="text-xs text-gray-500 font-medium">{savedLinksSummary}</p>
           </div>
         </div>
