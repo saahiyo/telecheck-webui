@@ -75,6 +75,9 @@ export const metadata: Metadata = {
       'Validate Telegram links in bulk, inspect metadata, and separate valid, invalid, and Mega links.',
     images: ['/og-image.png'],
   },
+  verification: {
+    google: 'zTLUc1pHJB0CD4rwlXovCOpqGxarVHd5u3Fy_nBhi3s',
+  },
 };
 
 export const viewport: Viewport = {
