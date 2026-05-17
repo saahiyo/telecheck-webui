@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LinkResult } from '../types';
-import { X, ExternalLink, Copy, Eye, Users, Tag as TagIcon, Loader2, Check } from 'lucide-react';
+import { X, ExternalLink, Copy, Eye, Users, Tag as TagIcon, Loader2, Check, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { copyText } from '../utils/clipboard';
 import { updateLinkTags } from '../services/api';
@@ -345,7 +345,12 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
               <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate" aria-label={`Status: ${statusLabel}`}>
                 {statusLabel}
               </span>
-
+              {result.cached && (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[9px] font-semibold uppercase tracking-wider" title="Served from cache">
+                  <Zap size={8} />
+                  Cached
+                </span>
+              )}
             </div>
 
             {/* Title / Link */}

@@ -1,4 +1,4 @@
-import { LinkResult, StatsData, ContributorsResponse, MyProfileResponse } from '../types';
+import { LinkResult, StatsData, ContributorsResponse, MyProfileResponse, RateLimitInfo } from '../types';
 import { formatCompactNumber } from '../utils/helpers';
 import {
   appendContributorIdentity,
@@ -42,6 +42,29 @@ export function clearCache(prefix?: string) {
   }
 }
 
+// ── Rate Limit Tracking ──
+let _lastRateLimitInfo: RateLimitInfo | null = null;
+
+function extractRateLimitInfo(response: Response): RateLimitInfo | null {
+  const limit = response.headers.get('X-RateLimit-Limit');
+  const remaining = response.headers.get('X-RateLimit-Remaining');
+  const reset = response.headers.get('X-RateLimit-Reset');
+  if (limit && remaining && reset) {
+    const info: RateLimitInfo = {
+      limit: parseInt(limit, 10),
+      remaining: parseInt(remaining, 10),
+      reset: parseInt(reset, 10),
+    };
+    _lastRateLimitInfo = info;
+    return info;
+  }
+  return null;
+}
+
+export function getLastRateLimitInfo(): RateLimitInfo | null {
+  return _lastRateLimitInfo;
+}
+
 // --------------------------------------------
 // STATS
 // --------------------------------------------
@@ -78,6 +101,17 @@ export const checkSingleLink = async (link: string): Promise<LinkResult> => {
       { headers: getContributorHeaders() }
     );
 
+    extractRateLimitInfo(response);
+
+    if (response.status === 429) {
+      const data = await response.json();
+      return {
+        link: cleanLink,
+        status: 'unknown',
+        reason: data.error || 'Rate limited. Please wait.',
+      };
+    }
+
     if (!response.ok) throw new Error('Failed to check link');
 
     const data = await response.json();
@@ -89,6 +123,7 @@ export const checkSingleLink = async (link: string): Promise<LinkResult> => {
       link: cleanLink,
       status: data.status?.toLowerCase() || 'unknown',
       reason: data.reason || data.message || undefined,
+      cached: data.cached === true,
       details: data.metadata ? {
         ...data.metadata,
         image: data.metadata.photo || data.metadata.image,
@@ -107,16 +142,49 @@ export const checkSingleLink = async (link: string): Promise<LinkResult> => {
 };
 
 // --------------------------------------------
-// BULK LINK CHECK
+// ASYNC JOB POLLING (for QStash background processing)
+// --------------------------------------------
+export type JobStatus = {
+  id: string;
+  status: 'queued' | 'processing' | 'completed' | 'failed';
+  total_links: number;
+  processed_links: number;
+  valid_count: number;
+  invalid_count: number;
+  unknown_count: number;
+  results: any[];
+  error?: string;
+};
+
+export const pollJobStatus = async (jobId: string): Promise<JobStatus | null> => {
+  try {
+    const response = await fetch(`${BASE_URL}/jobs/${jobId}`);
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+};
+
+// --------------------------------------------
+// BULK LINK CHECK (with async QStash support)
 // --------------------------------------------
 export const checkBulkLinks = async (
-  links: string[]
+  links: string[],
+  options?: {
+    onAsyncJob?: (jobId: string) => void;
+    onProgress?: (processed: number, total: number) => void;
+    onStreamResults?: (results: LinkResult[]) => void;
+    forceAsync?: boolean;
+  }
 ): Promise<LinkResult[]> => {
   try {
     const cleanLinks = links.map(l => l.trim()).filter(Boolean);
     if (!cleanLinks.length) return [];
 
-    const response = await fetch(`${BASE_URL}/`, {
+    const asyncParam = (options?.forceAsync || cleanLinks.length > 25) ? '?async=true' : '';
+
+    const response = await fetch(`${BASE_URL}/${asyncParam}`, {
       method: 'POST',
       headers: getContributorHeaders('application/json'),
       body: JSON.stringify({
@@ -125,25 +193,89 @@ export const checkBulkLinks = async (
       })
     });
 
-    if (!response.ok) throw new Error('Failed to validate links');
+    extractRateLimitInfo(response);
+
+    if (response.status === 429) {
+      const data = await response.json();
+      return cleanLinks.map(l => ({
+        link: l,
+        status: 'unknown',
+        reason: data.error || 'Rate limited. Please wait.',
+      }));
+    }
+
+    if (response.status !== 200 && response.status !== 202) {
+      throw new Error('Failed to validate links');
+    }
 
     const data = await response.json();
+
+    // ── Async Job Flow (202 Accepted) ──
+    if (response.status === 202 && data.jobId) {
+      options?.onAsyncJob?.(data.jobId);
+
+      // Poll until complete
+      const results: LinkResult[] = [];
+      let lastProcessed = 0;
+
+      while (true) {
+        await new Promise(r => setTimeout(r, 2000)); // Poll every 2s
+        const job = await pollJobStatus(data.jobId);
+        if (!job) continue;
+
+        options?.onProgress?.(job.processed_links, job.total_links);
+
+        // Stream new results
+        if (job.results && job.results.length > lastProcessed) {
+          const newResults: LinkResult[] = [];
+          for (const r of job.results.slice(lastProcessed)) {
+            const meta = r.metadata || {};
+            newResults.push({
+              link: r.url || r.link || 'Unknown',
+              status: r.status?.toLowerCase() || 'unknown',
+              cached: r.cached === true,
+              details: {
+                ...meta,
+                image: meta.photo || meta.image,
+                memberCount: meta.memberCount,
+                memberCountCompact: formatCompactNumber(meta.memberCount),
+                memberCountRaw: meta.memberCount?.toLocaleString(),
+              }
+            });
+          }
+          results.push(...newResults);
+          options?.onStreamResults?.(newResults);
+          lastProcessed = job.results.length;
+        }
+
+        if (job.status === 'completed' || job.status === 'failed') {
+          break;
+        }
+      }
+
+      clearCache('contributors:');
+      clearCache('profile:');
+      clearCache('links:');
+      return results;
+    }
+
+    // ── Synchronous Flow ──
     clearCache('contributors:');
     clearCache('profile:');
     clearCache('links:');
 
-    let results: any[] = [];
+    let apiResults: any[] = [];
 
     if (data.groups) {
-      results = [
+      apiResults = [
         ...(data.groups.valid || []),
         ...(data.groups.invalid || []),
         ...(data.groups.unknown || [])
       ];
     } else if (Array.isArray(data)) {
-      results = data;
+      apiResults = data;
     } else if (Array.isArray(data.results)) {
-      results = data.results;
+      apiResults = data.results;
     } else {
       console.warn('Unexpected API response:', data);
       return cleanLinks.map(l => ({
@@ -153,12 +285,13 @@ export const checkBulkLinks = async (
       }));
     }
 
-    return results.map(r => {
+    return apiResults.map(r => {
       const meta = r.metadata || {};
       return {
         link: r.link || r.url || 'Unknown Link',
         status: r.status?.toLowerCase() || 'unknown',
         reason: r.reason || r.message || undefined,
+        cached: r.cached === true,
         details: {
           ...meta,
           image: meta.photo || meta.image,

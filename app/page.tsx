@@ -6,7 +6,7 @@ import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, Zap, Clipboard, Che
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import StatsWidget from '@/components/StatsWidget';
 import ResultCard from '@/components/ResultCard';
-import { checkBulkLinks, checkSingleLink } from '@/services/api';
+import { checkBulkLinks, checkSingleLink, getLastRateLimitInfo } from '@/services/api';
 import { LinkResult } from '@/types';
 import { toast } from 'sonner';  
 import { URL_REGEX, isMegaLink, extractUrls, deduplicateLinks } from '@/utils/helpers';
@@ -300,38 +300,31 @@ function ValidatorContent() {
     }
 
     if (telegramLinks.length > 0) {
-      const BATCH_SIZE = 100; // Increased batch size for efficiency
-      const CONCURRENCY = 3; // Parallel requests
-      
-      const batches: string[][] = [];
-      for (let i = 0; i < telegramLinks.length; i += BATCH_SIZE) {
-        batches.push(telegramLinks.slice(i, i + BATCH_SIZE));
-      }
-
-      let activeIndex = 0;
-      const processWorker = async () => {
-        while (activeIndex < batches.length) {
-          const index = activeIndex++;
-          const batch = batches[index];
-          try {
-            const batchResults = await checkBulkLinks(batch);
-            allResults.push(...batchResults);
-            setResults(prev => [...prev, ...batchResults]);
-            
-            // Calculate progress based on total accumulated results
-            setCheckingProgress({ 
-              current: allResults.length, 
-              total: links.length 
+      try {
+        const batchResults = await checkBulkLinks(telegramLinks, {
+          onProgress: (processed, total) => {
+            setCheckingProgress({
+              current: megaResults.length + processed,
+              total: links.length
             });
-          } catch (e) {
-            console.error('Batch failed:', e);
+          },
+          onStreamResults: (newResults) => {
+            allResults.push(...newResults);
+            setResults(prev => [...prev, ...newResults]);
           }
+        });
+        
+        // Ensure final results are fully merged in case streaming missed anything or it was synchronous
+        const existingLinks = new Set(allResults.map(r => r.link));
+        const missingResults = batchResults.filter(r => !existingLinks.has(r.link));
+        
+        if (missingResults.length > 0) {
+          allResults.push(...missingResults);
+          setResults(prev => [...prev, ...missingResults]);
         }
-      };
-
-      // Start parallel workers
-      const workers = Array.from({ length: Math.min(CONCURRENCY, batches.length) }, processWorker);
-      await Promise.all(workers);
+      } catch (e) {
+        console.error('Batch failed:', e);
+      }
       
       setHasChecked(true);
     }
@@ -343,6 +336,14 @@ function ValidatorContent() {
     trackValidationComplete(allResults);
 
     toast.success(`Analysis complete! (${elapsedSeconds}s)`);
+
+    // Show rate limit feedback if approaching limit
+    const rl = getLastRateLimitInfo();
+    if (rl && rl.remaining <= 3 && rl.remaining > 0) {
+      toast.warning(`${rl.remaining} requests remaining this minute`, { duration: 5000 });
+    } else if (rl && rl.remaining === 0) {
+      toast.error('Rate limit reached. Please wait before checking more links.', { duration: 8000 });
+    }
 
     if (allResults.length >= 3 && allResults.every(r => r.status === 'valid' || r.status === 'mega')) {
       triggerSuccessConfetti();
@@ -380,6 +381,14 @@ function ValidatorContent() {
     trackValidationComplete([{ status: finalStatus }]);
 
     toast.success(`Analysis complete! (${elapsedSeconds}s)`);
+
+    // Show rate limit feedback if approaching limit
+    const rl = getLastRateLimitInfo();
+    if (rl && rl.remaining <= 3 && rl.remaining > 0) {
+      toast.warning(`${rl.remaining} requests remaining this minute`, { duration: 5000 });
+    } else if (rl && rl.remaining === 0) {
+      toast.error('Rate limit reached. Please wait before checking more links.', { duration: 8000 });
+    }
   };
 
   const [filter, setFilter] = useState<'all' | 'valid' | 'invalid' | 'mega'>('all');

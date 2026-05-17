@@ -4,6 +4,7 @@ export interface LinkResult {
   reason?: string;
   details?: any; // For any extra data API might return
   tags?: string[];
+  cached?: boolean;
 }
 
 export interface StatsData {
@@ -17,6 +18,12 @@ export interface BulkCheckResponse {
   results: LinkResult[];
 }
 
+export interface RateLimitInfo {
+  limit: number;
+  remaining: number;
+  reset: number;
+}
+
 export interface GroupedResponse {
   groups: {
     valid: LinkResult[];
@@ -25,6 +32,12 @@ export interface GroupedResponse {
   };
   total?: number;
   credits?: string;
+  truncated?: boolean;
+  warning?: string;
+  jobId?: string;
+  status?: string;
+  message?: string;
+  total_links?: number;
 }
 
 export type Theme = 'light' | 'dark';
