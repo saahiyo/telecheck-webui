@@ -210,8 +210,8 @@ export const checkBulkLinks = async (
 
     const data = await response.json();
 
-    // ── Async Job Flow (202 Accepted) ──
-    if (response.status === 202 && data.jobId) {
+    // ── Async Job Flow (Checks for jobId instead of strict 202 status) ──
+    if (data.jobId) {
       options?.onAsyncJob?.(data.jobId);
 
       // Poll until complete
