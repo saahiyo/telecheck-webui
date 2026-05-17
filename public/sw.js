@@ -29,8 +29,14 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Bypass Next.js internal data requests (RSC payloads), API routes, and build assets
   const url = new URL(event.request.url);
+
+  // Bypass non-HTTP(S) requests (like chrome-extension://)
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // Bypass Next.js internal data requests (RSC payloads), API routes, and build assets
   if (
     url.pathname.startsWith('/_next/') ||
     url.pathname.startsWith('/api/') ||
