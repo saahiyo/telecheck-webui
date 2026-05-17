@@ -119,6 +119,7 @@ function ValidatorContent() {
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [displayLimit, setDisplayLimit] = useState(100);
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const copyMenuRef = useRef<HTMLDivElement>(null);
@@ -263,6 +264,8 @@ function ValidatorContent() {
     setHasChecked(false);
     setResults([]);
     setCheckingProgress({ current: 0, total: 0 });
+    setDisplayLimit(100);
+    const startTime = Date.now();
 
     const { unique: links, duplicateCount } = await new Promise<{ unique: string[]; duplicateCount: number }>((resolve) => {
       const worker = new Worker(new URL('../utils/dedup.worker.ts', import.meta.url));
@@ -335,7 +338,8 @@ function ValidatorContent() {
     // Track validation completion
     trackValidationComplete(allResults);
 
-    toast.success(`Analysis complete! (${elapsedSeconds}s)`);
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    toast.success(`Analysis complete! (${elapsed}s)`);
 
     // Show rate limit feedback if approaching limit
     const rl = getLastRateLimitInfo();
@@ -361,6 +365,7 @@ function ValidatorContent() {
     setHasChecked(false);
     setResults([]);
     setCheckingProgress({ current: 0, total: 1 });
+    const startTime = Date.now();
 
     let finalStatus = '';
     if (isMegaLink(singleInput.trim())) {
@@ -380,7 +385,8 @@ function ValidatorContent() {
     // Track validation completion
     trackValidationComplete([{ status: finalStatus }]);
 
-    toast.success(`Analysis complete! (${elapsedSeconds}s)`);
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+    toast.success(`Analysis complete! (${elapsed}s)`);
 
     // Show rate limit feedback if approaching limit
     const rl = getLastRateLimitInfo();
@@ -1019,7 +1025,7 @@ function ValidatorContent() {
                   className="relative z-0 flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-2 pb-10"
                 >
                  <AnimatePresence initial={false}>
-                   {filteredResults.map((result, idx) => (
+                   {filteredResults.slice(0, displayLimit).map((result, idx) => (
                      <motion.div
                        key={`${result.link}-${idx}`}
                        layout
@@ -1033,6 +1039,17 @@ function ValidatorContent() {
                      </motion.div>
                    ))}
                  </AnimatePresence>
+                 {filteredResults.length > displayLimit && (
+                   <div className="text-center py-6">
+                     <button
+                       onClick={() => setDisplayLimit(d => d + 100)}
+                       className="text-xs font-medium bg-gray-100 dark:bg-[#222] hover:bg-gray-200 dark:hover:bg-[#333] text-gray-700 dark:text-gray-300 transition-colors px-4 py-2 rounded-full"
+                     >
+                       Load 100 more
+                     </button>
+                     <p className="mt-2 text-[10px] text-gray-500">Showing {displayLimit} of {filteredResults.length} results</p>
+                   </div>
+                 )}
                  {filteredResults.length === 0 && (
                    <div className="text-center py-12 text-gray-400 text-xs">
                      {emptyMessages[filter] || 'No links matching this filter.'}
