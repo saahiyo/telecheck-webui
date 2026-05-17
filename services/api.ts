@@ -266,22 +266,42 @@ export const checkBulkLinks = async (
 
     let apiResults: any[] = [];
 
-    if (data.groups) {
+    if (data.jobId) {
+      // This is handled above, but just in case
+      apiResults = [];
+    } else if (data.groups) {
       apiResults = [
         ...(data.groups.valid || []),
         ...(data.groups.invalid || []),
         ...(data.groups.unknown || [])
       ];
+    } else if (data.valid || data.invalid || data.unknown) {
+      // Handle alternative grouping format
+      apiResults = [
+        ...(Array.isArray(data.valid) ? data.valid : []),
+        ...(Array.isArray(data.invalid) ? data.invalid : []),
+        ...(Array.isArray(data.unknown) ? data.unknown : [])
+      ];
     } else if (Array.isArray(data)) {
       apiResults = data;
+    } else if (data.data && Array.isArray(data.data)) {
+      apiResults = data.data;
     } else if (Array.isArray(data.results)) {
       apiResults = data.results;
-    } else {
-      console.warn('Unexpected API response:', data);
+    } else if (data.error) {
+      console.warn('API returned error with 200 status:', data.error);
       return cleanLinks.map(l => ({
         link: l,
         status: 'unknown',
-        reason: 'Invalid API response'
+        reason: typeof data.error === 'string' ? data.error : 'API Error'
+      }));
+    } else {
+      console.warn('Unexpected API response:', data);
+      const preview = JSON.stringify(data).substring(0, 40);
+      return cleanLinks.map(l => ({
+        link: l,
+        status: 'unknown',
+        reason: `Invalid API response: ${preview}...`
       }));
     }
 
