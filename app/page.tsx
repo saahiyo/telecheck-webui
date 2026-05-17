@@ -462,7 +462,15 @@ function ValidatorContent() {
   }, [mode, hasChecked, results.length, runValidation, clearAll]);
 
   const filteredResults = useMemo(() => {
-    if (filter === 'all') return results;
+    if (filter === 'all') {
+      return [...results].sort((a, b) => {
+        const aValid = a.status === 'valid' || a.status === 'mega';
+        const bValid = b.status === 'valid' || b.status === 'mega';
+        if (aValid && !bValid) return -1;
+        if (!aValid && bValid) return 1;
+        return 0;
+      });
+    }
     return results.filter(r => r.status === filter);
   }, [results, filter]);
 
