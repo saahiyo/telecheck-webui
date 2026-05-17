@@ -118,6 +118,7 @@ export const checkSingleLink = async (link: string): Promise<LinkResult> => {
     clearCache('contributors:');
     clearCache('profile:');
     clearCache('links:');
+    clearCache('stats');
 
     return {
       link: cleanLink,
@@ -256,6 +257,7 @@ export const checkBulkLinks = async (
       clearCache('contributors:');
       clearCache('profile:');
       clearCache('links:');
+      clearCache('stats');
       return results;
     }
 
@@ -263,6 +265,7 @@ export const checkBulkLinks = async (
     clearCache('contributors:');
     clearCache('profile:');
     clearCache('links:');
+    clearCache('stats');
 
     let apiResults: any[] = [];
 
@@ -369,6 +372,7 @@ export const validateSavedLinks = async ({
     clearCache('links:');
     clearCache('contributors:');
     clearCache('profile:');
+    clearCache('stats');
 
     return await response.json();
   } catch (error) {
