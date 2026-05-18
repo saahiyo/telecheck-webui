@@ -81,6 +81,22 @@ const homeSwapVariants = {
   },
 };
 
+type AsyncJobUiState = {
+  status: 'idle' | 'queued' | 'processing' | 'completed' | 'failed';
+  jobId: string | null;
+  processed: number;
+  total: number;
+  streamed: number;
+};
+
+const emptyAsyncJobState: AsyncJobUiState = {
+  status: 'idle',
+  jobId: null,
+  processed: 0,
+  total: 0,
+  streamed: 0,
+};
+
 const triggerSuccessConfetti = () => {
   const count = 200;
   const defaults = {
@@ -120,6 +136,7 @@ function ValidatorContent() {
   const [isDragging, setIsDragging] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [displayLimit, setDisplayLimit] = useState(100);
+  const [asyncJob, setAsyncJob] = useState<AsyncJobUiState>(emptyAsyncJobState);
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const copyMenuRef = useRef<HTMLDivElement>(null);
@@ -223,6 +240,8 @@ function ValidatorContent() {
     }
     return { validCount: valid, invalidCount: invalid, megaCount: mega };
   }, [results]);
+  const asyncJobActive = asyncJob.status !== 'idle';
+  const asyncJobStatusLabel = asyncJob.status.charAt(0).toUpperCase() + asyncJob.status.slice(1);
 
   // ── Dynamic page title with result counts ──
   useEffect(() => {
@@ -264,6 +283,7 @@ function ValidatorContent() {
     setHasChecked(false);
     setResults([]);
     setCheckingProgress({ current: 0, total: 0 });
+    setAsyncJob(emptyAsyncJobState);
     setDisplayLimit(100);
     const startTime = Date.now();
 
@@ -305,6 +325,23 @@ function ValidatorContent() {
     if (telegramLinks.length > 0) {
       try {
         const batchResults = await checkBulkLinks(telegramLinks, {
+          onAsyncJob: (jobId) => {
+            setAsyncJob({
+              status: 'queued',
+              jobId,
+              processed: megaResults.length,
+              total: links.length,
+              streamed: 0,
+            });
+          },
+          onJobStatus: (status, job) => {
+            setAsyncJob(prev => ({
+              ...prev,
+              status,
+              processed: megaResults.length + job.processed_links,
+              total: links.length,
+            }));
+          },
           onProgress: (processed, total) => {
             setCheckingProgress({
               current: megaResults.length + processed,
@@ -314,6 +351,10 @@ function ValidatorContent() {
           onStreamResults: (newResults) => {
             allResults.push(...newResults);
             setResults(prev => [...prev, ...newResults]);
+            setAsyncJob(prev => ({
+              ...prev,
+              streamed: prev.streamed + newResults.length,
+            }));
           }
         });
         
@@ -333,6 +374,11 @@ function ValidatorContent() {
     }
 
     setIsChecking(false);
+    setAsyncJob(prev => (
+      prev.status === 'idle'
+        ? prev
+        : { ...prev, status: prev.status === 'failed' ? 'failed' : 'completed', processed: prev.total || prev.processed }
+    ));
     setRefreshStatsTrigger(prev => prev + 1);
 
     // Track validation completion
@@ -365,6 +411,7 @@ function ValidatorContent() {
     setHasChecked(false);
     setResults([]);
     setCheckingProgress({ current: 0, total: 1 });
+    setAsyncJob(emptyAsyncJobState);
     const startTime = Date.now();
 
     let finalStatus = '';
@@ -405,6 +452,7 @@ function ValidatorContent() {
     setResults([]);
     setHasChecked(false);
     setCheckingProgress({ current: 0, total: 0 });
+    setAsyncJob(emptyAsyncJobState);
     setCopyMenuOpen(false);
     setFilter('all');
     void clearResults();
@@ -863,14 +911,30 @@ function ValidatorContent() {
                <div className="mb-5 text-black dark:text-white">
                  <DotmSquare5 size={40} />
                </div>
-               <h3 className="text-xs font-medium text-gray-900 dark:text-white">Verifying Links</h3>
-                {checkingProgress.total > 0 ? (
-                  <p className="text-[10px] text-gray-500 mt-1">Starting {checkingProgress.total} links...{elapsedSeconds > 0 && <span className="ml-1 tabular-nums">({elapsedSeconds}s)</span>}</p>
-                ) : (
-                  <p className="text-[10px] text-gray-500 mt-1">Please wait...{elapsedSeconds > 0 && <span className="ml-1 tabular-nums">({elapsedSeconds}s)</span>}</p>
-                )}
-             </motion.div>
-           )}
+                <h3 className="text-xs font-medium text-gray-900 dark:text-white">Verifying Links</h3>
+                 {checkingProgress.total > 0 ? (
+                   <p className="text-[10px] text-gray-500 mt-1">Starting {checkingProgress.total} links...{elapsedSeconds > 0 && <span className="ml-1 tabular-nums">({elapsedSeconds}s)</span>}</p>
+                 ) : (
+                   <p className="text-[10px] text-gray-500 mt-1">Please wait...{elapsedSeconds > 0 && <span className="ml-1 tabular-nums">({elapsedSeconds}s)</span>}</p>
+                 )}
+                 {asyncJobActive && (
+                   <div className="mt-4 grid w-full max-w-sm grid-cols-3 gap-2">
+                     <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-center dark:border-[#333] dark:bg-[#111]">
+                       <div className="text-[9px] uppercase tracking-wide text-gray-400">Status</div>
+                       <div className="mt-1 text-xs font-semibold text-gray-900 dark:text-white">{asyncJobStatusLabel}</div>
+                     </div>
+                     <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-center dark:border-[#333] dark:bg-[#111]">
+                       <div className="text-[9px] uppercase tracking-wide text-gray-400">Processed</div>
+                       <div className="mt-1 text-xs font-semibold tabular-nums text-gray-900 dark:text-white">{asyncJob.processed}/{asyncJob.total}</div>
+                     </div>
+                     <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-center dark:border-[#333] dark:bg-[#111]">
+                       <div className="text-[9px] uppercase tracking-wide text-gray-400">Streamed</div>
+                       <div className="mt-1 text-xs font-semibold tabular-nums text-gray-900 dark:text-white">{asyncJob.streamed}</div>
+                     </div>
+                   </div>
+                 )}
+              </motion.div>
+            )}
 
            {hasChecked && (
              <motion.div
@@ -889,11 +953,30 @@ function ValidatorContent() {
                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
                    transition={{ duration: 0.22, ease: 'easeOut' }}
                  >
-                   <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-2 font-medium">
-                      <span className="flex items-center gap-1.5"><Loader2 size={10} className="animate-spin" aria-hidden="true" /> Verifying links...{elapsedSeconds > 0 && <span className="tabular-nums"> ({elapsedSeconds}s)</span>}</span>
-                     <span>{Math.round((checkingProgress.current / checkingProgress.total) * 100)}% ({checkingProgress.current}/{checkingProgress.total})</span>
-                   </div>
-                   <div className="w-full h-1.5 bg-gray-200 dark:bg-[#333] rounded-full overflow-hidden" role="progressbar" aria-valuenow={Math.round((checkingProgress.current / checkingProgress.total) * 100)} aria-valuemin={0} aria-valuemax={100}>
+                    <div className="flex justify-between text-[10px] text-gray-500 dark:text-gray-400 mb-2 font-medium">
+                       <span className="flex items-center gap-1.5">
+                         <Loader2 size={10} className="animate-spin" aria-hidden="true" />
+                         {asyncJobActive ? asyncJobStatusLabel : 'Verifying'} links...{elapsedSeconds > 0 && <span className="tabular-nums"> ({elapsedSeconds}s)</span>}
+                       </span>
+                      <span>{Math.round((checkingProgress.current / checkingProgress.total) * 100)}% ({checkingProgress.current}/{checkingProgress.total})</span>
+                    </div>
+                    {asyncJobActive && (
+                      <div className="mb-2 grid grid-cols-3 gap-2 text-[10px]">
+                        <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5 dark:border-[#333] dark:bg-black">
+                          <span className="block text-gray-400">Status</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{asyncJobStatusLabel}</span>
+                        </div>
+                        <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5 dark:border-[#333] dark:bg-black">
+                          <span className="block text-gray-400">Processed</span>
+                          <span className="font-semibold tabular-nums text-gray-900 dark:text-white">{asyncJob.processed}/{asyncJob.total}</span>
+                        </div>
+                        <div className="rounded-md border border-gray-200 bg-white px-2 py-1.5 dark:border-[#333] dark:bg-black">
+                          <span className="block text-gray-400">Streamed</span>
+                          <span className="font-semibold tabular-nums text-gray-900 dark:text-white">{asyncJob.streamed}</span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="w-full h-1.5 bg-gray-200 dark:bg-[#333] rounded-full overflow-hidden" role="progressbar" aria-valuenow={Math.round((checkingProgress.current / checkingProgress.total) * 100)} aria-valuemin={0} aria-valuemax={100}>
                      <motion.div
                        className="h-full bg-black dark:bg-white rounded-full transition-all duration-300 ease-out"
                        initial={{ width: 0 }}

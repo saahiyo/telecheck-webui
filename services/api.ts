@@ -177,6 +177,7 @@ export const checkBulkLinks = async (
   links: string[],
   options?: {
     onAsyncJob?: (jobId: string) => void;
+    onJobStatus?: (status: JobStatus['status'], job: JobStatus) => void;
     onProgress?: (processed: number, total: number) => void;
     onStreamResults?: (results: LinkResult[]) => void;
     forceAsync?: boolean;
@@ -230,6 +231,7 @@ export const checkBulkLinks = async (
           continue;
         }
 
+        options?.onJobStatus?.(job.status, job);
         options?.onProgress?.(job.processed_links, job.total_links);
 
         if (job.results && job.results.length > lastProcessed) {
