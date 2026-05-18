@@ -166,6 +166,37 @@ function ValidatorContent() {
     };
   }, [isChecking]);
 
+  // ── Fake Progress for Async Job ──
+  // Smoothly increment progress for better UX since backend processes in chunks
+  useEffect(() => {
+    const isJobActive = asyncJob.status === 'queued' || asyncJob.status === 'processing';
+    if (!isChecking || !isJobActive || asyncJob.total === 0) return;
+    
+    const interval = setInterval(() => {
+      setAsyncJob(prev => {
+        const fakeMax = Math.floor(prev.total * 0.95);
+        if (prev.processed < fakeMax) {
+          const inc = Math.floor(Math.random() * 3) + 1;
+          const next = Math.min(fakeMax, prev.processed + inc);
+          return { ...prev, processed: next };
+        }
+        return prev;
+      });
+      
+      setCheckingProgress(prev => {
+        const fakeMax = Math.floor(prev.total * 0.95);
+        if (prev.current < fakeMax) {
+          const inc = Math.floor(Math.random() * 3) + 1;
+          const next = Math.min(fakeMax, prev.current + inc);
+          return { ...prev, current: next };
+        }
+        return prev;
+      });
+    }, 400);
+    
+    return () => clearInterval(interval);
+  }, [isChecking, asyncJob.status, asyncJob.total]);
+
   // ── Restore from sessionStorage and IndexedDB on mount ──
   useEffect(() => {
     const restoreData = async () => {
@@ -338,15 +369,15 @@ function ValidatorContent() {
             setAsyncJob(prev => ({
               ...prev,
               status,
-              processed: megaResults.length + job.processed_links,
+              processed: Math.max(prev.processed, megaResults.length + job.processed_links),
               total: links.length,
             }));
           },
           onProgress: (processed, total) => {
-            setCheckingProgress({
-              current: megaResults.length + processed,
+            setCheckingProgress(prev => ({
+              current: Math.max(prev.current, megaResults.length + processed),
               total: links.length
-            });
+            }));
           },
           onStreamResults: (newResults) => {
             allResults.push(...newResults);
