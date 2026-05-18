@@ -15,6 +15,9 @@ const BASE_URL =
 // Simple in-memory cache
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 1000 * 60 * 2; // 2 minutes
+const ASYNC_JOB_INITIAL_POLL_MS = 500;
+const ASYNC_JOB_MAX_POLL_MS = 1500;
+const ASYNC_JOB_POLL_BACKOFF_MS = 250;
 
 export function getCached<T>(key: string): T | null {
   const entry = cache.get(key);
@@ -215,18 +218,20 @@ export const checkBulkLinks = async (
     if (data.jobId) {
       options?.onAsyncJob?.(data.jobId);
 
-      // Poll until complete
       const results: LinkResult[] = [];
       let lastProcessed = 0;
+      let pollDelay = ASYNC_JOB_INITIAL_POLL_MS;
 
       while (true) {
-        await new Promise(r => setTimeout(r, 2000)); // Poll every 2s
+        await new Promise(r => setTimeout(r, pollDelay));
         const job = await pollJobStatus(data.jobId);
-        if (!job) continue;
+        if (!job) {
+          pollDelay = Math.min(pollDelay + ASYNC_JOB_POLL_BACKOFF_MS, ASYNC_JOB_MAX_POLL_MS);
+          continue;
+        }
 
         options?.onProgress?.(job.processed_links, job.total_links);
 
-        // Stream new results
         if (job.results && job.results.length > lastProcessed) {
           const newResults: LinkResult[] = [];
           for (const r of job.results.slice(lastProcessed)) {
@@ -247,6 +252,9 @@ export const checkBulkLinks = async (
           results.push(...newResults);
           options?.onStreamResults?.(newResults);
           lastProcessed = job.results.length;
+          pollDelay = ASYNC_JOB_INITIAL_POLL_MS;
+        } else {
+          pollDelay = Math.min(pollDelay + ASYNC_JOB_POLL_BACKOFF_MS, ASYNC_JOB_MAX_POLL_MS);
         }
 
         if (job.status === 'completed' || job.status === 'failed') {
