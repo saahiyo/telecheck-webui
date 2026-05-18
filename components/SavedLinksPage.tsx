@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { motion } from 'motion/react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, ChevronDown, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import debounce from 'lodash.debounce';
@@ -142,7 +142,25 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const userParam = searchParams.get('user') || '';
   
   const resultsScrollRef = useRef<HTMLDivElement | null>(null);
+  const [mobileValidateMenuOpen, setMobileValidateMenuOpen] = useState(false);
+  const [desktopValidateMenuOpen, setDesktopValidateMenuOpen] = useState(false);
+  const mobileValidateMenuRef = useRef<HTMLDivElement | null>(null);
+  const desktopValidateMenuRef = useRef<HTMLDivElement | null>(null);
   const hasDataRef = useRef(false);
+
+  // Close validate menus on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (mobileValidateMenuRef.current && !mobileValidateMenuRef.current.contains(event.target as Node)) {
+        setMobileValidateMenuOpen(false);
+      }
+      if (desktopValidateMenuRef.current && !desktopValidateMenuRef.current.contains(event.target as Node)) {
+        setDesktopValidateMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Debounced handler: updates the query sent to the API after 300ms of inactivity
   const debouncedSetSearch = useMemo(
@@ -566,24 +584,46 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           >
             <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} />
           </button>
-          <button 
-            onClick={handleValidatePage}
-            disabled={isValidating || links.length === 0}
-            title="Validate this page"
-            aria-label="Validate this page"
-            className="h-10 w-10 bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
-          >
-            {isValidating ? <Loader2 size={15} className="animate-spin" /> : <ListChecks size={15} />}
-          </button>
-          <button 
-            onClick={handleValidate}
-            disabled={isValidating || links.length === 0}
-            title={isValidating ? 'Validating...' : 'Validate all links'}
-            aria-label={isValidating ? 'Validating...' : 'Validate all links'}
-            className="h-10 w-10 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
-          >
-            {isValidating ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
-          </button>
+          <div className="relative" ref={mobileValidateMenuRef}>
+            <button 
+              onClick={() => setMobileValidateMenuOpen(!mobileValidateMenuOpen)}
+              disabled={isValidating || links.length === 0}
+              title={isValidating ? 'Validating...' : 'Validate options'}
+              aria-label={isValidating ? 'Validating...' : 'Validate options'}
+              className="h-10 w-10 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
+            >
+              {isValidating ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+            </button>
+            <AnimatePresence>
+            {mobileValidateMenuOpen && (
+              <motion.div
+                className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-black rounded-lg shadow-xl border border-gray-200 dark:border-[#333] py-1 z-[90] overflow-hidden ring-1 ring-black/5"
+                initial={{ opacity: 0, y: 8, scale: 0.98, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: 6, scale: 0.98, filter: 'blur(8px)' }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+              >
+                <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-[#111] border-b border-gray-100 dark:border-[#333]">
+                  Validation Scope
+                </div>
+                <button 
+                  onClick={() => { setMobileValidateMenuOpen(false); void handleValidatePage(); }}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#222] hover:text-black dark:hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <ListChecks size={13} />
+                  <span>Validate Page</span>
+                </button>
+                <button 
+                  onClick={() => { setMobileValidateMenuOpen(false); void handleValidate(); }}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#222] hover:text-black dark:hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <ShieldCheck size={13} />
+                  <span>Validate All</span>
+                </button>
+              </motion.div>
+            )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <div className="hidden sm:flex sm:items-center sm:gap-2 shrink-0">
@@ -614,22 +654,46 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
             <span>Refresh</span>
           </button>
-          <button
-            onClick={handleValidatePage}
-            disabled={isValidating || links.length === 0}
-            className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
-          >
-            {isValidating ? <Loader2 size={14} className="animate-spin" /> : <ListChecks size={14} />}
-            <span>Validate Page</span>
-          </button>
-          <button
-            onClick={handleValidate}
-            disabled={isValidating || links.length === 0}
-            className="text-xs font-semibold bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all px-4 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
-          >
-            {isValidating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-            <span>{isValidating ? 'Validating...' : 'Validate All'}</span>
-          </button>
+          <div className="relative" ref={desktopValidateMenuRef}>
+            <button
+              onClick={() => setDesktopValidateMenuOpen(!desktopValidateMenuOpen)}
+              disabled={isValidating || links.length === 0}
+              className="text-xs font-semibold bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all px-4 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
+            >
+              {isValidating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+              <span>{isValidating ? 'Validating...' : 'Validate'}</span>
+              <ChevronDown size={12} className={`transform transition-transform ${desktopValidateMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+            <AnimatePresence>
+            {desktopValidateMenuOpen && (
+              <motion.div
+                className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-black rounded-lg shadow-xl border border-gray-200 dark:border-[#333] py-1 z-[90] overflow-hidden ring-1 ring-black/5"
+                initial={{ opacity: 0, y: 8, scale: 0.98, filter: 'blur(8px)' }}
+                animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                exit={{ opacity: 0, y: 6, scale: 0.98, filter: 'blur(8px)' }}
+                transition={{ duration: 0.18, ease: 'easeOut' }}
+              >
+                <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-[#111] border-b border-gray-100 dark:border-[#333]">
+                  Validation Scope
+                </div>
+                <button 
+                  onClick={() => { setDesktopValidateMenuOpen(false); void handleValidatePage(); }}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#222] hover:text-black dark:hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <ListChecks size={13} />
+                  <span>Validate Page</span>
+                </button>
+                <button 
+                  onClick={() => { setDesktopValidateMenuOpen(false); void handleValidate(); }}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#222] hover:text-black dark:hover:text-white transition-colors flex items-center gap-2"
+                >
+                  <ShieldCheck size={13} />
+                  <span>Validate All</span>
+                </button>
+              </motion.div>
+            )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
