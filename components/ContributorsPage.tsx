@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Users, Trophy, Medal, Award, Activity, Search, RefreshCw, X, ChevronLeft, ChevronRight, Hash, Calendar, Sparkles, Clock, ExternalLink } from 'lucide-react';
+import { Loader2, Users, Trophy, Medal, Award, Activity, Search, RefreshCw, X, ChevronLeft, ChevronRight, Hash, Calendar, Sparkles, Clock, ExternalLink, ArrowUp, ArrowDown } from 'lucide-react';
 import debounce from 'lodash.debounce';
 import { clearCache, fetchContributors, fetchMyProfile, getCached, getMyProfileCacheKey, fetchSavedLinks } from '../services/api';
 import { useRouter } from 'next/navigation';
@@ -98,6 +98,83 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
     return contributorLinks.slice(0, 5);
   }, [contributorLinks]);
 
+  const [sortField, setSortField] = useState<'rank' | 'username' | 'first_seen' | 'links_added'>('rank');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (field: 'rank' | 'username' | 'first_seen' | 'links_added') => {
+    if (sortField === field) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      if (field === 'links_added') {
+        setSortDirection('desc');
+      } else {
+        setSortDirection('asc');
+      }
+    }
+  };
+
+  const sortedContributors = useMemo(() => {
+    const list = [...contributors];
+    return list.sort((a, b) => {
+      let valA: any = a[sortField];
+      let valB: any = b[sortField];
+
+      if (sortField === 'first_seen') {
+        const timeA = a.first_seen ? new Date(a.first_seen).getTime() : 0;
+        const timeB = b.first_seen ? new Date(b.first_seen).getTime() : 0;
+        return sortDirection === 'asc' ? timeA - timeB : timeB - timeA;
+      }
+
+      if (typeof valA === 'string') {
+        return sortDirection === 'asc' 
+          ? valA.localeCompare(valB) 
+          : valB.localeCompare(valA);
+      }
+
+      return sortDirection === 'asc'
+        ? (valA || 0) - (valB || 0)
+        : (valB || 0) - (valA || 0);
+    });
+  }, [contributors, sortField, sortDirection]);
+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredContributors = useMemo(() => {
+    if (!searchQuery.trim()) return sortedContributors;
+    return sortedContributors.filter(c => 
+      c.username.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [sortedContributors, searchQuery]);
+
+  const totalCommunityLinks = useMemo(() => {
+    return contributors.reduce((sum, c) => sum + (c.links_added || 0), 0);
+  }, [contributors]);
+
+  const rankProgressInfo = useMemo(() => {
+    if (!profile || !profile.username || !profile.rank) return null;
+    
+    if (profile.rank === 1) {
+      return {
+        status: 'lead',
+        text: 'You are leading the board! Keep up the great work. 🏆'
+      };
+    }
+
+    const nextRank = profile.rank - 1;
+    const nextContributor = contributors.find(c => c.rank === nextRank);
+    
+    if (!nextContributor) return null;
+
+    const diff = (nextContributor.links_added || 0) - (profile.links_added || 0) + 1;
+    return {
+      status: 'climbing',
+      text: `Add ${diff.toLocaleString()} more links to overtake ${nextContributor.username} (#${nextContributor.rank})!`,
+      targetUser: nextContributor.username,
+      linksNeeded: diff
+    };
+  }, [profile, contributors]);
+
   const loadData = useCallback(async (currentPage: number) => {
     if (!hasDataRef.current) setIsLoading(true);
     try {
@@ -163,7 +240,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
     if (rank === 1) {
       return (
         <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-500 flex items-center justify-center font-bold text-[10px] sm:text-xs shadow-sm ring-1 ring-yellow-500/20">
-          <Trophy size={12} className="sm:w-[14px] sm:h-[14px]" />
+          <Trophy size={12} className="sm:w-3.5 sm:h-3.5" />
         </div>
       );
     }
@@ -190,7 +267,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
 
   return (
     <div className="flex flex-col h-full min-h-[500px]">
-      <div className="flex gap-3 sm:flex-row sm:items-center justify-between mb-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-100 dark:bg-[#111] border border-gray-200 dark:border-[#333] rounded-full flex items-center justify-center shadow-sm">
             <Users className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-gray-700 dark:text-gray-300" />
@@ -201,18 +278,83 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
           </div>
         </div>
         
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+              <Search size={14} />
+            </span>
+            <input
+              type="text"
+              placeholder="Search member..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-10 pl-9 pr-8 w-full sm:w-48 bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:border-gray-300 dark:hover:border-[#444] text-xs text-black dark:text-white rounded-lg focus:outline-none focus:ring-1 focus:ring-black dark:focus:ring-white transition-all shadow-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-0 flex items-center pr-2.5 text-gray-400 hover:text-black dark:hover:text-white cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
           <button 
             onClick={handleRefresh}
             disabled={isLoading}
             title="Refresh leaderboard"
-            className="h-10 px-4 bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all rounded-lg flex items-center justify-center gap-2 shadow-sm text-xs font-medium"
+            className="h-10 px-4 bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all rounded-lg flex items-center justify-center gap-2 shadow-sm text-xs font-medium shrink-0"
           >
             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
-            <span>Refresh</span>
+            <span className="hidden sm:inline">Refresh</span>
           </button>
         </div>
       </div>
+
+      {/* Community Visual Stats Widgets */}
+      {!isLoading && contributors.length > 0 && (
+        <div className="hidden sm:grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 animate-fade-in">
+          {/* Card 1: Community Impact */}
+          <div className="p-4 bg-white dark:bg-black border border-gray-200 dark:border-[#333] rounded-xl shadow-sm flex items-center gap-4">
+            <div className="w-10 h-10 bg-green-50 dark:bg-green-950/20 text-green-600 dark:text-green-400 rounded-lg flex items-center justify-center shrink-0 border border-green-100 dark:border-green-900/30">
+              <Activity size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Community Impact</p>
+              <p className="text-lg font-bold text-black dark:text-white mt-0.5 tabular-nums">
+                {totalCommunityLinks.toLocaleString()} <span className="text-xs text-gray-500 font-normal">links added</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Card 2: Total Contributors */}
+          <div className="p-4 bg-white dark:bg-black border border-gray-200 dark:border-[#333] rounded-xl shadow-sm flex items-center gap-4">
+            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 rounded-lg flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/30">
+              <Users size={18} />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Active Helpers</p>
+              <p className="text-lg font-bold text-black dark:text-white mt-0.5 tabular-nums">
+                {total.toLocaleString()} <span className="text-xs text-gray-500 font-normal">members</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Card 3: Rank Progress Tracker */}
+          <div className="p-4 bg-white dark:bg-black border border-gray-200 dark:border-[#333] rounded-xl shadow-sm flex items-center gap-4">
+            <div className="w-10 h-10 bg-purple-50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400 rounded-lg flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-900/30">
+              <Trophy size={18} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Rank Progress</p>
+              <p className="text-[10px] sm:text-xs font-semibold text-gray-700 dark:text-gray-300 mt-1 leading-snug" title={rankProgressInfo ? rankProgressInfo.text : "No ranking details available"}>
+                {rankProgressInfo ? rankProgressInfo.text : "Log in to check rank progress."}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Current User Profile Card */}
       {!isLoading && profile?.username && (
@@ -307,15 +449,55 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
             <table className="w-full text-left border-collapse min-w-[320px] sm:min-w-[600px]">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-[#333] bg-gray-50/50 dark:bg-[#111]/50 top-0 sticky z-10 backdrop-blur-sm">
-                  <th className="font-semibold text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider py-2 sm:py-3 px-3 sm:px-4 w-12 sm:w-16 text-center">Rank</th>
-                  <th className="font-semibold text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider py-2 sm:py-3 px-3 sm:px-4">Contributor</th>
-                  <th className="font-semibold text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider py-2 sm:py-3 px-3 sm:px-4 w-[25%] hidden sm:table-cell">Joined</th>
-                  <th className="font-semibold text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider py-2 sm:py-3 px-3 sm:px-4 w-20 sm:w-32 text-right">Links Added</th>
+                  <th 
+                    onClick={() => handleSort('rank')}
+                    className="font-semibold text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider py-2 sm:py-3 px-3 sm:px-4 w-12 sm:w-16 text-center cursor-pointer hover:bg-gray-100/50 dark:hover:bg-[#222]/30 select-none transition-colors"
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>Rank</span>
+                      {sortField === 'rank' && (
+                        sortDirection === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('username')}
+                    className="font-semibold text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider py-2 sm:py-3 px-3 sm:px-4 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-[#222]/30 select-none transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Contributor</span>
+                      {sortField === 'username' && (
+                        sortDirection === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('first_seen')}
+                    className="font-semibold text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider py-2 sm:py-3 px-3 sm:px-4 w-[25%] hidden sm:table-cell cursor-pointer hover:bg-gray-100/50 dark:hover:bg-[#222]/30 select-none transition-colors"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Joined</span>
+                      {sortField === 'first_seen' && (
+                        sortDirection === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    onClick={() => handleSort('links_added')}
+                    className="font-semibold text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider py-2 sm:py-3 px-3 sm:px-4 w-20 sm:w-32 text-right cursor-pointer hover:bg-gray-100/50 dark:hover:bg-[#222]/30 select-none transition-colors"
+                  >
+                    <div className="flex items-center justify-end gap-1.5">
+                      <span>Links Added</span>
+                      {sortField === 'links_added' && (
+                        sortDirection === 'asc' ? <ArrowUp size={10} /> : <ArrowDown size={10} />
+                      )}
+                    </div>
+                  </th>
                   <th className="font-semibold text-[10px] sm:text-xs text-gray-400 uppercase tracking-wider py-2 sm:py-3 px-3 sm:px-4 w-[15%] sm:w-[20%] hidden sm:table-cell"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-[#222]">
-                {contributors.map((contributor) => {
+                {filteredContributors.map((contributor) => {
                   const isMe = profile?.username === contributor.username;
                   // Dynamic width percentage based on top contributor
                   const widthPercent = highestLinksCount > 0 
@@ -388,12 +570,12 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
           {hasPagination && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] shrink-0">
               <span className="text-[10px] sm:text-xs text-gray-500 font-medium">
-                Showing {(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)} of {total}
+                {searchQuery ? `Found ${filteredContributors.length} matching members` : `Showing ${(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)} of {total}`}
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1 || isLoading}
+                  disabled={page === 1 || isLoading || !!searchQuery}
                   className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1 shadow-sm"
                 >
                   <ChevronLeft size={14} />
@@ -401,7 +583,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                 </button>
                 <button
                   onClick={() => setPage(p => Math.min(Math.ceil(total / PAGE_SIZE), p + 1))}
-                  disabled={page >= Math.ceil(total / PAGE_SIZE) || isLoading}
+                  disabled={page >= Math.ceil(total / PAGE_SIZE) || isLoading || !!searchQuery}
                   className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1 shadow-sm"
                 >
                   Next
