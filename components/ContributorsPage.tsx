@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Loader2, Users, Trophy, Medal, Award, Activity, Search, RefreshCw, X, ChevronLeft, ChevronRight, Hash, Calendar, Sparkles } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'motion/react';
+import { Loader2, Users, Trophy, Medal, Award, Activity, Search, RefreshCw, X, ChevronLeft, ChevronRight, Hash, Calendar, Sparkles, Clock, ExternalLink } from 'lucide-react';
 import debounce from 'lodash.debounce';
-import { clearCache, fetchContributors, fetchMyProfile, getCached, getMyProfileCacheKey } from '../services/api';
+import { clearCache, fetchContributors, fetchMyProfile, getCached, getMyProfileCacheKey, fetchSavedLinks } from '../services/api';
 import { useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
-import { Contributor, MyProfileResponse, ContributorsResponse } from '../types';
+import { Contributor, MyProfileResponse, ContributorsResponse, StoredLink } from '../types';
 import { toast } from 'sonner';
 
 interface ContributorsPageProps {}
 
 const PAGE_SIZE = 20;
+const springTransition = { type: 'spring' as const, stiffness: 520, damping: 42, mass: 0.7 };
 
 function formatShortDate(dateValue?: string) {
   if (!dateValue) return 'Unknown';
@@ -33,6 +36,67 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
   const [total, setTotal] = useState(initialContribCache?.total || 0);
   const [page, setPage] = useState(1);
   const hasDataRef = useRef(false);
+
+  const [selectedContributor, setSelectedContributor] = useState<Contributor | null>(null);
+  const [isModalLoading, setIsModalLoading] = useState(false);
+  const [contributorLinks, setContributorLinks] = useState<StoredLink[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const handleOpenContributorModal = useCallback(async (contributor: Contributor) => {
+    setSelectedContributor(contributor);
+    setIsModalLoading(true);
+    setContributorLinks([]);
+    try {
+      const result = await fetchSavedLinks({ user: contributor.username, limit: 100, platform: 'telegram' });
+      if (result && result.links) {
+        setContributorLinks(result.links);
+      }
+    } catch (error) {
+      console.error('Failed to load contributor links:', error);
+      toast.error('Failed to load contributor activity details.');
+    } finally {
+      setIsModalLoading(false);
+    }
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedContributor(null);
+    setContributorLinks([]);
+    setIsModalLoading(false);
+  }, []);
+
+  const activityData = useMemo(() => {
+    if (!contributorLinks || contributorLinks.length === 0) return [];
+    
+    const groups: Record<string, number> = {};
+    contributorLinks.forEach((link) => {
+      if (link.checked_at) {
+        try {
+          const dateStr = link.checked_at.split('T')[0];
+          groups[dateStr] = (groups[dateStr] || 0) + 1;
+        } catch {}
+      }
+    });
+
+    const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+    return sortedDates.slice(0, 10).map((date) => ({
+      date,
+      count: groups[date],
+    }));
+  }, [contributorLinks]);
+
+  const maxDayCount = useMemo(() => {
+    if (activityData.length === 0) return 1;
+    return Math.max(...activityData.map((d) => d.count), 1);
+  }, [activityData]);
+
+  const recentLinksPreview = useMemo(() => {
+    return contributorLinks.slice(0, 5);
+  }, [contributorLinks]);
 
   const loadData = useCallback(async (currentPage: number) => {
     if (!hasDataRef.current) setIsLoading(true);
@@ -59,6 +123,27 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
   useEffect(() => {
     loadData(page);
   }, [page, loadData]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedContributor(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (selectedContributor) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [selectedContributor]);
 
   const handleRefresh = async () => {
     clearCache('contributors:');
@@ -146,7 +231,13 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm sm:text-base font-bold text-black dark:text-white truncate">
                       <button
-                        onClick={() => router.push(`/saved?user=${profile.username}`)}
+                        onClick={() => handleOpenContributorModal({
+                          rank: profile.rank || 0,
+                          username: profile.username || '',
+                          links_added: profile.links_added,
+                          first_seen: profile.first_seen || '',
+                          last_seen: profile.last_seen || ''
+                        })}
                         className="hover:underline text-left bg-transparent border-none p-0 cursor-pointer font-bold text-black dark:text-white"
                       >
                         {profile.username}
@@ -170,7 +261,13 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                   </div>
                 </div>
                 <div 
-                  onClick={() => router.push(`/saved?user=${profile.username}`)}
+                  onClick={() => handleOpenContributorModal({
+                    rank: profile.rank || 0,
+                    username: profile.username || '',
+                    links_added: profile.links_added,
+                    first_seen: profile.first_seen || '',
+                    last_seen: profile.last_seen || ''
+                  })}
                   className="px-3 sm:px-4 py-1.5 sm:py-2 flex flex-col items-center flex-1 sm:flex-auto cursor-pointer hover:bg-gray-100 dark:hover:bg-[#222] transition-colors"
                 >
                   <span className="text-[9px] sm:text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-0.5 sm:mb-1">Links Added</span>
@@ -249,7 +346,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                           <div className="min-w-0">
                             <div className="text-xs sm:text-sm font-semibold text-black dark:text-white flex items-center gap-1.5 sm:gap-2 truncate">
                               <button
-                                onClick={() => router.push(`/saved?user=${contributor.username}`)}
+                                onClick={() => handleOpenContributorModal(contributor)}
                                 className="truncate hover:underline text-left bg-transparent border-none p-0 cursor-pointer font-semibold text-black dark:text-white"
                               >
                                 {contributor.username}
@@ -267,7 +364,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                       </td>
                       <td className="py-2.5 sm:py-3 px-3 sm:px-4 text-right">
                         <button 
-                          onClick={() => router.push(`/saved?user=${contributor.username}`)}
+                          onClick={() => handleOpenContributorModal(contributor)}
                           className="text-xs sm:text-sm font-bold text-black dark:text-white tabular-nums hover:underline cursor-pointer bg-transparent border-none p-0"
                         >
                           {contributor.links_added.toLocaleString()}
@@ -314,6 +411,199 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
             </div>
           )}
         </div>
+      )}
+
+      {isMounted && createPortal(
+        <AnimatePresence>
+          {selectedContributor && (
+            <motion.div 
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+              onClick={handleCloseModal}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+            >
+              <motion.div 
+                className="w-full max-w-2xl bg-white dark:bg-black border border-gray-200 dark:border-[#333] rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+                role="dialog"
+                aria-modal="true"
+                onClick={(e) => e.stopPropagation()}
+                initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 12, scale: 0.98 }}
+                transition={springTransition}
+              >
+                {/* Modal Header */}
+                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-200 dark:border-[#222] bg-gray-50/50 dark:bg-[#111]/50 backdrop-blur-sm sticky top-0 z-10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
+                      {selectedContributor.username.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-bold text-black dark:text-white flex items-center gap-2">
+                        {selectedContributor.username}
+                        {profile?.username === selectedContributor.username && (
+                          <span className="text-[8px] sm:text-[9px] bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 px-1.5 py-0.5 rounded font-bold">YOU</span>
+                        )}
+                      </h3>
+                      <p className="text-[10px] text-gray-500">Contributor Activity Profile</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={handleCloseModal}
+                    className="w-8 h-8 rounded-full border border-gray-200 dark:border-[#333] flex items-center justify-center text-gray-500 hover:bg-gray-100 dark:hover:bg-[#111] hover:text-black dark:hover:text-white transition-all cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
+                  {/* Profile Overview Card */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-3.5 bg-gray-50 dark:bg-[#111]/50 border border-gray-200 dark:border-[#222] rounded-xl flex flex-col justify-between">
+                      <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Rank</span>
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <Trophy size={14} className="text-yellow-500" />
+                        <span className="text-sm font-bold text-black dark:text-white">#{selectedContributor.rank}</span>
+                      </div>
+                    </div>
+                    <div className="p-3.5 bg-gray-50 dark:bg-[#111]/50 border border-gray-200 dark:border-[#222] rounded-xl flex flex-col justify-between">
+                      <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Total Added</span>
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <Activity size={14} className="text-green-500" />
+                        <span className="text-sm font-bold text-black dark:text-white">{selectedContributor.links_added.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="p-3.5 bg-gray-50 dark:bg-[#111]/50 border border-gray-200 dark:border-[#222] rounded-xl flex flex-col justify-between">
+                      <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Joined Date</span>
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <Calendar size={14} className="text-blue-500" />
+                        <span className="text-xs font-semibold text-black dark:text-white truncate">{formatShortDate(selectedContributor.first_seen)}</span>
+                      </div>
+                    </div>
+                    <div className="p-3.5 bg-gray-50 dark:bg-[#111]/50 border border-gray-200 dark:border-[#222] rounded-xl flex flex-col justify-between">
+                      <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Last Active</span>
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <Clock size={14} className="text-purple-500" />
+                        <span className="text-xs font-semibold text-black dark:text-white truncate">{formatShortDate(selectedContributor.last_seen)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Loader/Skeleton or Content */}
+                  {isModalLoading ? (
+                    <div className="py-12 flex flex-col items-center justify-center space-y-4">
+                      <Loader2 className="animate-spin text-blue-500" size={28} />
+                      <span className="text-xs text-gray-500 font-medium">Fetching activity history...</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Activity Bar Chart / Sparklines for last 10 dates */}
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5 font-sans">
+                          <Activity size={12} />
+                          Activity History (Last 10 Active Days)
+                        </h4>
+                        
+                        {activityData.length === 0 ? (
+                          <div className="text-center p-6 bg-gray-50 dark:bg-[#111]/30 border border-dashed border-gray-200 dark:border-[#222] rounded-xl">
+                            <span className="text-xs text-gray-500">No recent activity details found.</span>
+                          </div>
+                        ) : (
+                          <div className="space-y-2 bg-gray-50/50 dark:bg-[#111]/20 border border-gray-200 dark:border-[#222] rounded-xl p-4">
+                            {activityData.map(({ date, count }) => {
+                              const percent = (count / maxDayCount) * 100;
+                              return (
+                                <div key={date} className="flex items-center gap-4">
+                                  <span className="text-[10px] sm:text-xs font-semibold text-gray-500 w-24 tabular-nums">
+                                    {formatShortDate(date)}
+                                  </span>
+                                  <div className="flex-1 h-3 bg-gray-100 dark:bg-[#222] rounded-full overflow-hidden flex items-center">
+                                    <div 
+                                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-500"
+                                      style={{ width: `${percent}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[10px] sm:text-xs font-bold text-black dark:text-white w-12 text-right tabular-nums">
+                                    {count} {count === 1 ? 'link' : 'links'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Recent Validated Links */}
+                      <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5 font-sans">
+                          <Clock size={12} />
+                          Recent Link Checks
+                        </h4>
+
+                        {recentLinksPreview.length === 0 ? (
+                          <div className="text-center p-6 bg-gray-50 dark:bg-[#111]/30 border border-dashed border-gray-200 dark:border-[#222] rounded-xl">
+                            <span className="text-xs text-gray-500">No recently checked links visible.</span>
+                          </div>
+                        ) : (
+                          <div className="border border-gray-200 dark:border-[#222] rounded-xl overflow-hidden divide-y divide-gray-100 dark:divide-[#222]">
+                            {recentLinksPreview.map((link) => {
+                              const statusColor = 
+                                link.status === 'valid' ? 'bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 border-green-200 dark:border-green-900/30' :
+                                link.status === 'invalid' ? 'bg-red-100 dark:bg-red-950/40 text-red-700 dark:text-red-400 border-red-200 dark:border-red-900/30' :
+                                'bg-gray-100 dark:bg-gray-900/50 text-gray-700 dark:text-gray-400 border-gray-200 dark:border-[#333]';
+
+                              return (
+                                <div key={link.id} className="p-3 bg-white dark:bg-black hover:bg-gray-50/50 dark:hover:bg-[#111]/30 transition-colors flex items-center justify-between gap-4">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-semibold text-black dark:text-white truncate">
+                                      {link.title || link.url}
+                                    </p>
+                                    <p className="text-[10px] text-gray-500 truncate mt-0.5 font-medium">
+                                      {link.url}
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-3 shrink-0">
+                                    <span className={`px-2 py-0.5 text-[9px] font-bold rounded-full border ${statusColor} capitalize`}>
+                                      {link.status || 'unknown'}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="px-5 py-4 border-t border-gray-200 dark:border-[#222] bg-gray-50/50 dark:bg-[#111]/50 backdrop-blur-sm flex items-center justify-end gap-3 sticky bottom-0 z-10">
+                  <button 
+                    onClick={handleCloseModal}
+                    className="h-9 px-4 rounded-lg border border-gray-200 dark:border-[#333] hover:bg-gray-100 dark:hover:bg-[#111] text-xs font-semibold text-gray-700 dark:text-gray-300 transition-all cursor-pointer"
+                  >
+                    Close
+                  </button>
+                  <button 
+                    onClick={() => {
+                      router.push(`/saved?user=${selectedContributor.username}`);
+                      handleCloseModal();
+                    }}
+                    className="h-9 px-4 rounded-lg bg-black dark:bg-white text-white dark:text-black hover:bg-gray-950 dark:hover:bg-gray-100 transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    <span>View All Links</span>
+                    <ExternalLink size={12} />
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>,
+        document.body
       )}
     </div>
   );
