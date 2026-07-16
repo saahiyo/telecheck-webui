@@ -144,7 +144,14 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-bold text-black dark:text-white truncate">{profile.username}</h3>
+                    <h3 className="text-sm sm:text-base font-bold text-black dark:text-white truncate">
+                      <button
+                        onClick={() => router.push(`/saved?user=${profile.username}`)}
+                        className="hover:underline text-left bg-transparent border-none p-0 cursor-pointer font-bold text-black dark:text-white"
+                      >
+                        {profile.username}
+                      </button>
+                    </h3>
                     <span className="px-1.5 py-0.5 rounded-full bg-black/5 dark:bg-white/10 text-[9px] sm:text-[10px] font-semibold text-gray-500 dark:text-gray-400 flex items-center gap-1 shrink-0">
                       <Sparkles size={10} className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
                       You
@@ -241,7 +248,12 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                           </div>
                           <div className="min-w-0">
                             <div className="text-xs sm:text-sm font-semibold text-black dark:text-white flex items-center gap-1.5 sm:gap-2 truncate">
-                              <span className="truncate">{contributor.username}</span>
+                              <button
+                                onClick={() => router.push(`/saved?user=${contributor.username}`)}
+                                className="truncate hover:underline text-left bg-transparent border-none p-0 cursor-pointer font-semibold text-black dark:text-white"
+                              >
+                                {contributor.username}
+                              </button>
                               {isMe && <span className="text-[8px] sm:text-[9px] bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 px-1 sm:px-1.5 py-0.5 rounded font-bold shrink-0">YOU</span>}
                             </div>
                           </div>
