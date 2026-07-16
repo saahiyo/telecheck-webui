@@ -527,6 +527,19 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     };
   }, [updateScrollJumpState]);
 
+  useEffect(() => {
+    const handleValidateTrigger = () => {
+      if (!isValidating && links.length > 0) {
+        void handleValidate();
+      }
+    };
+
+    window.addEventListener('app-validate-links', handleValidateTrigger);
+    return () => {
+      window.removeEventListener('app-validate-links', handleValidateTrigger);
+    };
+  }, [handleValidate, isValidating, links.length]);
+
   const scrollToBoundary = useCallback((target: 'top' | 'bottom') => {
     const container = resultsScrollRef.current;
     const containerMaxScrollTop = container ? container.scrollHeight - container.clientHeight : 0;

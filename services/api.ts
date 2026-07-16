@@ -12,14 +12,30 @@ const BASE_URL =
   process.env.NEXT_PUBLIC_TELECHECK_API_URL?.replace(/\/$/, '') ||
   'https://telecheck.vercel.app';
 
-// Simple in-memory cache
+// Simple in-memory cache with sessionStorage synchronization
 const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 1000 * 60 * 2; // 2 minutes
 const ASYNC_JOB_INITIAL_POLL_MS = 500;
 const ASYNC_JOB_MAX_POLL_MS = 1500;
 const ASYNC_JOB_POLL_BACKOFF_MS = 250;
 
+const isBrowser = typeof window !== 'undefined';
+
 export function getCached<T>(key: string): T | null {
+  if (isBrowser) {
+    try {
+      const raw = sessionStorage.getItem(`telecheck_cache:${key}`);
+      if (raw) {
+        const { data, timestamp } = JSON.parse(raw);
+        if (Date.now() - timestamp < CACHE_TTL) {
+          return data as T;
+        }
+      }
+    } catch {
+      // Ignore sessionStorage read errors and fall back to memory
+    }
+  }
+
   const entry = cache.get(key);
   if (entry && Date.now() - entry.timestamp < CACHE_TTL) {
     return entry.data as T;
@@ -28,7 +44,16 @@ export function getCached<T>(key: string): T | null {
 }
 
 function setCache(key: string, data: any) {
-  cache.set(key, { data, timestamp: Date.now() });
+  const timestamp = Date.now();
+  cache.set(key, { data, timestamp });
+
+  if (isBrowser) {
+    try {
+      sessionStorage.setItem(`telecheck_cache:${key}`, JSON.stringify({ data, timestamp }));
+    } catch {
+      // Ignore sessionStorage write errors
+    }
+  }
 }
 
 export function getMyProfileCacheKey() {
@@ -38,10 +63,32 @@ export function getMyProfileCacheKey() {
 export function clearCache(prefix?: string) {
   if (!prefix) {
     cache.clear();
+    if (isBrowser) {
+      try {
+        for (let i = sessionStorage.length - 1; i >= 0; i--) {
+          const key = sessionStorage.key(i);
+          if (key?.startsWith('telecheck_cache:')) {
+            sessionStorage.removeItem(key);
+          }
+        }
+      } catch {}
+    }
     return;
   }
+
   for (const key of cache.keys()) {
     if (key.startsWith(prefix)) cache.delete(key);
+  }
+
+  if (isBrowser) {
+    try {
+      for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const key = sessionStorage.key(i);
+        if (key?.startsWith(`telecheck_cache:${prefix}`)) {
+          sessionStorage.removeItem(key);
+        }
+      }
+    } catch {}
   }
 }
 

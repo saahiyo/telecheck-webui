@@ -30,6 +30,7 @@ const shortcutGroups = [
       { keys: ['Ctrl', 'ArrowDown'], description: 'Scroll to the bottom' },
       { keys: ['E'], description: 'Open export when results are visible' },
       { keys: ['Alt', 'C'], description: 'Clear inputs and results' },
+      { keys: ['Alt', 'V'], description: 'Revalidate database links (on saved page)' },
       { keys: ['T'], description: 'Toggle theme' },
       { keys: ['?'], description: 'Show or hide this shortcut list' },
       { keys: ['Esc'], description: 'Close open menus and panels' },
@@ -148,6 +149,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (key === 'c') {
           event.preventDefault();
           window.dispatchEvent(new Event('app-clear-all'));
+          return;
+        }
+
+        if (key === 'v') {
+          event.preventDefault();
+          window.dispatchEvent(new Event('app-validate-links'));
           return;
         }
       }

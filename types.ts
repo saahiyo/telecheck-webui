@@ -1,8 +1,26 @@
+export interface LinkMetadata {
+  title?: string;
+  description?: string;
+  image?: string;
+  memberCount?: number;
+  memberCountCompact?: string;
+  memberCountRaw?: string;
+  type?: string;
+  checkedAt?: string;
+  savedStatus?: string;
+  savedId?: number;
+  contributorUsername?: string | null;
+  contributorLinksAdded?: number | string | null;
+  contributorFirstSeen?: string | null;
+  contributorLastSeen?: string | null;
+  [key: string]: any;
+}
+
 export interface LinkResult {
   link: string;
   status: 'valid' | 'invalid' | 'mega' | 'unknown' | string;
   reason?: string;
-  details?: any; // For any extra data API might return
+  details?: LinkMetadata;
   tags?: string[];
   cached?: boolean;
 }
