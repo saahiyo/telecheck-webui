@@ -1,5 +1,5 @@
 import { LinkResult, StatsData, ContributorsResponse, MyProfileResponse, RateLimitInfo } from '../types';
-import { formatCompactNumber } from '../utils/helpers';
+import { normalizeMetadata } from '../utils/helpers';
 import {
   appendContributorIdentity,
   getContributorIdentity,
@@ -128,13 +128,7 @@ export const checkSingleLink = async (link: string): Promise<LinkResult> => {
       status: data.status?.toLowerCase() || 'unknown',
       reason: data.reason || data.message || undefined,
       cached: data.cached === true,
-      details: data.metadata ? {
-        ...data.metadata,
-        image: data.metadata.photo || data.metadata.image,
-        memberCount: data.metadata.memberCount,
-        memberCountCompact: formatCompactNumber(data.metadata.memberCount),
-        memberCountRaw: data.metadata.memberCount?.toLocaleString(),
-      } : undefined
+      details: normalizeMetadata(data.metadata)
     };
   } catch (error) {
     return {
@@ -242,13 +236,7 @@ export const checkBulkLinks = async (
               link: r.url || r.link || 'Unknown',
               status: r.status?.toLowerCase() || 'unknown',
               cached: r.cached === true,
-              details: {
-                ...meta,
-                image: meta.photo || meta.image,
-                memberCount: meta.memberCount,
-                memberCountCompact: formatCompactNumber(meta.memberCount),
-                memberCountRaw: meta.memberCount?.toLocaleString(),
-              }
+              details: normalizeMetadata(meta)
             });
           }
           results.push(...newResults);
@@ -325,13 +313,7 @@ export const checkBulkLinks = async (
         status: r.status?.toLowerCase() || 'unknown',
         reason: r.reason || r.message || undefined,
         cached: r.cached === true,
-        details: {
-          ...meta,
-          image: meta.photo || meta.image,
-          memberCount: meta.memberCount,
-          memberCountCompact: formatCompactNumber(meta.memberCount),
-          memberCountRaw: meta.memberCount?.toLocaleString(),
-        }
+        details: normalizeMetadata(meta)
       };
     });
   } catch (error) {

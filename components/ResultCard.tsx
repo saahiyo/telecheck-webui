@@ -6,6 +6,8 @@ import { toast } from 'sonner';
 import { copyText } from '../utils/clipboard';
 import { updateLinkTags } from '../services/api';
 import { trackLinkCopy, trackLinkPreview, trackTagModalOpen, trackTagToggle } from '../utils/tracking';
+import { DEFAULT_TAGS } from '../utils/helpers';
+import ErrorBoundary from './ErrorBoundary';
 
 interface ResultCardProps {
   result: LinkResult;
@@ -45,7 +47,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
   const isValid = status === 'valid';
   const hasRichMeta = isValid && (details.title || details.description || details.image);
   
-  const PREDEFINED_TAGS = ['Crypto', 'News', 'Entertainment', 'Finance', 'Gaming', 'Tech', 'Education', 'Music', 'Sports', 'Other'];
+  const PREDEFINED_TAGS = DEFAULT_TAGS;
   const [localTags, setLocalTags] = useState<string[]>(result.tags || []);
   const [isUpdatingTags, setIsUpdatingTags] = useState(false);
   const contributorLinksAdded = Number(details.contributorLinksAdded);
@@ -426,4 +428,12 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
 
 ResultCard.displayName = 'ResultCard';
 
-export default ResultCard;
+const ResultCardWithBoundary: React.FC<ResultCardProps> = (props) => (
+  <ErrorBoundary>
+    <ResultCard {...props} />
+  </ErrorBoundary>
+);
+
+ResultCardWithBoundary.displayName = 'ResultCardWithBoundary';
+
+export default ResultCardWithBoundary;

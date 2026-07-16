@@ -46,3 +46,28 @@ export const formatCompactNumber = (num: number | undefined | null): string | un
     if (num >= 1_000) return `${(num / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
     return num.toLocaleString();
 };
+
+export const DEFAULT_TAGS = [
+  'Crypto',
+  'News',
+  'Entertainment',
+  'Finance',
+  'Gaming',
+  'Tech',
+  'Education',
+  'Music',
+  'Sports',
+  'Other'
+];
+
+export const normalizeMetadata = (meta: any) => {
+  if (!meta) return undefined;
+  return {
+    ...meta,
+    image: meta.photo || meta.image,
+    memberCount: meta.memberCount,
+    memberCountCompact: formatCompactNumber(meta.memberCount),
+    memberCountRaw: meta.memberCount?.toLocaleString(),
+  };
+};
+

@@ -7,6 +7,7 @@ import debounce from 'lodash.debounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags } from '../services/api';
 import { StoredLink, LinkResult, StoredLinkResponse } from '../types';
+import { DEFAULT_TAGS } from '../utils/helpers';
 import { formatCompactNumber } from '../utils/helpers';
 import { toast } from 'sonner';
 import { copyText } from '../utils/clipboard';
@@ -129,7 +130,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [savedFilter, setSavedFilter] = useState<SavedFilter>('all');
   const [savedSort, setSavedSort] = useState<SavedSort>('recently-updated');
-  const PREDEFINED_TAGS = ['Crypto', 'News', 'Entertainment', 'Finance', 'Gaming', 'Tech', 'Education', 'Music', 'Sports', 'Other'];
+  const PREDEFINED_TAGS = DEFAULT_TAGS;
   const [availableTags, setAvailableTags] = useState<string[]>(PREDEFINED_TAGS);
   const [selectedTag, setSelectedTag] = useState<string>('All');
   const [randomSeed, setRandomSeed] = useState(() => Date.now());
@@ -223,8 +224,23 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, [page, debouncedSearchQuery, selectedTag, userParam, loadLinks]);
 
   useEffect(() => {
-    // We only use hardcoded tags now, but we keep this effect for structure
-    setAvailableTags(PREDEFINED_TAGS);
+    let active = true;
+    async function loadDynamicTags() {
+      try {
+        const tags = await fetchTags();
+        if (active) {
+          if (tags && tags.length > 0) {
+            setAvailableTags(tags);
+          } else {
+            setAvailableTags(DEFAULT_TAGS);
+          }
+        }
+      } catch {
+        if (active) setAvailableTags(DEFAULT_TAGS);
+      }
+    }
+    loadDynamicTags();
+    return () => { active = false; };
   }, []);
 
   const handleRefresh = async () => {
@@ -445,7 +461,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const rowVirtualizer = useVirtualizer({
     count: virtualRows.length,
     getScrollElement: () => resultsScrollRef.current,
-    estimateSize: () => 80, // estimated row height in px
+    estimateSize: () => 120, // estimated row height in px
     overscan: 5,
   });
 
