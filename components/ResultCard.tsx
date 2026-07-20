@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LinkResult } from '../types';
-import { X, ExternalLink, Copy, Eye, Users, Tag as TagIcon, Loader2, Check, Zap } from 'lucide-react';
+import { X, ExternalLink, Copy, Eye, Users, Tag as TagIcon, Loader2, Check, Zap, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { copyText } from '../utils/clipboard';
 import { updateLinkTags } from '../services/api';
@@ -11,6 +11,8 @@ import ErrorBoundary from './ErrorBoundary';
 
 interface ResultCardProps {
   result: LinkResult;
+  isTopContributor?: boolean;
+  onDelete?: (id: number | undefined, url: string) => void;
 }
 
 /** Extract a display initial from a title or link */
@@ -37,7 +39,7 @@ function getAvatarColor(str: string): string {
   return `hsl(${hue}, 45%, 65%)`;
 }
 
-const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
+const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContributor = false, onDelete }) => {
   const status = result.status?.toLowerCase();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
@@ -50,6 +52,21 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
   const PREDEFINED_TAGS = DEFAULT_TAGS;
   const [localTags, setLocalTags] = useState<string[]>(result.tags || []);
   const [isUpdatingTags, setIsUpdatingTags] = useState(false);
+  
+  const handleDeleteClick = () => {
+    toast("Delete this saved link?", {
+      description: `This will remove "${details.title || result.link}" from your view.`,
+      action: {
+        label: "Delete",
+        onClick: () => {
+          if (onDelete) {
+            onDelete(details.savedId, result.link);
+          }
+        }
+      }
+    });
+  };
+
   const contributorLinksAdded = Number(details.contributorLinksAdded);
 
   // Sync tags if result changes from parent
@@ -259,20 +276,32 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => void copyToClipboard()}
-              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 dark:border-[#333] bg-white dark:bg-black text-sm font-medium text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-[#333] bg-white dark:bg-black text-xs font-medium text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] transition-colors flex items-center justify-center gap-1.5"
             >
-              <Copy size={14} />
+              <Copy size={13} />
               Copy Link
             </button>
             <a
               href={result.link.startsWith('http') ? result.link : `https://${result.link}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 px-4 py-2.5 rounded-lg bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-sm font-medium text-white transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-3 py-2.5 rounded-lg bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-xs font-medium text-white transition-colors flex items-center justify-center gap-1.5"
             >
-              <ExternalLink size={14} />
+              <ExternalLink size={13} />
               Open Link
             </a>
+            {isTopContributor && (
+              <button
+                onClick={() => {
+                  setIsPreviewOpen(false);
+                  handleDeleteClick();
+                }}
+                className="flex-1 px-3 py-2.5 rounded-lg border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <Trash2 size={13} />
+                Delete
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -417,6 +446,16 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result }) => {
           >
             <Copy size={14} aria-hidden="true" />
           </button>
+          {isTopContributor && (
+            <button
+              onClick={handleDeleteClick}
+              className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors"
+              title="Delete Saved Link"
+              aria-label={`Delete saved link for ${details.title || result.link}`}
+            >
+              <Trash2 size={14} aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
 

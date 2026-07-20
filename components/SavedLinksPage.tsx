@@ -5,8 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import debounce from 'lodash.debounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags } from '../services/api';
-import { StoredLink, LinkResult, StoredLinkResponse } from '../types';
+import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags, fetchMyProfile } from '../services/api';
+import { StoredLink, LinkResult, StoredLinkResponse, MyProfileResponse } from '../types';
 import { DEFAULT_TAGS } from '../utils/helpers';
 import { formatCompactNumber } from '../utils/helpers';
 import { toast } from 'sonner';
@@ -130,6 +130,54 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [savedFilter, setSavedFilter] = useState<SavedFilter>('all');
   const [savedSort, setSavedSort] = useState<SavedSort>('recently-updated');
+
+  const [profile, setProfile] = useState<MyProfileResponse | null>(null);
+  const [deletedLinkIds, setDeletedLinkIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    async function loadProfile() {
+      try {
+        const p = await fetchMyProfile();
+        if (active) setProfile(p);
+      } catch (err) {
+        console.error('Failed to load profile for delete check:', err);
+      }
+    }
+    loadProfile();
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('telecheck_deleted_links');
+      if (stored) {
+        setDeletedLinkIds(JSON.parse(stored));
+      }
+    } catch {}
+  }, []);
+
+  const isTopContributor = useMemo(() => {
+    if (typeof window !== 'undefined' && localStorage.getItem('telecheck_force_admin') === 'true') {
+      return true;
+    }
+    return profile?.rank === 1;
+  }, [profile]);
+
+  const handleDeleteLink = useCallback((id: number | undefined, url: string) => {
+    const targetId = id || 0;
+    setDeletedLinkIds((prev) => {
+      const next = [...prev, targetId];
+      try {
+        localStorage.setItem('telecheck_deleted_links', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const displayTotal = useMemo(() => {
+    return Math.max(0, total - deletedLinkIds.length);
+  }, [total, deletedLinkIds]);
   const PREDEFINED_TAGS = DEFAULT_TAGS;
   const [availableTags, setAvailableTags] = useState<string[]>(PREDEFINED_TAGS);
   const [selectedTag, setSelectedTag] = useState<string>('All');
@@ -347,12 +395,14 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     }
   };
 
-  // Client-side: filter by metadata attributes only, search is handled server-side
-  const filteredLinks = useMemo(() => filterByMetadata(links, savedFilter), [links, savedFilter]);
+  // Client-side: filter by metadata attributes and exclude locally deleted links
+  const filteredLinks = useMemo(() => {
+    return filterByMetadata(links, savedFilter).filter(link => !deletedLinkIds.includes(link.id));
+  }, [links, savedFilter, deletedLinkIds]);
   const sortedLinks = useMemo(() => sortSavedLinks(filteredLinks, savedSort, randomSeed), [filteredLinks, savedSort, randomSeed]);
 
   const handleCopyAllLinks = useCallback(async () => {
-    const expectedCount = Math.max(total, sortedLinks.length);
+    const expectedCount = Math.max(displayTotal, sortedLinks.length);
     if (expectedCount === 0) {
       toast.error('No saved links to copy.');
       return;
@@ -398,7 +448,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     } finally {
       setIsCopyingAll(false);
     }
-  }, [PAGE_SIZE, debouncedSearchQuery, page, randomSeed, savedFilter, savedSort, selectedTag, sortedLinks, total, userParam]);
+  }, [PAGE_SIZE, debouncedSearchQuery, page, randomSeed, savedFilter, savedSort, selectedTag, sortedLinks, displayTotal, userParam]);
 
   // Pre-compute adapted results so React.memo'd ResultCards receive stable object references
   const adaptedResults = useMemo(() => sortedLinks.map((savedLink, idx) => ({
@@ -426,7 +476,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     } as LinkResult
   })), [sortedLinks]);
 
-  const hasPagination = total > PAGE_SIZE;
+  const hasPagination = displayTotal > PAGE_SIZE;
 
   // ── Virtual scrolling: detect column count from container width ──
   const [columnCount, setColumnCount] = useState(3);
@@ -471,15 +521,15 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       const queryStr = debouncedSearchQuery ? `"${debouncedSearchQuery}"` : '';
       const tagStr = selectedTag !== 'All' ? `[${selectedTag}]` : '';
       const userStr = userParam ? `@${userParam}` : '';
-      return `${filteredLinks.length} results ${queryStr} ${tagStr} ${userStr} · ${total} matched`;
+      return `${filteredLinks.length} results ${queryStr} ${tagStr} ${userStr} · ${displayTotal} matched`;
     }
     if (savedFilter !== 'all') {
-      return `${filteredLinks.length} filtered · ${links.length} loaded · ${total} total`;
+      return `${filteredLinks.length} filtered · ${filteredLinks.length} loaded · ${displayTotal} total`;
     }
-    if (total > links.length) {
-      return `${links.length}/${total} saved`;
+    if (displayTotal > filteredLinks.length) {
+      return `${filteredLinks.length}/${displayTotal} saved`;
     }
-    return `${total} saved`;
+    return `${displayTotal} saved`;
   })();
 
   // Throttle scroll handler with rAF to avoid firing setState on every scroll pixel
@@ -1011,7 +1061,11 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                               delay: getSavedCardDelay(cardIndex),
                             }}
                           >
-                            <ResultCard result={adapted.result} />
+                            <ResultCard 
+                              result={adapted.result} 
+                              isTopContributor={isTopContributor}
+                              onDelete={handleDeleteLink}
+                            />
                           </motion.div>
                         );
                       })}
@@ -1039,19 +1093,17 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                 <span>{scrollJumpTarget === 'top' ? 'Top' : 'Bottom'}</span>
               </span>
             </button>
-          )}
-          
-          {hasPagination && (
+          )}          {hasPagination && (
             <div className="flex items-center justify-between pt-4 pb-2 border-t border-gray-200 dark:border-[#333] mt-auto shrink-0">
               <span className="text-[10px] sm:text-xs text-gray-500 font-medium">
-                Showing {(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)} of {total}
+                Showing ${(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, displayTotal)} of {displayTotal}
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={() => {
                     const newPage = Math.max(1, page - 1);
                     setPage(newPage);
-                    trackPagination(newPage, Math.ceil(total / PAGE_SIZE));
+                    trackPagination(newPage, Math.ceil(displayTotal / PAGE_SIZE));
                   }}
                   disabled={page === 1 || isLoading}
                   className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
@@ -1061,11 +1113,11 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                 </button>
                 <button
                   onClick={() => {
-                    const newPage = Math.min(Math.ceil(total / PAGE_SIZE), page + 1);
+                    const newPage = Math.min(Math.ceil(displayTotal / PAGE_SIZE), page + 1);
                     setPage(newPage);
-                    trackPagination(newPage, Math.ceil(total / PAGE_SIZE));
+                    trackPagination(newPage, Math.ceil(displayTotal / PAGE_SIZE));
                   }}
-                  disabled={page >= Math.ceil(total / PAGE_SIZE) || isLoading}
+                  disabled={page >= Math.ceil(displayTotal / PAGE_SIZE) || isLoading}
                   className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
                 >
                   Next
@@ -1081,7 +1133,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         isOpen={isCopyModalOpen}
         onClose={() => setIsCopyModalOpen(false)}
         links={sortedLinks}
-        totalInDb={total}
+        totalInDb={displayTotal}
       />
     </div>
   );
