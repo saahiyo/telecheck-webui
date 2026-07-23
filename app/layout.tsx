@@ -29,9 +29,19 @@ const themeInitScript = `
 `;
 
 export const metadata: Metadata = {
-  title: 'TeleCheck Pro | Telegram Link Validator',
+  title: 'TeleCheck Pro | Bulk Telegram Link Validator & Checker',
   description:
-    'Validate Telegram links in bulk, review saved links, and browse validation results in a polished dashboard.',
+    'Free bulk Telegram link validator. Check if Telegram channels, groups, and invite links are valid or dead. Detect invalid, expired, and Mega.nz links instantly.',
+  keywords: [
+    'telegram link validator',
+    'telegram link checker',
+    'bulk telegram link check',
+    'check telegram channel',
+    'telegram invite link checker',
+    'telegram group validator',
+    'dead link checker telegram',
+    'telegram link status',
+  ],
   manifest: '/site.webmanifest',
   metadataBase: new URL('https://telecheck-pro.vercel.app'),
   icons: {
@@ -52,9 +62,9 @@ export const metadata: Metadata = {
     telephone: false,
   },
   openGraph: {
-    title: 'TeleCheck Pro | Telegram Link Validator',
+    title: 'TeleCheck Pro | Bulk Telegram Link Validator & Checker',
     description:
-      'Validate Telegram links in bulk, inspect metadata, and separate valid, invalid, and Mega links — all in a sleek dashboard.',
+      'Free bulk Telegram link validator. Check if Telegram channels, groups, and invite links are valid or dead. Detect invalid, expired, and Mega.nz links instantly.',
     url: 'https://telecheck-pro.vercel.app',
     siteName: 'TeleCheck Pro',
     locale: 'en_US',
@@ -70,9 +80,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'TeleCheck Pro | Telegram Link Validator',
+    title: 'TeleCheck Pro | Bulk Telegram Link Validator & Checker',
     description:
-      'Validate Telegram links in bulk, inspect metadata, and separate valid, invalid, and Mega links.',
+      'Free bulk Telegram link validator. Check if Telegram channels, groups, and invite links are valid or dead.',
     images: ['/og-image.png'],
   },
   verification: {
@@ -89,6 +99,36 @@ export const viewport: Viewport = {
   ],
 };
 
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'TeleCheck Pro',
+  url: 'https://telecheck-pro.vercel.app',
+  description:
+    'Validate Telegram links in bulk, inspect metadata, and separate valid, invalid, and Mega links — all in a sleek dashboard.',
+  applicationCategory: 'UtilitiesApplication',
+  operatingSystem: 'Any',
+  browserRequirements: 'Requires JavaScript',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  featureList: [
+    'Bulk Telegram link validation',
+    'Single link quick check',
+    'Mega.nz link detection',
+    'Saved links dashboard',
+    'Contributor leaderboard',
+    'Link metadata inspection',
+  ],
+  creator: {
+    '@type': 'Organization',
+    name: 'TeleCheck Pro',
+    url: 'https://telecheck-pro.vercel.app',
+  },
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -100,6 +140,10 @@ export default function RootLayout({
         <Script id="theme-init" strategy="beforeInteractive">
           {themeInitScript}
         </Script>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <SWRegistration />
         <DatabuddyAnalytics />
         <AppLayout>
