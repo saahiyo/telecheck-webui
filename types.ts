@@ -80,6 +80,10 @@ export interface StoredLink {
   contributor_links_added?: number | string | null;
   contributor_first_seen?: string | null;
   contributor_last_seen?: string | null;
+  raw_metadata?: {
+    memberCountRaw?: string;
+    [key: string]: any;
+  } | null;
 }
 
 export interface StoredLinkResponse {

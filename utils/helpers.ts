@@ -43,7 +43,7 @@ export const formatCompactNumber = (num: number | undefined | null): string | un
     if (num == null || isNaN(num)) return undefined;
     if (num >= 1_000_000_000) return `${(num / 1_000_000_000).toFixed(1).replace(/\.0$/, '')}B`;
     if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-    if (num >= 1_000) return `${(num / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+    if (num >= 10_000) return `${(num / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
     return num.toLocaleString();
 };
 
@@ -60,14 +60,39 @@ export const DEFAULT_TAGS = [
   'Other'
 ];
 
+/**
+ * Extract the true member/subscriber count from a Telegram memberCountRaw string.
+ * e.g. "2 408 members, 103 online" → 2408
+ *      "4 393 members, 126 online" → 4393
+ *      "4 952 subscribers"         → 4952
+ *      "1 subscriber"              → 1
+ * Returns null if the string can't be parsed.
+ */
+export const parseMemberCountRaw = (raw: string | undefined | null): number | null => {
+  if (!raw) return null;
+  // Take everything before the first comma (strips ", 103 online" etc.)
+  const beforeComma = raw.split(',')[0];
+  // Extract all digit sequences and join them (handles "2 408" → "2408")
+  const digits = beforeComma.match(/\d+/g);
+  if (!digits) return null;
+  const parsed = parseInt(digits.join(''), 10);
+  return isNaN(parsed) ? null : parsed;
+};
+
 export const normalizeMetadata = (meta: any) => {
   if (!meta) return undefined;
+
+  // Prefer parsing memberCountRaw (accurate) over the raw numeric field
+  // which the backend corrupts by merging member + online counts into one integer.
+  const parsedCount = parseMemberCountRaw(meta.memberCountRaw);
+  const memberCount = parsedCount ?? meta.memberCount;
+
   return {
     ...meta,
     image: meta.photo || meta.image,
-    memberCount: meta.memberCount,
-    memberCountCompact: formatCompactNumber(meta.memberCount),
-    memberCountRaw: meta.memberCount?.toLocaleString(),
+    memberCount,
+    memberCountCompact: formatCompactNumber(memberCount),
+    memberCountRaw: memberCount?.toLocaleString(),
   };
 };
 

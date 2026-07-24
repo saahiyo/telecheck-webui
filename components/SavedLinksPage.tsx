@@ -8,7 +8,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags, fetchMyProfile } from '../services/api';
 import { StoredLink, LinkResult, StoredLinkResponse, MyProfileResponse } from '../types';
 import { DEFAULT_TAGS } from '../utils/helpers';
-import { formatCompactNumber } from '../utils/helpers';
+import { formatCompactNumber, parseMemberCountRaw } from '../utils/helpers';
 import { toast } from 'sonner';
 import { copyText } from '../utils/clipboard';
 import ResultCard from './ResultCard';
@@ -451,30 +451,37 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, [PAGE_SIZE, debouncedSearchQuery, page, randomSeed, savedFilter, savedSort, selectedTag, sortedLinks, displayTotal, userParam]);
 
   // Pre-compute adapted results so React.memo'd ResultCards receive stable object references
-  const adaptedResults = useMemo(() => sortedLinks.map((savedLink, idx) => ({
-    key: savedLink.id || idx,
-    result: {
-      link: savedLink.url,
-      status: savedLink.status || 'valid',
-      reason: `Saved on ${formatSavedDate(savedLink.checked_at || Date.now())}`,
-      details: {
-        title: savedLink.title || savedLink.description || 'Database Link',
-        description: savedLink.description,
-        image: savedLink.image,
-        memberCount: savedLink.member_count,
-        memberCountCompact: formatCompactNumber(savedLink.member_count),
-        memberCountRaw: savedLink.member_count?.toLocaleString(),
-        checkedAt: savedLink.checked_at,
-        savedStatus: savedLink.status,
-        savedId: savedLink.id,
-        contributorUsername: savedLink.contributor_username,
-        contributorLinksAdded: savedLink.contributor_links_added,
-        contributorFirstSeen: savedLink.contributor_first_seen,
-        contributorLastSeen: savedLink.contributor_last_seen
-      },
-      tags: savedLink.tags
-    } as LinkResult
-  })), [sortedLinks]);
+  const adaptedResults = useMemo(() => sortedLinks.map((savedLink, idx) => {
+    // The DB member_count column is corrupted: backend stores members+online as one int
+    // (e.g. "2 408 members, 103 online" → 2408103). Parse the raw string instead.
+    const parsedCount = parseMemberCountRaw(savedLink.raw_metadata?.memberCountRaw);
+    const memberCount = parsedCount ?? savedLink.member_count;
+
+    return {
+      key: savedLink.id || idx,
+      result: {
+        link: savedLink.url,
+        status: savedLink.status || 'valid',
+        reason: `Saved on ${formatSavedDate(savedLink.checked_at || Date.now())}`,
+        details: {
+          title: savedLink.title || savedLink.description || 'Database Link',
+          description: savedLink.description,
+          image: savedLink.image,
+          memberCount,
+          memberCountCompact: formatCompactNumber(memberCount),
+          memberCountRaw: memberCount?.toLocaleString(),
+          checkedAt: savedLink.checked_at,
+          savedStatus: savedLink.status,
+          savedId: savedLink.id,
+          contributorUsername: savedLink.contributor_username,
+          contributorLinksAdded: savedLink.contributor_links_added,
+          contributorFirstSeen: savedLink.contributor_first_seen,
+          contributorLastSeen: savedLink.contributor_last_seen
+        },
+        tags: savedLink.tags
+      } as LinkResult
+    };
+  }), [sortedLinks]);
 
   const hasPagination = displayTotal > PAGE_SIZE;
 
@@ -1093,7 +1100,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                 <span>{scrollJumpTarget === 'top' ? 'Top' : 'Bottom'}</span>
               </span>
             </button>
-          )}          {hasPagination && (
+          )}
+          {hasPagination && (
             <div className="flex items-center justify-between pt-4 pb-2 border-t border-gray-200 dark:border-[#333] mt-auto shrink-0">
               <span className="text-[10px] sm:text-xs text-gray-500 font-medium">
                 Showing ${(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, displayTotal)} of {displayTotal}
