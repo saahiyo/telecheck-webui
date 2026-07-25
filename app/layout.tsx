@@ -5,6 +5,7 @@ import './globals.css';
 import AppLayout from '@/components/AppLayout';
 import DatabuddyAnalytics from '@/components/DatabuddyAnalytics';
 import SWRegistration from '@/components/SWRegistration';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 const themeInitScript = `
   (() => {
@@ -146,9 +147,11 @@ export default function RootLayout({
         />
         <SWRegistration />
         <DatabuddyAnalytics />
-        <AppLayout>
-          {children}
-        </AppLayout>
+        <AuthProvider>
+          <AppLayout>
+            {children}
+          </AppLayout>
+        </AuthProvider>
         <Analytics />
       </body>
     </html>

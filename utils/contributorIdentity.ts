@@ -89,10 +89,11 @@ export function getContributorIdentity() {
   return identity;
 }
 
-export function getContributorHeaders(contentType?: string): HeadersInit {
+export function getContributorHeaders(contentType?: string, authToken?: string | null): HeadersInit {
   const headers: Record<string, string> = {};
 
   if (contentType) headers['Content-Type'] = contentType;
+  if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
   return headers;
 }
 

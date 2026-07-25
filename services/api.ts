@@ -222,6 +222,7 @@ export const checkBulkLinks = async (
     onProgress?: (processed: number, total: number) => void;
     onStreamResults?: (results: LinkResult[]) => void;
     forceAsync?: boolean;
+    authToken?: string | null;
   }
 ): Promise<LinkResult[]> => {
   try {
@@ -232,7 +233,7 @@ export const checkBulkLinks = async (
 
     const response = await fetch(`${BASE_URL}/${asyncParam}`, {
       method: 'POST',
-      headers: getContributorHeaders('application/json'),
+      headers: getContributorHeaders('application/json', options?.authToken),
       body: JSON.stringify({
         links: cleanLinks,
         ...getContributorPayload(),
@@ -379,11 +380,13 @@ export const checkBulkLinks = async (
 export const validateSavedLinks = async ({
   platform,
   limit = '100',
-  offset = 0
+  offset = 0,
+  authToken
 }: {
   platform?: string;
   limit?: string;
   offset?: number;
+  authToken?: string | null;
 } = {}): Promise<{
   processed: number;
   kept: number;
@@ -402,7 +405,7 @@ export const validateSavedLinks = async ({
 
     const response = await fetch(`${BASE_URL}/links/validate?${params.toString()}`, {
       method: 'POST',
-      headers: getContributorHeaders()
+      headers: getContributorHeaders(undefined, authToken)
     });
 
     if (!response.ok) throw new Error('Failed to validate links');
@@ -566,11 +569,11 @@ export const fetchTags = async (): Promise<string[]> => {
   }
 };
 
-export const updateLinkTags = async (url: string, tags: string[]): Promise<boolean> => {
+export const updateLinkTags = async (url: string, tags: string[], authToken?: string | null): Promise<boolean> => {
   try {
     const response = await fetch(`${BASE_URL}/links/tags`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getContributorHeaders('application/json', authToken),
       body: JSON.stringify({ url, tags })
     });
     

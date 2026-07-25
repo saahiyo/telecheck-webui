@@ -15,6 +15,7 @@ import { useSearchParams } from 'next/navigation';
 import { saveResults, getResults, clearResults } from '@/utils/db';
 import confetti from 'canvas-confetti';
 import { trackBulkValidation, trackSingleValidation, trackValidationComplete, trackModeSwitch } from '@/utils/tracking';
+import { useAuth } from '@/hooks/useAuth';
 
 
 /** Contextual empty-state messages per filter tab */
@@ -121,6 +122,7 @@ const triggerSuccessConfetti = () => {
 };
 
 function ValidatorContent() {
+  const { idToken } = useAuth();
   const searchParams = useSearchParams();
   const defaultMode = searchParams.get('mode') === 'single' ? 'single' : 'bulk';
 
@@ -356,6 +358,7 @@ function ValidatorContent() {
     if (telegramLinks.length > 0) {
       try {
         const batchResults = await checkBulkLinks(telegramLinks, {
+          authToken: idToken,
           onAsyncJob: (jobId) => {
             setAsyncJob({
               status: 'queued',

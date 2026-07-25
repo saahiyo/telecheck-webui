@@ -8,6 +8,7 @@ import { updateLinkTags } from '../services/api';
 import { trackLinkCopy, trackLinkPreview, trackTagModalOpen, trackTagToggle } from '../utils/tracking';
 import { DEFAULT_TAGS } from '../utils/helpers';
 import ErrorBoundary from './ErrorBoundary';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ResultCardProps {
   result: LinkResult;
@@ -40,6 +41,7 @@ function getAvatarColor(str: string): string {
 }
 
 const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContributor = false, onDelete }) => {
+  const { idToken } = useAuth();
   const status = result.status?.toLowerCase();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
@@ -145,7 +147,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
     const updatedTags = isSelected
       ? localTags.filter(t => t !== tag)
       : [...localTags, tag];
-    const success = await updateLinkTags(result.link, updatedTags);
+    const success = await updateLinkTags(result.link, updatedTags, idToken);
     setIsUpdatingTags(false);
     
     if (success) {

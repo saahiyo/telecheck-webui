@@ -6,6 +6,7 @@ import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import debounce from 'lodash.debounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags, fetchMyProfile } from '../services/api';
+import { useAuth } from '@/hooks/useAuth';
 import { StoredLink, LinkResult, StoredLinkResponse, MyProfileResponse } from '../types';
 import { DEFAULT_TAGS } from '../utils/helpers';
 import { formatCompactNumber, parseMemberCountRaw } from '../utils/helpers';
@@ -113,6 +114,7 @@ function sortSavedLinks(sourceLinks: StoredLink[], savedSort: SavedSort, randomS
 }
 
 const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProps>(function SavedLinksPage({ searchInputRef }, ref) {
+  const { idToken } = useAuth();
   const PAGE_SIZE = 100;
   
   // Synchronous cache read for instant mount
@@ -328,7 +330,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       while (processed < total) {
         const result = await validateSavedLinks({ 
           limit: String(BATCH_SIZE_VAL),
-          offset: currentOffset
+          offset: currentOffset,
+          authToken: idToken
         });
 
         processed += result.processed;
@@ -371,7 +374,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         const limit = Math.min(BATCH_SIZE_VAL, totalToProcess - processed);
         const result = await validateSavedLinks({
           limit: String(limit),
-          offset: currentOffset
+          offset: currentOffset,
+          authToken: idToken
         });
 
         processed += result.processed;
