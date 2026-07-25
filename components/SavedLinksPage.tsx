@@ -318,6 +318,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     const authToken = await getIdToken();
     if (!authToken) {
       toast.error('Please sign in before validating saved links.');
+      window.dispatchEvent(new Event('app-open-auth-modal'));
       return;
     }
 
@@ -366,6 +367,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     const authToken = await getIdToken();
     if (!authToken) {
       toast.error('Please sign in before validating saved links.');
+      window.dispatchEvent(new Event('app-open-auth-modal'));
       return;
     }
 

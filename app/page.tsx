@@ -371,6 +371,7 @@ function ValidatorContent() {
       const authToken = await getIdToken();
       if (!authToken) {
         toast.error('Please sign in before validating Telegram links.');
+        window.dispatchEvent(new Event('app-open-auth-modal'));
         setIsChecking(false);
         return;
       }

@@ -202,6 +202,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [router]);
 
+  // Listen for any component requesting the auth modal to open
+  useEffect(() => {
+    const handleOpenAuthModal = () => setIsAuthModalOpen(true);
+    window.addEventListener('app-open-auth-modal', handleOpenAuthModal);
+    return () => window.removeEventListener('app-open-auth-modal', handleOpenAuthModal);
+  }, []);
+
   return (
     <div className="min-h-screen w-full relative bg-white dark:bg-black font-sans selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
       <Toaster position="bottom-center" toastOptions={{
