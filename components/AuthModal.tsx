@@ -145,7 +145,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop — dark overlay only, no blur (blur is on a separate layer below the card) */}
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
@@ -153,7 +153,18 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
             onClick={handleClose}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            className="fixed inset-0 z-[60]"
+            style={{ background: 'rgba(0,0,0,0.55)' }}
+          />
+
+          {/* Blur layer — sits between backdrop and modal, doesn't affect modal card */}
+          <motion.div
+            key="blur-layer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-[61] backdrop-blur-sm pointer-events-none"
           />
 
           {/* Modal */}
@@ -163,7 +174,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 12 }}
             transition={springTransition}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
             role="dialog"
             aria-modal="true"
             aria-labelledby="auth-modal-title"
