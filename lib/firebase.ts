@@ -3,6 +3,7 @@ import {
   getAuth, 
   connectAuthEmulator, 
   Auth,
+  GoogleAuthProvider,
   setPersistence,
   browserLocalPersistence
 } from 'firebase/auth';
@@ -86,6 +87,13 @@ export function getFirebaseAuth(): Auth | null {
     console.warn('Failed to initialize Firebase Auth:', error.message);
     return null;
   }
+}
+
+export function getGoogleProvider(): GoogleAuthProvider {
+  const provider = new GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
+  return provider;
 }
 
 export function isFirebaseConfigured(): boolean {

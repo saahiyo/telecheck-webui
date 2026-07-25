@@ -4,9 +4,10 @@ import React, { createContext, useCallback, useEffect, useState, ReactNode } fro
 import { 
   User,
   onIdTokenChanged,
+  signInWithPopup,
   signOut as firebaseSignOut
 } from 'firebase/auth';
-import { getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebase';
+import { getFirebaseAuth, getGoogleProvider, isFirebaseConfigured } from '@/lib/firebase';
 
 export interface AuthContextType {
   user: User | null;
@@ -14,6 +15,7 @@ export interface AuthContextType {
   loading: boolean;
   getIdToken: () => Promise<string | null>;
   signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   isConfigured: boolean;
 }
 
@@ -88,6 +90,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const handleSignInWithGoogle = async () => {
+    const auth = getFirebaseAuth();
+    if (!auth) throw new Error('Firebase Auth is not initialized.');
+
+    try {
+      const provider = getGoogleProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error('Google sign-in failed:', error.message);
+      throw error;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -96,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         getIdToken,
         signOut: handleSignOut,
+        signInWithGoogle: handleSignInWithGoogle,
         isConfigured,
       }}
     >
