@@ -273,6 +273,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <Users size={14} /> Contributors
                   </span>
                 </button>
+
               </div>
 
               <div className="flex items-center gap-2">
@@ -288,16 +289,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 {isConfigured && (
                   <button
                     type="button"
-                    onClick={() => setIsAuthModalOpen(true)}
-                    className={`p-2 rounded-md border transition-all duration-200 ${
+                    onClick={() => user ? router.push('/profile') : setIsAuthModalOpen(true)}
+                    className={`rounded-md border transition-all duration-200 overflow-hidden ${
                       user
-                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30'
-                        : 'bg-white dark:bg-black border-gray-200 dark:border-[#333] text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#111]'
+                        ? 'border-gray-200 dark:border-[#333] hover:opacity-80'
+                        : 'p-2 bg-white dark:bg-black border-gray-200 dark:border-[#333] text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#111]'
                     }`}
-                    aria-label={user ? 'Account' : 'Sign in'}
-                    title={user ? 'Account' : 'Sign in'}
+                    aria-label={user ? 'View profile' : 'Sign in'}
+                    title={user ? (user.displayName || user.email || 'Profile') : 'Sign in'}
                   >
-                    <LogIn size={16} />
+                    {user ? (
+                      user.photoURL ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={user.photoURL}
+                          alt={user.displayName || 'User'}
+                          className="w-8 h-8 rounded-md object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-md bg-black dark:bg-white flex items-center justify-center">
+                          <span className="text-[11px] font-bold text-white dark:text-black uppercase">
+                            {(user.displayName || user.email || 'U').charAt(0)}
+                          </span>
+                        </div>
+                      )
+                    ) : (
+                      <LogIn size={16} />
+                    )}
                   </button>
                 )}
                 <ThemeToggle buttonRef={themeToggleRef} />
@@ -428,6 +447,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="text-xs text-gray-500 dark:text-gray-400">View the community leaderboard</div>
               </div>
             </motion.button>
+
+            {user && (
+              <motion.button
+                type="button"
+                onClick={() => {
+                  navigateTo('/profile', 'home');
+                  setIsMobileNavOpen(false);
+                }}
+                className={`flex items-start gap-3 rounded-xl border px-4 py-3 text-left transition-all shadow-none appearance-none ${pathname === '/profile' ? 'border-black/10 bg-gray-100 text-black dark:border-white/10 dark:bg-[#111] dark:text-white' : 'border-gray-200 text-gray-600 hover:text-black dark:border-[#333] dark:text-gray-400 dark:hover:text-white'}`}
+                variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+              >
+                <div className="mt-0.5 shrink-0">
+                  <UserCircle size={18} />
+                </div>
+                <div>
+                  <div className="text-sm font-medium">Profile</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">View your account and stats</div>
+                </div>
+              </motion.button>
+            )}
           </motion.div>
         </motion.aside>
           </motion.div>
