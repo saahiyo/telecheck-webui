@@ -570,7 +570,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
           {hasPagination && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] shrink-0">
               <span className="text-[10px] sm:text-xs text-gray-500 font-medium">
-                {searchQuery ? `Found ${filteredContributors.length} matching members` : `Showing ${(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)} of {total}`}
+                {searchQuery ? `Found ${filteredContributors.length} matching members` : `Showing ${(page - 1) * PAGE_SIZE + 1} - ${Math.min(page * PAGE_SIZE, total)} of ${total}`}
               </span>
               <div className="flex gap-2">
                 <button

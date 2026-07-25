@@ -1120,7 +1120,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           {hasPagination && (
             <div className="flex items-center justify-between pt-4 pb-2 border-t border-gray-200 dark:border-[#333] mt-auto shrink-0">
               <span className="text-[10px] sm:text-xs text-gray-500 font-medium">
-                Showing ${(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, displayTotal)} of {displayTotal}
+                {`Showing ${(page - 1) * PAGE_SIZE + 1} - ${Math.min(page * PAGE_SIZE, displayTotal)} of ${displayTotal}`}
               </span>
               <div className="flex gap-2">
                 <button
