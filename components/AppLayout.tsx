@@ -4,11 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'motion/react';
-import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Github, Heart } from 'lucide-react';
+import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Github, Heart, LogIn } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import GithubBtn from './GithubBtn';
+import AuthModal from './AuthModal';
 import { Toaster } from 'sonner';
 import { trackNavigation } from '../utils/tracking';
+import { useAuth } from '@/hooks/useAuth';
 
 const shortcutGroups = [
   {
@@ -56,6 +58,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const { user, isConfigured } = useAuth();
   const themeToggleRef = useRef<HTMLButtonElement>(null);
 
   const pathname = usePathname();
@@ -281,6 +285,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 >
                   <Keyboard size={16} />
                 </button>
+                {isConfigured && (
+                  <button
+                    type="button"
+                    onClick={() => setIsAuthModalOpen(true)}
+                    className={`p-2 rounded-md border transition-all duration-200 ${
+                      user
+                        ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30'
+                        : 'bg-white dark:bg-black border-gray-200 dark:border-[#333] text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#111]'
+                    }`}
+                    aria-label={user ? 'Account' : 'Sign in'}
+                    title={user ? 'Account' : 'Sign in'}
+                  >
+                    <LogIn size={16} />
+                  </button>
+                )}
                 <ThemeToggle buttonRef={themeToggleRef} />
                 <GithubBtn />
                 <button
@@ -555,6 +574,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </motion.div>
         )}
       </AnimatePresence>
+
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   );
 }
