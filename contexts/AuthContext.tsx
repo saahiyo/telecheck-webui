@@ -1,9 +1,9 @@
 'use client';
 
-import React, { createContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useCallback, useEffect, useState, ReactNode } from 'react';
 import { 
   User,
-  onAuthStateChanged,
+  onIdTokenChanged,
   signOut as firebaseSignOut
 } from 'firebase/auth';
 import { getFirebaseAuth, isFirebaseConfigured } from '@/lib/firebase';
@@ -12,6 +12,7 @@ export interface AuthContextType {
   user: User | null;
   idToken: string | null;
   loading: boolean;
+  getIdToken: () => Promise<string | null>;
   signOut: () => Promise<void>;
   isConfigured: boolean;
 }
@@ -23,6 +24,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [idToken, setIdToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const isConfigured = isFirebaseConfigured();
+
+  const getIdToken = useCallback(async (): Promise<string | null> => {
+    const currentUser = getFirebaseAuth()?.currentUser;
+    if (!currentUser) return null;
+
+    try {
+      const token = await currentUser.getIdToken();
+      setIdToken(token);
+      return token;
+    } catch (error: any) {
+      console.error('Failed to refresh Firebase ID token:', error.message);
+      setIdToken(null);
+      return null;
+    }
+  }, []);
 
   useEffect(() => {
     // If Firebase isn't configured, skip auth setup
@@ -37,13 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onIdTokenChanged(auth, async (currentUser) => {
       setUser(currentUser);
 
       if (currentUser) {
         try {
-          // Get fresh ID token for API calls
-          const token = await currentUser.getIdToken(true);
+          const token = await currentUser.getIdToken();
           setIdToken(token);
         } catch (error: any) {
           console.error('Failed to get ID token:', error.message);
@@ -61,14 +76,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleSignOut = async () => {
     const auth = getFirebaseAuth();
-    if (auth) {
-      try {
-        await firebaseSignOut(auth);
-        setUser(null);
-        setIdToken(null);
-      } catch (error: any) {
-        console.error('Sign out failed:', error.message);
-      }
+    if (!auth) return;
+
+    try {
+      await firebaseSignOut(auth);
+      setUser(null);
+      setIdToken(null);
+    } catch (error: any) {
+      console.error('Sign out failed:', error.message);
+      throw error;
     }
   };
 
@@ -78,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         idToken,
         loading,
+        getIdToken,
         signOut: handleSignOut,
         isConfigured,
       }}

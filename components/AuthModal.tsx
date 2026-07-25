@@ -18,7 +18,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { user, idToken, signOut } = useAuth();
+  const { user, getIdToken, signOut } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,13 +41,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
       if (mode === 'login') {
         await signInWithEmailAndPassword(auth, email, password);
-        toast.success('Logged in successfully!');
-        onClose();
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
-        toast.success('Account created successfully!');
-        onClose();
       }
+
+      const token = await getIdToken();
+      if (!token) throw new Error('Signed in, but unable to create a session. Please try again.');
+
+      toast.success(mode === 'login' ? 'Logged in successfully!' : 'Account created successfully!');
+      onClose();
     } catch (err: any) {
       const errorMessage = err.message || 'Authentication failed';
       setError(errorMessage);

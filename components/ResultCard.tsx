@@ -41,7 +41,7 @@ function getAvatarColor(str: string): string {
 }
 
 const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContributor = false, onDelete }) => {
-  const { idToken } = useAuth();
+  const { getIdToken } = useAuth();
   const status = result.status?.toLowerCase();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
@@ -142,12 +142,18 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
 
   const handleToggleTag = async (tag: string) => {
     if (isUpdatingTags) return;
+    const authToken = await getIdToken();
+    if (!authToken) {
+      toast.error('Please sign in before updating tags.');
+      return;
+    }
+
     setIsUpdatingTags(true);
     const isSelected = localTags.includes(tag);
     const updatedTags = isSelected
       ? localTags.filter(t => t !== tag)
       : [...localTags, tag];
-    const success = await updateLinkTags(result.link, updatedTags, idToken);
+    const success = await updateLinkTags(result.link, updatedTags, authToken);
     setIsUpdatingTags(false);
     
     if (success) {

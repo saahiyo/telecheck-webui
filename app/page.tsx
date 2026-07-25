@@ -122,7 +122,7 @@ const triggerSuccessConfetti = () => {
 };
 
 function ValidatorContent() {
-  const { idToken } = useAuth();
+  const { getIdToken, isConfigured, loading } = useAuth();
   const searchParams = useSearchParams();
   const defaultMode = searchParams.get('mode') === 'single' ? 'single' : 'bulk';
 
@@ -356,9 +356,28 @@ function ValidatorContent() {
     }
 
     if (telegramLinks.length > 0) {
+      if (!isConfigured) {
+        toast.error('Authentication is not configured. Please contact the site administrator.');
+        setIsChecking(false);
+        return;
+      }
+
+      if (loading) {
+        toast.info('Checking your sign-in session. Please try again in a moment.');
+        setIsChecking(false);
+        return;
+      }
+
+      const authToken = await getIdToken();
+      if (!authToken) {
+        toast.error('Please sign in before validating Telegram links.');
+        setIsChecking(false);
+        return;
+      }
+
       try {
         const batchResults = await checkBulkLinks(telegramLinks, {
-          authToken: idToken,
+          authToken,
           onAsyncJob: (jobId) => {
             setAsyncJob({
               status: 'queued',
@@ -402,6 +421,10 @@ function ValidatorContent() {
         }
       } catch (e) {
         console.error('Batch failed:', e);
+        toast.error(e instanceof Error ? e.message : 'Failed to validate links. Please try again.');
+        setAsyncJob(prev => ({ ...prev, status: 'failed' }));
+        setIsChecking(false);
+        return;
       }
       
       setHasChecked(true);

@@ -102,7 +102,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      const key = event.key.toLowerCase();
+      const key = event.key?.toLowerCase();
 
       if (event.key === 'Escape') {
         setIsMobileNavOpen(false);

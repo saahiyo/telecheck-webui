@@ -114,7 +114,7 @@ function sortSavedLinks(sourceLinks: StoredLink[], savedSort: SavedSort, randomS
 }
 
 const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProps>(function SavedLinksPage({ searchInputRef }, ref) {
-  const { idToken } = useAuth();
+  const { getIdToken } = useAuth();
   const PAGE_SIZE = 100;
   
   // Synchronous cache read for instant mount
@@ -315,6 +315,12 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
   const handleValidate = async () => {
     if (total === 0) return;
+    const authToken = await getIdToken();
+    if (!authToken) {
+      toast.error('Please sign in before validating saved links.');
+      return;
+    }
+
     trackLinksValidate(total);
     setIsValidating(true);
     setValidationProgress({ current: 0, total });
@@ -331,7 +337,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         const result = await validateSavedLinks({ 
           limit: String(BATCH_SIZE_VAL),
           offset: currentOffset,
-          authToken: idToken
+          authToken
         });
 
         processed += result.processed;
@@ -357,6 +363,12 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
   const handleValidatePage = async () => {
     if (links.length === 0) return;
+    const authToken = await getIdToken();
+    if (!authToken) {
+      toast.error('Please sign in before validating saved links.');
+      return;
+    }
+
     setIsValidating(true);
     const totalToProcess = links.length;
     setValidationProgress({ current: 0, total: totalToProcess });
@@ -375,7 +387,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         const result = await validateSavedLinks({
           limit: String(limit),
           offset: currentOffset,
-          authToken: idToken
+          authToken
         });
 
         processed += result.processed;

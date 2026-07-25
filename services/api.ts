@@ -252,7 +252,11 @@ export const checkBulkLinks = async (
     }
 
     if (response.status !== 200 && response.status !== 202) {
-      throw new Error('Failed to validate links');
+      const data = await response.json().catch(() => null);
+      if (response.status === 401) {
+        throw new Error(data?.error || 'Please sign in before validating links.');
+      }
+      throw new Error(data?.error || `Failed to validate links (HTTP ${response.status})`);
     }
 
     const data = await response.json();
