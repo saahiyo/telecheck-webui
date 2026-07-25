@@ -1,11 +1,7 @@
 "use client";
 
-import { track } from "@databuddy/sdk";
-
 export const trackEvent = (eventName: string, properties?: Record<string, any>) => {
-  if (typeof window !== 'undefined') {
-    track(eventName, properties);
-  }
+  // analytics removed
 };
 
 // Validation events

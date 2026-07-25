@@ -3,7 +3,6 @@ import Script from 'next/script';
 import { Analytics } from '@vercel/analytics/react';
 import './globals.css';
 import AppLayout from '@/components/AppLayout';
-import DatabuddyAnalytics from '@/components/DatabuddyAnalytics';
 import SWRegistration from '@/components/SWRegistration';
 import { AuthProvider } from '@/contexts/AuthContext';
 
@@ -146,7 +145,6 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         <SWRegistration />
-        <DatabuddyAnalytics />
         <AuthProvider>
           <AppLayout>
             {children}

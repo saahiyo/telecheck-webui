@@ -10,12 +10,12 @@
     "start": "next start"
   },
   "dependencies": {
-    "@databuddy/sdk": "^2.4.11",
     "@tanstack/react-virtual": "^3.13.24",
     "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",
     "dotenv": "^17.4.2",
     "firebase": "^12.16.0",
+    "firebase-admin": "^14.2.0",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.555.0",
     "motion": "^12.38.0",

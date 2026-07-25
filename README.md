@@ -15,7 +15,6 @@ TeleCheck Pro is the Next.js web UI for the TeleCheck API. It validates Telegram
 - Sonner
 - TanStack React Virtual
 - Vercel Analytics
-- Optional Databuddy analytics
 
 ## Getting Started
 
@@ -42,11 +41,10 @@ npm.cmd run dev
 
 ## Environment Variables
 
-Copy `.env.example` to `.env.local` when you want to override the API origin or enable Databuddy:
+Copy `.env.example` to `.env.local` when you want to override the API origin:
 
 ```env
 NEXT_PUBLIC_TELECHECK_API_URL=https://telecheck.vercel.app
-NEXT_PUBLIC_DATABUDDY_CLIENT_ID=
 ```
 
 If `NEXT_PUBLIC_TELECHECK_API_URL` is empty, the frontend falls back to `https://telecheck.vercel.app`.
