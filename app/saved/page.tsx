@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, Suspense } from 'react';
 import SavedLinksPage, { SavedLinksPageHandle } from '@/components/SavedLinksPage';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 
 export default function Saved() {
@@ -28,21 +29,23 @@ export default function Saved() {
   }, []);
 
   return (
-    <div className="animate-fade-in">
-      <Suspense fallback={
-        <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
-          <div className="mb-6 text-black dark:text-white">
-            <DotmSquare5 size={40} />
+    <ProtectedRoute>
+      <div className="animate-fade-in">
+        <Suspense fallback={
+          <div className="flex flex-col items-center justify-center p-12 min-h-[400px]">
+            <div className="mb-6 text-black dark:text-white">
+              <DotmSquare5 size={40} />
+            </div>
+            <p className="mt-4 text-sm text-gray-500">Loading saved links...</p>
           </div>
-          <p className="mt-4 text-sm text-gray-500">Loading saved links...</p>
-        </div>
-      }>
-        <SavedLinksPage
-          ref={savedLinksPageRef}
-          searchInputRef={savedSearchInputRef}
-        />
-      </Suspense>
-    </div>
+        }>
+          <SavedLinksPage
+            ref={savedLinksPageRef}
+            searchInputRef={savedSearchInputRef}
+          />
+        </Suspense>
+      </div>
+    </ProtectedRoute>
   );
 }
 

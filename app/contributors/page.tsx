@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import ContributorsPage from '@/components/ContributorsPage';
+import ProtectedRoute from '@/components/ProtectedRoute';
 
 export default function Contributors() {
   useEffect(() => {
@@ -19,8 +20,10 @@ export default function Contributors() {
   }, []);
 
   return (
-    <div className="animate-fade-in">
-      <ContributorsPage />
-    </div>
+    <ProtectedRoute>
+      <div className="animate-fade-in">
+        <ContributorsPage />
+      </div>
+    </ProtectedRoute>
   );
 }
