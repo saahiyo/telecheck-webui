@@ -175,11 +175,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             exit={{ opacity: 0, scale: 0.97, y: 12 }}
             transition={springTransition}
             className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+            onClick={handleClose}
             role="dialog"
             aria-modal="true"
             aria-labelledby="auth-modal-title"
           >
-            <div className="w-full max-w-sm bg-white dark:bg-black rounded-2xl border border-gray-200 dark:border-[#333] shadow-2xl overflow-hidden">
+            <div
+              className="w-full max-w-sm bg-white dark:bg-black rounded-2xl border border-gray-200 dark:border-[#333] shadow-2xl overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
 
               {/* Header */}
               <div className="flex items-center justify-between border-b border-gray-100 dark:border-[#222] px-5 py-4">
