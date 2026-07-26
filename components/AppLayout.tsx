@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'motion/react';
-import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Github, Heart, LogIn } from 'lucide-react';
+import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Github, Heart, LogIn, UserCircle } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import GithubBtn from './GithubBtn';
 import AuthModal from './AuthModal';
