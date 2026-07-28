@@ -318,6 +318,12 @@ export default function ProfilePage() {
 
   const rank = profile?.rank ?? null;
   const linksAdded = profile?.links_added ?? 0;
+
+  // For new users the API may not yet have a contributor record — fall back to
+  // Firebase metadata so the tiles never show "—" for a freshly signed-in user.
+  const memberSince = profile?.first_seen ?? user.metadata?.creationTime ?? null;
+  const lastActive = profile?.last_seen ?? user.metadata?.lastSignInTime ?? null;
+
   const rankPercentile =
     rank && totalContributors && totalContributors > 0
       ? Math.round(((totalContributors - rank) / totalContributors) * 100)
@@ -440,14 +446,14 @@ export default function ProfilePage() {
         <StatTile
           icon={Calendar}
           label="Member Since"
-          value={formatDate(profile?.first_seen)}
+          value={formatDate(memberSince)}
           loading={profileLoading}
           accent="text-blue-500"
         />
         <StatTile
           icon={Clock}
           label="Last Active"
-          value={formatRelative(profile?.last_seen)}
+          value={formatRelative(lastActive)}
           loading={profileLoading}
           accent="text-purple-500"
         />

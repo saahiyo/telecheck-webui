@@ -154,8 +154,17 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
   }, [contributors]);
 
   const rankProgressInfo = useMemo(() => {
-    if (!profile || !profile.username || !profile.rank) return null;
-    
+    // Not loaded yet — caller will show a loading state
+    if (!profile) return null;
+
+    // Logged in but no contributor record yet (brand-new account)
+    if (!profile.username || !profile.rank) {
+      return {
+        status: 'unranked',
+        text: 'Add valid links to earn a rank on the leaderboard!'
+      };
+    }
+
     if (profile.rank === 1) {
       return {
         status: 'lead',
@@ -165,13 +174,18 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
 
     const nextRank = profile.rank - 1;
     const nextContributor = contributors.find(c => c.rank === nextRank);
-    
-    if (!nextContributor) return null;
+
+    if (!nextContributor) {
+      return {
+        status: 'climbing',
+        text: `You are ranked #${profile.rank}. Keep adding valid links to climb!`
+      };
+    }
 
     const diff = (nextContributor.links_added || 0) - (profile.links_added || 0) + 1;
     return {
       status: 'climbing',
-      text: `Add ${diff.toLocaleString()} more links to overtake ${nextContributor.username} (#${nextContributor.rank})!`,
+      text: `Add ${diff.toLocaleString()} more link${diff === 1 ? '' : 's'} to overtake ${nextContributor.username} (#${nextContributor.rank})!`,
       targetUser: nextContributor.username,
       linksNeeded: diff
     };
@@ -351,8 +365,15 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Rank Progress</p>
-              <p className="text-[10px] sm:text-xs font-semibold text-gray-700 dark:text-gray-300 mt-1 leading-snug" title={rankProgressInfo ? rankProgressInfo.text : "No ranking details available"}>
-                {rankProgressInfo ? rankProgressInfo.text : "Log in to check rank progress."}
+              <p className="text-[10px] sm:text-xs font-semibold text-gray-700 dark:text-gray-300 mt-1 leading-snug" title={rankProgressInfo ? rankProgressInfo.text : undefined}>
+                {rankProgressInfo
+                  ? rankProgressInfo.text
+                  : user
+                    ? isLoading
+                      ? 'Loading rank data…'
+                      : 'Add valid links to earn a rank!'
+                    : 'Log in to check rank progress.'
+                }
               </p>
             </div>
           </div>
