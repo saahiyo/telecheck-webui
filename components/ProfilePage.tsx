@@ -224,7 +224,7 @@ function SignInPrompt() {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
-  const { user, signOut, loading: authLoading } = useAuth();
+  const { user, getIdToken, signOut, loading: authLoading } = useAuth();
   const router = useRouter();
 
   // contributor API data
@@ -247,10 +247,12 @@ export default function ProfilePage() {
 
   // load contributor profile + total count
   const loadProfile = useCallback(async () => {
+    if (!user) return;
     setProfileLoading(true);
     try {
+      const authToken = await getIdToken();
       const [prof, contribs] = await Promise.all([
-        fetchMyProfile(),
+        fetchMyProfile({ authToken, firebaseUid: user.uid }),
         fetchContributors({ limit: 1, offset: 0 }),
       ]);
       setProfile(prof);
@@ -260,7 +262,7 @@ export default function ProfilePage() {
     } finally {
       setProfileLoading(false);
     }
-  }, []);
+  }, [getIdToken, user]);
 
   // load last IndexedDB results
   useEffect(() => {
@@ -507,8 +509,8 @@ export default function ProfilePage() {
         {/* contributor identity */}
         <SectionCard title="Contributor Identity" icon={Key}>
           <div className="flex flex-col gap-3">
-            {identity?.username ? (
-              <CopyField label="Username" value={identity.username} />
+            {profile?.username ? (
+              <CopyField label="Username" value={profile.username} />
             ) : (
               <div className="flex flex-col gap-1.5">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Username</span>
@@ -525,10 +527,10 @@ export default function ProfilePage() {
                 mono
               />
             )}
-            {identity?.recoveryKey && (
+            {profile?.recovery_key && (
               <CopyField
                 label="Recovery Key"
-                value={identity.recoveryKey}
+                value={profile.recovery_key}
                 secret
                 mono
               />

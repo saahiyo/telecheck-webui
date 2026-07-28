@@ -114,7 +114,7 @@ function sortSavedLinks(sourceLinks: StoredLink[], savedSort: SavedSort, randomS
 }
 
 const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProps>(function SavedLinksPage({ searchInputRef }, ref) {
-  const { getIdToken } = useAuth();
+  const { user, getIdToken } = useAuth();
   const PAGE_SIZE = 100;
   
   // Synchronous cache read for instant mount
@@ -140,7 +140,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     let active = true;
     async function loadProfile() {
       try {
-        const p = await fetchMyProfile();
+        const authToken = await getIdToken();
+        const p = await fetchMyProfile({ authToken, firebaseUid: user?.uid });
         if (active) setProfile(p);
       } catch (err) {
         console.error('Failed to load profile for delete check:', err);
@@ -148,7 +149,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     }
     loadProfile();
     return () => { active = false; };
-  }, []);
+  }, [getIdToken, user?.uid]);
 
   useEffect(() => {
     try {

@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import { Contributor, MyProfileResponse, ContributorsResponse, StoredLink } from '../types';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ContributorsPageProps {}
 
@@ -26,6 +27,7 @@ function formatShortDate(dateValue?: string) {
 }
 
 const ContributorsPage: React.FC<ContributorsPageProps> = () => {
+  const { user, getIdToken } = useAuth();
   const initialContribCache = getCached<ContributorsResponse>(`contributors:${PAGE_SIZE}:0`);
   const initialProfileCache = getCached<MyProfileResponse>(getMyProfileCacheKey());
   const router = useRouter();
@@ -179,10 +181,11 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
     if (!hasDataRef.current) setIsLoading(true);
     try {
       const offset = (currentPage - 1) * PAGE_SIZE;
+      const authToken = await getIdToken();
 
       const [contribData, profileData] = await Promise.all([
         fetchContributors({ limit: PAGE_SIZE, offset }),
-        fetchMyProfile()
+        fetchMyProfile({ authToken, firebaseUid: user?.uid })
       ]);
 
       setContributors(contribData.contributors || []);
@@ -195,7 +198,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [getIdToken, user?.uid]);
 
   useEffect(() => {
     loadData(page);

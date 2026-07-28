@@ -8,6 +8,7 @@ import {
   signOut as firebaseSignOut
 } from 'firebase/auth';
 import { getFirebaseAuth, getGoogleProvider, isFirebaseConfigured } from '@/lib/firebase';
+import { clearCache, fetchMyProfile } from '@/services/api';
 
 export interface AuthContextType {
   user: User | null;
@@ -62,6 +63,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const token = await currentUser.getIdToken();
           setIdToken(token);
+          // Claim the legacy browser/device contributor on the first sign-in.
+          // The API verifies this token and will never let another Firebase UID
+          // take over an already-linked contributor.
+          clearCache('profile:');
+          await fetchMyProfile({ authToken: token, firebaseUid: currentUser.uid });
         } catch (error: any) {
           console.error('Failed to get ID token:', error.message);
           setIdToken(null);

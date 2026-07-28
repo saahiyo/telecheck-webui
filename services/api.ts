@@ -56,8 +56,10 @@ function setCache(key: string, data: any) {
   }
 }
 
-export function getMyProfileCacheKey() {
-  return `profile:${getContributorIdentity().deviceId}`;
+export function getMyProfileCacheKey(firebaseUid?: string | null) {
+  return firebaseUid
+    ? `profile:firebase:${firebaseUid}`
+    : `profile:device:${getContributorIdentity().deviceId}`;
 }
 
 export function clearCache(prefix?: string) {
@@ -139,7 +141,7 @@ export const fetchStats = async (): Promise<StatsData> => {
 // --------------------------------------------
 // SINGLE LINK CHECK
 // --------------------------------------------
-export const checkSingleLink = async (link: string): Promise<LinkResult> => {
+export const checkSingleLink = async (link: string, authToken?: string | null): Promise<LinkResult> => {
   try {
     const cleanLink = link.trim();
     const params = appendContributorIdentity(
@@ -148,7 +150,7 @@ export const checkSingleLink = async (link: string): Promise<LinkResult> => {
 
     const response = await fetch(
       `${BASE_URL}/?${params.toString()}`,
-      { headers: getContributorHeaders() }
+      { headers: getContributorHeaders(undefined, authToken) }
     );
 
     extractRateLimitInfo(response);
@@ -531,19 +533,28 @@ export const fetchContributors = async ({
 // --------------------------------------------
 // MY PROFILE
 // --------------------------------------------
-export const fetchMyProfile = async (): Promise<MyProfileResponse> => {
+export const fetchMyProfile = async ({
+  authToken,
+  firebaseUid,
+}: {
+  authToken?: string | null;
+  firebaseUid?: string | null;
+} = {}): Promise<MyProfileResponse> => {
   const profileParams = appendContributorIdentity(new URLSearchParams());
-  const cacheKey = getMyProfileCacheKey();
+  const cacheKey = getMyProfileCacheKey(firebaseUid);
   const cached = getCached<MyProfileResponse>(cacheKey);
   if (cached) return cached;
 
   try {
     const response = await fetch(`${BASE_URL}/contributors/me?${profileParams.toString()}`, {
-      headers: getContributorHeaders()
+      headers: getContributorHeaders(undefined, authToken)
     });
     if (!response.ok) throw new Error('Failed to fetch my profile');
 
-    const data = rememberContributorProfile(await response.json());
+    const profile = await response.json() as MyProfileResponse;
+    // Browser storage represents only the pre-login, device-based identity.
+    // Never let it overwrite the profile selected by a verified Firebase UID.
+    const data = firebaseUid ? profile : rememberContributorProfile(profile);
     setCache(cacheKey, data);
     return data;
   } catch (error) {

@@ -478,7 +478,27 @@ function ValidatorContent() {
       setResults([result]);
       finalStatus = 'mega';
     } else {
-      const data = await checkSingleLink(singleInput);
+      if (!isConfigured) {
+        toast.error('Authentication is not configured. Please contact the site administrator.');
+        setIsChecking(false);
+        return;
+      }
+
+      if (loading) {
+        toast.info('Checking your sign-in session. Please try again in a moment.');
+        setIsChecking(false);
+        return;
+      }
+
+      const authToken = await getIdToken();
+      if (!authToken) {
+        toast.error('Please sign in before validating Telegram links.');
+        window.dispatchEvent(new Event('app-open-auth-modal'));
+        setIsChecking(false);
+        return;
+      }
+
+      const data = await checkSingleLink(singleInput, authToken);
       setResults([data]);
       finalStatus = data.status;
     }
