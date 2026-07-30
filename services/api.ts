@@ -203,9 +203,14 @@ export type JobStatus = {
   error?: string;
 };
 
-export const pollJobStatus = async (jobId: string): Promise<JobStatus | null> => {
+export const pollJobStatus = async (
+  jobId: string,
+  authToken?: string | null
+): Promise<JobStatus | null> => {
   try {
-    const response = await fetch(`${BASE_URL}/jobs/${jobId}`);
+    const response = await fetch(`${BASE_URL}/jobs/${jobId}`, {
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+    });
     if (!response.ok) return null;
     return await response.json();
   } catch {
@@ -273,7 +278,7 @@ export const checkBulkLinks = async (
 
       while (true) {
         await new Promise(r => setTimeout(r, pollDelay));
-        const job = await pollJobStatus(data.jobId);
+        const job = await pollJobStatus(data.jobId, options?.authToken);
         if (!job) {
           pollDelay = Math.min(pollDelay + ASYNC_JOB_POLL_BACKOFF_MS, ASYNC_JOB_MAX_POLL_MS);
           continue;
