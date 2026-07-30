@@ -103,10 +103,6 @@ export function appendContributorIdentity(params: URLSearchParams) {
   params.set('contributor_id', identity.deviceId);
   params.set('device_id', identity.deviceId);
 
-  if (identity.recoveryKey) {
-    params.set('recovery_key', identity.recoveryKey);
-  }
-
   if (identity.username) {
     params.set('contributor_username', identity.username);
   }

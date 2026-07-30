@@ -161,9 +161,6 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, []);
 
   const isTopContributor = useMemo(() => {
-    if (typeof window !== 'undefined' && localStorage.getItem('telecheck_force_admin') === 'true') {
-      return true;
-    }
     return profile?.rank === 1;
   }, [profile]);
 

@@ -18,6 +18,8 @@ const CACHE_TTL = 1000 * 60 * 2; // 2 minutes
 const ASYNC_JOB_INITIAL_POLL_MS = 500;
 const ASYNC_JOB_MAX_POLL_MS = 1500;
 const ASYNC_JOB_POLL_BACKOFF_MS = 250;
+const ASYNC_JOB_MAX_POLL_FAILURES = 5;
+const ASYNC_JOB_TIMEOUT_MS = 10 * 60 * 1000;
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -211,9 +213,20 @@ export const pollJobStatus = async (
     const response = await fetch(`${BASE_URL}/jobs/${jobId}`, {
       headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      if ([401, 403, 404].includes(response.status)) {
+        const data = await response.json().catch(() => null);
+        throw new Error(
+          `Job polling failed (HTTP ${response.status}): ${data?.error || 'Unable to retrieve this job.'}`
+        );
+      }
+      return null;
+    }
     return await response.json();
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Job polling failed')) {
+      throw error;
+    }
     return null;
   }
 };
@@ -275,14 +288,26 @@ export const checkBulkLinks = async (
       const results: LinkResult[] = [];
       let lastProcessed = 0;
       let pollDelay = ASYNC_JOB_INITIAL_POLL_MS;
+      let failedPolls = 0;
+      const pollingDeadline = Date.now() + ASYNC_JOB_TIMEOUT_MS;
 
       while (true) {
+        if (Date.now() >= pollingDeadline) {
+          throw new Error('This job took too long to finish. Please try again.');
+        }
+
         await new Promise(r => setTimeout(r, pollDelay));
         const job = await pollJobStatus(data.jobId, options?.authToken);
         if (!job) {
+          failedPolls += 1;
+          if (failedPolls >= ASYNC_JOB_MAX_POLL_FAILURES) {
+            throw new Error('Unable to retrieve job status. Please try again.');
+          }
           pollDelay = Math.min(pollDelay + ASYNC_JOB_POLL_BACKOFF_MS, ASYNC_JOB_MAX_POLL_MS);
           continue;
         }
+
+        failedPolls = 0;
 
         options?.onJobStatus?.(job.status, job);
         options?.onProgress?.(job.processed_links, job.total_links);

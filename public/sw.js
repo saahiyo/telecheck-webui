@@ -38,8 +38,10 @@ self.addEventListener('fetch', (event) => {
 
   // Bypass Next.js internal data requests (RSC payloads), API routes, and build assets
   if (
+    url.origin !== self.location.origin ||
     url.pathname.startsWith('/_next/') ||
     url.pathname.startsWith('/api/') ||
+    event.request.headers.has('authorization') ||
     event.request.headers.get('rsc') === '1' ||
     event.request.method !== 'GET'
   ) {
