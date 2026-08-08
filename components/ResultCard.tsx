@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { LinkResult } from '../types';
 import { X, ExternalLink, Copy, Eye, Users, Tag as TagIcon, Loader2, Check, Zap, Trash2 } from 'lucide-react';
@@ -14,6 +14,7 @@ interface ResultCardProps {
   result: LinkResult;
   isTopContributor?: boolean;
   onDelete?: (id: number | undefined, url: string) => void;
+  onUndoDelete?: (id: number | undefined, url: string) => void;
 }
 
 /** Extract a display initial from a title or link */
@@ -40,12 +41,16 @@ function getAvatarColor(str: string): string {
   return `hsl(${hue}, 45%, 65%)`;
 }
 
-const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContributor = false, onDelete }) => {
+const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContributor = false, onDelete, onUndoDelete }) => {
   const { getIdToken } = useAuth();
   const status = result.status?.toLowerCase();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
+  const confirmDeleteBtnRef = useRef<HTMLButtonElement | null>(null);
+  const cancelDeleteBtnRef = useRef<HTMLButtonElement | null>(null);
+
   const details = result.details || {};
   const hasImage = details.image && !imgError;
   const isValid = status === 'valid';
@@ -56,20 +61,70 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
   const [isUpdatingTags, setIsUpdatingTags] = useState(false);
   
   const handleDeleteClick = () => {
-    toast("Delete this saved link?", {
-      description: `This will remove "${details.title || result.link}" from your view.`,
-      action: {
-        label: "Delete",
-        onClick: () => {
-          if (onDelete) {
-            onDelete(details.savedId, result.link);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = useCallback(() => {
+    setIsDeleteModalOpen(false);
+    if (onDelete) {
+      onDelete(details.savedId, result.link);
+      toast.success('Link deleted from view', {
+        action: onUndoDelete ? {
+          label: 'Undo',
+          onClick: () => {
+            onUndoDelete(details.savedId, result.link);
+            toast.success('Link restored');
+          }
+        } : undefined
+      });
+    }
+  }, [details.savedId, onDelete, onUndoDelete, result.link]);
+
+  const contributorLinksAdded = Number(details.contributorLinksAdded);
+
+  // Keyboard navigation & accessibility for Delete Modal
+  useEffect(() => {
+    if (!isDeleteModalOpen) return;
+
+    // Auto-focus Delete button when modal opens for quick Enter confirmation
+    const timer = setTimeout(() => {
+      confirmDeleteBtnRef.current?.focus();
+    }, 50);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsDeleteModalOpen(false);
+      } else if (event.key === 'Enter') {
+        if (document.activeElement !== cancelDeleteBtnRef.current) {
+          event.preventDefault();
+          handleConfirmDelete();
+        }
+      } else if (event.key === 'Tab') {
+        const focusable = [cancelDeleteBtnRef.current, confirmDeleteBtnRef.current].filter(Boolean);
+        if (focusable.length < 2) return;
+        const index = focusable.indexOf(document.activeElement as HTMLButtonElement);
+
+        if (event.shiftKey) {
+          if (index <= 0) {
+            event.preventDefault();
+            focusable[focusable.length - 1]?.focus();
+          }
+        } else {
+          if (index === -1 || index >= focusable.length - 1) {
+            event.preventDefault();
+            focusable[0]?.focus();
           }
         }
       }
-    });
-  };
+    };
 
-  const contributorLinksAdded = Number(details.contributorLinksAdded);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isDeleteModalOpen, handleConfirmDelete]);
 
   // Sync tags if result changes from parent
   useEffect(() => {
@@ -112,7 +167,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
   const avatarBg = getAvatarColor(result.link);
 
   useEffect(() => {
-    if (!isPreviewOpen) return;
+    if (!isPreviewOpen && !isTagModalOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -298,7 +353,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
               <ExternalLink size={13} />
               Open Link
             </a>
-            {isTopContributor && (
+            {onDelete && (
               <button
                 onClick={() => {
                   setIsPreviewOpen(false);
@@ -367,6 +422,65 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
     </div>
   ) : null;
 
+  const deleteModal = isDeleteModalOpen ? (
+    <div
+      className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={() => setIsDeleteModalOpen(false)}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-modal-title"
+      aria-describedby="delete-modal-desc"
+    >
+      <div
+        className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black shadow-2xl p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3 mb-4 text-red-600 dark:text-red-500">
+          <div className="w-10 h-10 rounded-full bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/30 flex items-center justify-center shrink-0">
+            <Trash2 size={20} />
+          </div>
+          <div>
+            <h3 id="delete-modal-title" className="text-base font-semibold text-black dark:text-white">
+              Delete Saved Link
+            </h3>
+            <p id="delete-modal-desc" className="text-xs text-gray-500 dark:text-gray-400">
+              This action will remove the link from your view. Press <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-gray-100 dark:bg-[#222] border border-gray-200 dark:border-[#333] rounded text-gray-700 dark:text-gray-300">Enter ↵</kbd> to confirm or <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-gray-100 dark:bg-[#222] border border-gray-200 dark:border-[#333] rounded text-gray-700 dark:text-gray-300">Esc</kbd> to cancel.
+            </p>
+          </div>
+        </div>
+
+        <div className="my-4 p-3 rounded-lg bg-gray-50 dark:bg-[#111] border border-gray-100 dark:border-[#222]">
+          <p className="text-xs font-semibold text-black dark:text-white truncate">
+            {details.title || result.link}
+          </p>
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+            {result.link}
+          </p>
+        </div>
+
+        <div className="flex items-center justify-end gap-2.5 mt-6">
+          <button
+            ref={cancelDeleteBtnRef}
+            type="button"
+            onClick={() => setIsDeleteModalOpen(false)}
+            className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-200 dark:border-[#333] bg-white dark:bg-black text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#111] focus:outline-none focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            ref={confirmDeleteBtnRef}
+            type="button"
+            onClick={handleConfirmDelete}
+            className="px-4 py-2 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black transition-colors flex items-center gap-1.5"
+          >
+            <Trash2 size={13} />
+            Delete Link
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="group relative bg-white dark:bg-black rounded-lg border border-gray-200 dark:border-[#333] p-2.5 transition-all hover:bg-gray-50 dark:hover:bg-[#111]">
       <div className="flex items-start justify-between gap-3">
@@ -397,7 +511,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
               href={result.link.startsWith('http') ? result.link : `https://${result.link}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="block text-sm font-medium text-black dark:text-white truncate hover:underline decoration-gray-400 underline-offset-2"
+              className="block text-sm font-medium text-black dark:text-white truncate hover:underline decoration-gray-400 underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white rounded"
               title={details.title || result.link}
             >
               {details.title || result.link}
@@ -423,13 +537,13 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
           </div>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 focus-within:opacity-100 transition-opacity">
           <button
             onClick={() => {
               setIsPreviewOpen(true);
               trackLinkPreview(result.link);
             }}
-            className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
+            className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white"
             title="View Details"
             aria-label={`View details for ${details.title || result.link}`}
           >
@@ -440,7 +554,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
               setIsTagModalOpen(true);
               trackTagModalOpen(result.link);
             }}
-            className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
+            className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white"
             title="Edit Tags"
             aria-label={`Edit tags for ${details.title || result.link}`}
           >
@@ -448,16 +562,16 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
           </button>
           <button
             onClick={() => void copyToClipboard()}
-            className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors"
+            className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white"
             title="Copy Link"
             aria-label={`Copy link for ${details.title || result.link}`}
           >
             <Copy size={14} aria-hidden="true" />
           </button>
-          {isTopContributor && (
+          {onDelete && (
             <button
               onClick={handleDeleteClick}
-              className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors"
+              className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
               title="Delete Saved Link"
               aria-label={`Delete saved link for ${details.title || result.link}`}
             >
@@ -469,6 +583,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
 
       {isPreviewOpen && previewModal ? createPortal(previewModal, document.body) : null}
       {isTagModalOpen && tagModal ? createPortal(tagModal, document.body) : null}
+      {isDeleteModalOpen && deleteModal ? createPortal(deleteModal, document.body) : null}
     </div>
   );
 });

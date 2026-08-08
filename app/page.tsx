@@ -133,6 +133,10 @@ function ValidatorContent() {
   const [checkingProgress, setCheckingProgress] = useState({ current: 0, total: 0 });
   const [refreshStatsTrigger, setRefreshStatsTrigger] = useState(0);
   const [results, setResults] = useState<LinkResult[]>([]);
+
+  const handleDeleteHomeResult = useCallback((id: number | undefined, targetUrl: string) => {
+    setResults(prev => prev.filter(r => r.link !== targetUrl));
+  }, []);
   const [hasChecked, setHasChecked] = useState(false);
   const [copyMenuOpen, setCopyMenuOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -1196,7 +1200,7 @@ function ValidatorContent() {
                        animate="show"
                        exit="exit"
                      >
-                       <ResultCard result={result} />
+                       <ResultCard result={result} onDelete={handleDeleteHomeResult} />
                      </motion.div>
                    ))}
                  </AnimatePresence>

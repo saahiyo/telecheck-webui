@@ -132,9 +132,12 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [savedFilter, setSavedFilter] = useState<SavedFilter>('all');
   const [savedSort, setSavedSort] = useState<SavedSort>('recently-updated');
-
   const [profile, setProfile] = useState<MyProfileResponse | null>(null);
-  const [deletedLinkIds, setDeletedLinkIds] = useState<number[]>([]);
+  const [deletedLinkKeys, setDeletedLinkKeys] = useState<Set<string>>(() => new Set());
+  const PREDEFINED_TAGS = DEFAULT_TAGS;
+  const [availableTags, setAvailableTags] = useState<string[]>(PREDEFINED_TAGS);
+  const [selectedTag, setSelectedTag] = useState<string>('All');
+  const [randomSeed, setRandomSeed] = useState(() => Date.now());
 
   useEffect(() => {
     let active = true;
@@ -155,7 +158,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     try {
       const stored = localStorage.getItem('telecheck_deleted_links');
       if (stored) {
-        setDeletedLinkIds(JSON.parse(stored));
+        const parsed: (number | string)[] = JSON.parse(stored);
+        setDeletedLinkKeys(new Set(parsed.map(item => String(item))));
       }
     } catch {}
   }, []);
@@ -165,23 +169,38 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, [profile]);
 
   const handleDeleteLink = useCallback((id: number | undefined, url: string) => {
-    const targetId = id || 0;
-    setDeletedLinkIds((prev) => {
-      const next = [...prev, targetId];
+    setDeletedLinkKeys((prev) => {
+      const next = new Set(prev);
+      if (id) next.add(String(id));
+      if (url) next.add(`url:${url}`);
       try {
-        localStorage.setItem('telecheck_deleted_links', JSON.stringify(next));
+        localStorage.setItem('telecheck_deleted_links', JSON.stringify(Array.from(next)));
       } catch {}
       return next;
     });
   }, []);
 
+  const handleUndoDeleteLink = useCallback((id: number | undefined, url: string) => {
+    setDeletedLinkKeys((prev) => {
+      const next = new Set(prev);
+      if (id) next.delete(String(id));
+      if (url) next.delete(`url:${url}`);
+      try {
+        localStorage.setItem('telecheck_deleted_links', JSON.stringify(Array.from(next)));
+      } catch {}
+      return next;
+    });
+  }, []);
+
+  const isLinkDeleted = useCallback((link: StoredLink) => {
+    if (link.id && deletedLinkKeys.has(String(link.id))) return true;
+    if (link.url && deletedLinkKeys.has(`url:${link.url}`)) return true;
+    return false;
+  }, [deletedLinkKeys]);
+
   const displayTotal = useMemo(() => {
-    return Math.max(0, total - deletedLinkIds.length);
-  }, [total, deletedLinkIds]);
-  const PREDEFINED_TAGS = DEFAULT_TAGS;
-  const [availableTags, setAvailableTags] = useState<string[]>(PREDEFINED_TAGS);
-  const [selectedTag, setSelectedTag] = useState<string>('All');
-  const [randomSeed, setRandomSeed] = useState(() => Date.now());
+    return Math.max(0, total - deletedLinkKeys.size);
+  }, [total, deletedLinkKeys]);
   const [showScrollJump, setShowScrollJump] = useState(false);
   const [scrollJumpTarget, setScrollJumpTarget] = useState<'top' | 'bottom'>('bottom');
   const [scrollJumpContext, setScrollJumpContext] = useState<'container' | 'window'>('window');
@@ -413,8 +432,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
   // Client-side: filter by metadata attributes and exclude locally deleted links
   const filteredLinks = useMemo(() => {
-    return filterByMetadata(links, savedFilter).filter(link => !deletedLinkIds.includes(link.id));
-  }, [links, savedFilter, deletedLinkIds]);
+    return filterByMetadata(links, savedFilter).filter(link => !isLinkDeleted(link));
+  }, [links, savedFilter, isLinkDeleted]);
   const sortedLinks = useMemo(() => sortSavedLinks(filteredLinks, savedSort, randomSeed), [filteredLinks, savedSort, randomSeed]);
 
   const handleCopyAllLinks = useCallback(async () => {
@@ -1088,6 +1107,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                               result={adapted.result} 
                               isTopContributor={isTopContributor}
                               onDelete={handleDeleteLink}
+                              onUndoDelete={handleUndoDeleteLink}
                             />
                           </motion.div>
                         );
