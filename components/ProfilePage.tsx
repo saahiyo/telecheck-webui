@@ -386,7 +386,8 @@ export default function ProfilePage() {
 
           {/* name + meta */}
           <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-bold text-black dark:text-white truncate">
                 {user.displayName || 'Anonymous'}
               </h2>
@@ -406,6 +407,18 @@ export default function ProfilePage() {
                   <ShieldCheck size={9} /> Verified
                 </span>
               )}
+              </div>
+              <button
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black text-xs font-medium text-gray-500 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 dark:hover:border-red-900/40 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 transition-colors shrink-0"
+              >
+                {signingOut
+                  ? <Loader2 size={13} className="animate-spin" />
+                  : <LogOut size={13} />
+                }
+                {signingOut ? 'Signing out…' : 'Sign Out'}
+              </button>
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
               <Mail size={13} />
@@ -663,24 +676,7 @@ export default function ProfilePage() {
             <ChevronRight size={15} className="text-gray-400 group-hover:text-black dark:group-hover:text-white transition-colors shrink-0" />
           </Link>
 
-          <button
-            onClick={handleSignOut}
-            disabled={signingOut}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-200 dark:hover:border-red-900/40 transition-colors group disabled:opacity-50 text-left"
-          >
-            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1a1a1a] flex items-center justify-center shrink-0 group-hover:bg-red-100 dark:group-hover:bg-red-950/40 transition-colors">
-              {signingOut
-                ? <Loader2 size={15} className="animate-spin text-red-500" />
-                : <LogOut size={15} className="text-gray-600 dark:text-gray-400 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
-              }
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-black dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                {signingOut ? 'Signing out…' : 'Sign Out'}
-              </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">End your current session</p>
-            </div>
-          </button>
+
         </div>
       </SectionCard>
 
