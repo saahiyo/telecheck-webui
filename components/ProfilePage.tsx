@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  User, Mail, Shield, ShieldCheck, LogOut, Copy, Check, Eye, EyeOff,
+  User, Mail, ShieldCheck, LogOut, Copy, Check, Eye, EyeOff,
   Hash, Activity, Calendar, Clock, Link2, CheckCircle2, XCircle,
   ExternalLink, RefreshCw, Trophy, Zap, Key, Loader2, ChevronRight,
   AlertCircle, Database,
@@ -630,55 +630,6 @@ export default function ProfilePage() {
           )}
         </SectionCard>
       </div>
-
-      {/* ── quick actions ── */}
-      <SectionCard title="Account Actions" icon={Shield}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <Link
-            href="/saved"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black hover:bg-gray-50 dark:hover:bg-[#111] transition-colors group"
-          >
-            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1a1a1a] flex items-center justify-center shrink-0 group-hover:bg-gray-200 dark:group-hover:bg-[#222] transition-colors">
-              <Database size={15} className="text-gray-600 dark:text-gray-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-black dark:text-white">Saved Links</p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">Browse your stored links</p>
-            </div>
-            <ChevronRight size={15} className="text-gray-400 group-hover:text-black dark:group-hover:text-white transition-colors shrink-0" />
-          </Link>
-
-          <Link
-            href="/contributors"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black hover:bg-gray-50 dark:hover:bg-[#111] transition-colors group"
-          >
-            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1a1a1a] flex items-center justify-center shrink-0 group-hover:bg-gray-200 dark:group-hover:bg-[#222] transition-colors">
-              <Trophy size={15} className="text-gray-600 dark:text-gray-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-black dark:text-white">Leaderboard</p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">See community contributors</p>
-            </div>
-            <ChevronRight size={15} className="text-gray-400 group-hover:text-black dark:group-hover:text-white transition-colors shrink-0" />
-          </Link>
-
-          <Link
-            href="/"
-            className="flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black hover:bg-gray-50 dark:hover:bg-[#111] transition-colors group"
-          >
-            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-[#1a1a1a] flex items-center justify-center shrink-0 group-hover:bg-gray-200 dark:group-hover:bg-[#222] transition-colors">
-              <Zap size={15} className="text-gray-600 dark:text-gray-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-black dark:text-white">Validator</p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400">Check Telegram links</p>
-            </div>
-            <ChevronRight size={15} className="text-gray-400 group-hover:text-black dark:group-hover:text-white transition-colors shrink-0" />
-          </Link>
-
-
-        </div>
-      </SectionCard>
 
     </motion.div>
   );

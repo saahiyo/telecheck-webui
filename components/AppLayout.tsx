@@ -488,8 +488,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-[#333] mt-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            {/* Left: Brand + version */}
+          {/* Mobile: stacked, Desktop: single row */}
+          <div className="hidden sm:flex items-center justify-between gap-3">
+            {/* Brand + version */}
             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <ShieldCheck size={14} className="text-gray-400 dark:text-gray-500" />
               <span className="font-medium text-gray-700 dark:text-gray-300">TeleCheck Pro</span>
@@ -497,48 +498,64 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 v{APP_VERSION}
               </span>
             </div>
-
-            {/* Center: API status + GitHub */}
+            {/* API status + GitHub */}
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1.5">
-                <span
-                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                    apiStatus === 'online'
-                      ? 'bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.6)]'
-                      : apiStatus === 'offline'
-                        ? 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.6)]'
-                        : 'bg-gray-400 animate-pulse'
-                  }`}
-                />
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${apiStatus === 'online' ? 'bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.6)]' : apiStatus === 'offline' ? 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.6)]' : 'bg-gray-400 animate-pulse'}`} />
                 <span className="text-gray-500 dark:text-gray-400 font-medium">
                   API {apiStatus === 'online' ? 'Online' : apiStatus === 'offline' ? 'Offline' : 'Checking...'}
                 </span>
               </div>
               <span className="text-gray-200 dark:text-[#333]">|</span>
-              <a
-                href="https://github.com/saahiyo/telecheck-webui"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors font-medium"
-              >
-                <Github size={13} />
-                <span>GitHub</span>
+              <a href="https://github.com/saahiyo/telecheck-webui" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors font-medium">
+                <Github size={13} /><span>GitHub</span>
               </a>
             </div>
-
-            {/* Right: Made with love + Legal */}
-            <div className="flex flex-col items-center sm:items-end gap-2">
+            {/* Made with + Legal */}
+            <div className="flex flex-col items-end gap-1.5">
               <div className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500">
                 <span>Made with</span>
                 <Heart size={10} className="text-red-400 fill-red-400" />
                 <span>by</span>
-                <a
-                  href="https://github.com/saahiyo"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-semibold text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors"
-                >
-                  saahiyo
+                <a href="https://github.com/saahiyo" target="_blank" rel="noopener noreferrer" className="font-semibold text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition-colors">saahiyo</a>
+              </div>
+              <div className="flex items-center gap-3 text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest">
+                <Link href="/privacy" className="hover:text-black dark:hover:text-white transition-colors">Privacy</Link>
+                <Link href="/terms" className="hover:text-black dark:hover:text-white transition-colors">Terms</Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile layout */}
+          <div className="flex sm:hidden flex-col gap-3 text-xs">
+            {/* Row 1: Brand left, Made-with right */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                <ShieldCheck size={14} className="text-gray-400 dark:text-gray-500" />
+                <span className="font-medium text-gray-700 dark:text-gray-300">TeleCheck Pro</span>
+                <span className="px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-[#222] text-[10px] font-semibold text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-[#333] tabular-nums">
+                  v{APP_VERSION}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-[11px] text-gray-400 dark:text-gray-500">
+                <span>Made with</span>
+                <Heart size={10} className="text-red-400 fill-red-400" />
+                <span>by</span>
+                <a href="https://github.com/saahiyo" target="_blank" rel="noopener noreferrer" className="font-semibold text-gray-600 dark:text-gray-300">saahiyo</a>
+              </div>
+            </div>
+            {/* Row 2: API + GitHub left, Privacy/Terms right */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${apiStatus === 'online' ? 'bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.6)]' : apiStatus === 'offline' ? 'bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.6)]' : 'bg-gray-400 animate-pulse'}`} />
+                  <span className="text-gray-500 dark:text-gray-400 font-medium">
+                    API {apiStatus === 'online' ? 'Online' : apiStatus === 'offline' ? 'Offline' : 'Checking...'}
+                  </span>
+                </div>
+                <span className="text-gray-200 dark:text-[#333]">|</span>
+                <a href="https://github.com/saahiyo/telecheck-webui" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-medium">
+                  <Github size={13} /><span>GitHub</span>
                 </a>
               </div>
               <div className="flex items-center gap-3 text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest">
