@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Github, X, ExternalLink, Send, Code2 } from 'lucide-react';
+import { Github, X, ExternalLink, Send, Code2, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { createPortal } from 'react-dom';
 
@@ -145,7 +145,7 @@ const GithubBtn: React.FC = () => {
         aria-label="Contact & Source"
         title="Contact & Source"
       >
-        <Github size={16} />
+        <Info size={16} />
       </button>
 
       {mounted && createPortal(modal, document.body)}

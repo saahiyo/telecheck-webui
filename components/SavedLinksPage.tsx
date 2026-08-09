@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, ChevronDown, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User } from 'lucide-react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, ChevronDown, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User, Tag as TagIcon, Plus, Trash2, Crown } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import debounce from 'lodash.debounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags, fetchMyProfile } from '../services/api';
+import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags, fetchMyProfile, createTag, deleteTag } from '../services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { StoredLink, LinkResult, StoredLinkResponse, MyProfileResponse } from '../types';
 import { DEFAULT_TAGS } from '../utils/helpers';
@@ -139,6 +139,12 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [selectedTag, setSelectedTag] = useState<string>('All');
   const [randomSeed, setRandomSeed] = useState(() => Date.now());
 
+  // Manage Tags panel (top contributors only)
+  const [isManageTagsOpen, setIsManageTagsOpen] = useState(false);
+  const [newTagInput, setNewTagInput] = useState('');
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [deletingTag, setDeletingTag] = useState<string | null>(null);
+
   useEffect(() => {
     let active = true;
     async function loadProfile() {
@@ -165,7 +171,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, []);
 
   const isTopContributor = useMemo(() => {
-    return profile?.rank === 1;
+    return profile?.rank !== null && profile?.rank !== undefined && profile.rank <= 5;
   }, [profile]);
 
   const handleDeleteLink = useCallback((id: number | undefined, url: string) => {
@@ -328,6 +334,48 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const handleFilterChange = (nextFilter: SavedFilter) => {
     setSavedFilter(nextFilter);
     trackFilterChange(nextFilter, selectedTag);
+  };
+
+  const handleCreateTag = async () => {
+    const name = newTagInput.trim();
+    if (!name) return;
+    if (availableTags.includes(name)) {
+      toast.error('Tag already exists');
+      return;
+    }
+    const authToken = await getIdToken();
+    if (!authToken) {
+      toast.error('Please sign in to manage tags.');
+      return;
+    }
+    setIsCreatingTag(true);
+    const ok = await createTag(name, authToken);
+    setIsCreatingTag(false);
+    if (ok) {
+      setAvailableTags(prev => [...prev, name]);
+      setNewTagInput('');
+      toast.success(`Tag "${name}" created`);
+    } else {
+      toast.error('Failed to create tag');
+    }
+  };
+
+  const handleDeleteTag = async (tag: string) => {
+    const authToken = await getIdToken();
+    if (!authToken) {
+      toast.error('Please sign in to manage tags.');
+      return;
+    }
+    setDeletingTag(tag);
+    const ok = await deleteTag(tag, authToken);
+    setDeletingTag(null);
+    if (ok) {
+      setAvailableTags(prev => prev.filter(t => t !== tag));
+      if (selectedTag === tag) setSelectedTag('All');
+      toast.success(`Tag "${tag}" deleted`);
+    } else {
+      toast.error('Failed to delete tag');
+    }
   };
 
   const handleValidate = async () => {
@@ -986,17 +1034,14 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           )}
           <div className="mb-4 flex flex-col gap-3">
             {/* Tag Filter Chips */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 shrink-0 min-w-[45px]">
                 Tags
               </span>
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+              <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
                 <button
                   type="button"
-                  onClick={() => {
-                    setSelectedTag('All');
-                    setPage(1);
-                  }}
+                  onClick={() => { setSelectedTag('All'); setPage(1); }}
                   className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${
                     selectedTag === 'All'
                       ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
@@ -1009,11 +1054,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                   <button
                     key={t}
                     type="button"
-                    onClick={() => {
-                      setSelectedTag(t);
-                      setPage(1);
-                      trackFilterChange(savedFilter, t);
-                    }}
+                    onClick={() => { setSelectedTag(t); setPage(1); trackFilterChange(savedFilter, t); }}
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${
                       selectedTag === t
                         ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
@@ -1024,7 +1065,90 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                   </button>
                 ))}
               </div>
+              {/* Manage Tags button — top contributors only */}
+              {isTopContributor && (
+                <button
+                  type="button"
+                  onClick={() => setIsManageTagsOpen(o => !o)}
+                  title="Manage tags"
+                  className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full border text-xs font-medium transition-all ${
+                    isManageTagsOpen
+                      ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
+                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
+                  }`}
+                >
+                  <Crown size={11} />
+                  <span className="hidden sm:inline">Manage</span>
+                </button>
+              )}
             </div>
+
+            {/* Manage Tags panel — top contributors only */}
+            <AnimatePresence>
+              {isTopContributor && isManageTagsOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  className="rounded-xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black p-4 flex flex-col gap-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <Crown size={12} className="text-yellow-500" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Tag Management
+                    </span>
+                  </div>
+
+                  {/* Create new tag */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newTagInput}
+                      onChange={e => setNewTagInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') void handleCreateTag(); }}
+                      placeholder="New tag name…"
+                      maxLength={32}
+                      className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] text-xs text-black dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void handleCreateTag()}
+                      disabled={isCreatingTag || !newTagInput.trim()}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-semibold hover:opacity-80 disabled:opacity-40 transition-opacity"
+                    >
+                      {isCreatingTag ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                      Add
+                    </button>
+                  </div>
+
+                  {/* Existing tags with delete */}
+                  <div className="flex flex-wrap gap-2">
+                    {availableTags.map(tag => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300"
+                      >
+                        <TagIcon size={10} className="text-gray-400" />
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteTag(tag)}
+                          disabled={deletingTag === tag}
+                          className="ml-0.5 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40"
+                          title={`Delete "${tag}"`}
+                        >
+                          {deletingTag === tag
+                            ? <Loader2 size={10} className="animate-spin" />
+                            : <Trash2 size={10} />
+                          }
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Sort Chips */}
             <div className="flex items-center gap-4">
@@ -1106,6 +1230,26 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                             <ResultCard 
                               result={adapted.result} 
                               isTopContributor={isTopContributor}
+                              availableTags={availableTags}
+                              onCreateTag={async (name) => {
+                                if (availableTags.includes(name)) { toast.error('Tag already exists'); return; }
+                                const authToken = await getIdToken();
+                                if (!authToken) { toast.error('Please sign in to manage tags.'); return; }
+                                setIsCreatingTag(true);
+                                const ok = await createTag(name, authToken);
+                                setIsCreatingTag(false);
+                                if (ok) { setAvailableTags(prev => [...prev, name]); toast.success(`Tag "${name}" created`); }
+                                else toast.error('Failed to create tag');
+                              }}
+                              onDeleteTag={async (name) => {
+                                const authToken = await getIdToken();
+                                if (!authToken) { toast.error('Please sign in to manage tags.'); return; }
+                                setDeletingTag(name);
+                                const ok = await deleteTag(name, authToken);
+                                setDeletingTag(null);
+                                if (ok) { setAvailableTags(prev => prev.filter(t => t !== name)); if (selectedTag === name) setSelectedTag('All'); toast.success(`Tag "${name}" deleted`); }
+                                else toast.error('Failed to delete tag');
+                              }}
                               onDelete={handleDeleteLink}
                               onUndoDelete={handleUndoDeleteLink}
                             />

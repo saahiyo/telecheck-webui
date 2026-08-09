@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { LinkResult } from '../types';
-import { X, ExternalLink, Copy, Eye, Users, Tag as TagIcon, Loader2, Check, Zap, Trash2 } from 'lucide-react';
+import { X, ExternalLink, Copy, Eye, Users, Tag as TagIcon, Loader2, Check, Zap, Trash2, Plus, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { copyText } from '../utils/clipboard';
 import { updateLinkTags } from '../services/api';
@@ -13,6 +13,9 @@ import { useAuth } from '@/hooks/useAuth';
 interface ResultCardProps {
   result: LinkResult;
   isTopContributor?: boolean;
+  availableTags?: string[];
+  onCreateTag?: (name: string) => Promise<void>;
+  onDeleteTag?: (name: string) => Promise<void>;
   onDelete?: (id: number | undefined, url: string) => void;
   onUndoDelete?: (id: number | undefined, url: string) => void;
 }
@@ -41,7 +44,7 @@ function getAvatarColor(str: string): string {
   return `hsl(${hue}, 45%, 65%)`;
 }
 
-const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContributor = false, onDelete, onUndoDelete }) => {
+const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContributor = false, availableTags, onCreateTag, onDeleteTag, onDelete, onUndoDelete }) => {
   const { getIdToken } = useAuth();
   const status = result.status?.toLowerCase();
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -56,9 +59,13 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
   const isValid = status === 'valid';
   const hasRichMeta = isValid && (details.title || details.description || details.image);
   
-  const PREDEFINED_TAGS = DEFAULT_TAGS;
+  const PREDEFINED_TAGS = availableTags ?? DEFAULT_TAGS;
   const [localTags, setLocalTags] = useState<string[]>(result.tags || []);
   const [isUpdatingTags, setIsUpdatingTags] = useState(false);
+  // new tag input inside the modal (top contributors only)
+  const [newTagInput, setNewTagInput] = useState('');
+  const [isCreatingTagInModal, setIsCreatingTagInModal] = useState(false);
+  const [deletingTagInModal, setDeletingTagInModal] = useState<string | null>(null);
   
   const handleDeleteClick = () => {
     setIsDeleteModalOpen(true);
@@ -391,13 +398,14 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
             <X size={18} />
           </button>
         </div>
-        
+
         {isUpdatingTags && (
           <div className="flex items-center justify-center py-2 mb-3">
             <Loader2 size={16} className="animate-spin text-gray-400" />
           </div>
         )}
 
+        {/* Assign existing tags */}
         <div className="flex flex-wrap gap-2">
           {PREDEFINED_TAGS.map(tag => {
             const isActive = localTags.includes(tag);
@@ -418,6 +426,81 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
             );
           })}
         </div>
+
+        {/* Top contributor: create & delete tags */}
+        {isTopContributor && (
+          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-[#222] flex flex-col gap-3">
+            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              <Crown size={10} className="text-yellow-500" /> Manage Tags
+            </div>
+            {/* Create */}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newTagInput}
+                onChange={e => setNewTagInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    void (async () => {
+                      if (!newTagInput.trim() || !onCreateTag) return;
+                      setIsCreatingTagInModal(true);
+                      await onCreateTag(newTagInput.trim());
+                      setNewTagInput('');
+                      setIsCreatingTagInModal(false);
+                    })();
+                  }
+                }}
+                placeholder="New tag name…"
+                maxLength={32}
+                className="flex-1 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] text-xs text-black dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
+              />
+              <button
+                type="button"
+                disabled={isCreatingTagInModal || !newTagInput.trim()}
+                onClick={() => void (async () => {
+                  if (!newTagInput.trim() || !onCreateTag) return;
+                  setIsCreatingTagInModal(true);
+                  await onCreateTag(newTagInput.trim());
+                  setNewTagInput('');
+                  setIsCreatingTagInModal(false);
+                })()}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-semibold hover:opacity-80 disabled:opacity-40 transition-opacity"
+              >
+                {isCreatingTagInModal ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
+                Add
+              </button>
+            </div>
+            {/* Delete existing */}
+            <div className="flex flex-wrap gap-1.5">
+              {PREDEFINED_TAGS.map(tag => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-full border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] px-2 py-1 text-[11px] font-medium text-gray-600 dark:text-gray-400"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    disabled={deletingTagInModal === tag}
+                    onClick={() => void (async () => {
+                      if (!onDeleteTag) return;
+                      setDeletingTagInModal(tag);
+                      await onDeleteTag(tag);
+                      setDeletingTagInModal(null);
+                    })()}
+                    className="text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40"
+                    title={`Delete "${tag}"`}
+                  >
+                    {deletingTagInModal === tag
+                      ? <Loader2 size={9} className="animate-spin" />
+                      : <Trash2 size={9} />
+                    }
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   ) : null;
@@ -554,9 +637,14 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({ result, isTopContrib
               setIsTagModalOpen(true);
               trackTagModalOpen(result.link);
             }}
-            className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white"
-            title="Edit Tags"
+            className={`p-2 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white ${
+              isTopContributor
+                ? 'text-gray-500 hover:text-black dark:hover:text-white'
+                : 'text-gray-300 dark:text-gray-700 cursor-not-allowed opacity-50'
+            }`}
+            title={isTopContributor ? 'Edit Tags' : 'Top contributors only'}
             aria-label={`Edit tags for ${details.title || result.link}`}
+            disabled={!isTopContributor}
           >
             <TagIcon size={14} aria-hidden="true" />
           </button>

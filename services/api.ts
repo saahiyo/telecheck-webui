@@ -634,3 +634,46 @@ export const updateLinkTags = async (url: string, tags: string[], authToken?: st
     return false;
   }
 };
+
+// --------------------------------------------
+// CREATE TAG (admin / top-ranker only)
+// --------------------------------------------
+export const createTag = async (name: string, authToken?: string | null): Promise<boolean> => {
+  try {
+    const response = await fetch(`${BASE_URL}/tags`, {
+      method: 'POST',
+      headers: getContributorHeaders('application/json', authToken),
+      body: JSON.stringify({ name: name.trim() }),
+    });
+
+    if (!response.ok) throw new Error('Failed to create tag');
+
+    clearCache('tags');
+    return true;
+  } catch (error) {
+    console.error('Error creating tag:', error);
+    return false;
+  }
+};
+
+// --------------------------------------------
+// DELETE TAG (admin / top-ranker only)
+// --------------------------------------------
+export const deleteTag = async (name: string, authToken?: string | null): Promise<boolean> => {
+  try {
+    const params = new URLSearchParams({ name: name.trim() });
+    const response = await fetch(`${BASE_URL}/tags?${params.toString()}`, {
+      method: 'DELETE',
+      headers: getContributorHeaders(undefined, authToken),
+    });
+
+    if (!response.ok) throw new Error('Failed to delete tag');
+
+    clearCache('tags');
+    clearCache('links:');
+    return true;
+  } catch (error) {
+    console.error('Error deleting tag:', error);
+    return false;
+  }
+};
