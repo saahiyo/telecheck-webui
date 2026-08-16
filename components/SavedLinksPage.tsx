@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import debounce from 'lodash.debounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags, fetchMyProfile, createTag, deleteTag } from '../services/api';
+import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags, fetchMyProfile, createTag, deleteTag, fetchTagCount } from '../services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { StoredLink, LinkResult, StoredLinkResponse, MyProfileResponse } from '../types';
 import { DEFAULT_TAGS } from '../utils/helpers';
@@ -144,6 +144,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [newTagInput, setNewTagInput] = useState('');
   const [isCreatingTag, setIsCreatingTag] = useState(false);
   const [deletingTag, setDeletingTag] = useState<string | null>(null);
+  const [tagCounts, setTagCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
@@ -301,20 +302,24 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     async function loadDynamicTags() {
       try {
         const tags = await fetchTags();
-        if (active) {
-          if (tags && tags.length > 0) {
-            setAvailableTags(tags);
-          } else {
-            setAvailableTags(DEFAULT_TAGS);
-          }
-        }
+        const resolved = (tags && tags.length > 0) ? tags : DEFAULT_TAGS;
+        if (active) setAvailableTags(resolved);
+
+        // Fetch counts for each tag in parallel (dedicated function — no shared abort controller)
+        const entries = await Promise.all(
+          resolved.map(async (tag) => {
+            const count = await fetchTagCount(tag, userParam);
+            return [tag, count] as [string, number];
+          })
+        );
+        if (active) setTagCounts(Object.fromEntries(entries));
       } catch {
         if (active) setAvailableTags(DEFAULT_TAGS);
       }
     }
     loadDynamicTags();
     return () => { active = false; };
-  }, []);
+  }, [userParam]);
 
   const handleRefresh = async () => {
     setIsLoading(true);
@@ -1055,13 +1060,22 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                     key={t}
                     type="button"
                     onClick={() => { setSelectedTag(t); setPage(1); trackFilterChange(savedFilter, t); }}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 flex items-center gap-1.5 ${
                       selectedTag === t
                         ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
                         : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
                     }`}
                   >
                     {t}
+                    {tagCounts[t] !== undefined && tagCounts[t] > 0 && (
+                      <span className={`text-[10px] font-semibold tabular-nums px-1 py-0.5 rounded-full min-w-[18px] text-center leading-none ${
+                        selectedTag === t
+                          ? 'bg-white/20 dark:bg-black/20 text-white dark:text-black'
+                          : 'bg-gray-100 dark:bg-[#222] text-gray-500 dark:text-gray-400'
+                      }`}>
+                        {tagCounts[t] > 999 ? '999+' : tagCounts[t]}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>

@@ -463,8 +463,32 @@ export const validateSavedLinks = async ({
 // SAVED LINKS (with search + abort control)
 // --------------------------------------------
 
-// Global controller to cancel previous requests
+// Global controller to cancel previous requests (search/filter changes)
 let controller: AbortController | null = null;
+
+// Lightweight fetch just for tag counts — uses its own controller per call, never aborts siblings
+export const fetchTagCount = async (tag: string, user = ''): Promise<number> => {
+  const cacheKey = `links:1:0:telegram::${tag}:${user}`;
+  const cached = getCached<import('../types').StoredLinkResponse>(cacheKey);
+  if (cached) return cached.total ?? 0;
+
+  try {
+    const params = new URLSearchParams({ platform: 'telegram', limit: '1', offset: '0' });
+    if (tag && tag !== 'All') params.set('tag', tag);
+    if (user) params.set('username', user);
+
+    const res = await fetch(`${BASE_URL}/links?${params.toString()}`, {
+      headers: getContributorHeaders(),
+    });
+    if (!res.ok) return 0;
+    const data = await res.json();
+    const result = { ...data, links: Array.isArray(data.links) ? data.links : [] };
+    setCache(cacheKey, result);
+    return result.total ?? 0;
+  } catch {
+    return 0;
+  }
+};
 
 export const fetchSavedLinks = async ({
   limit = 50,
