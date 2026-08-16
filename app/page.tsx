@@ -6,7 +6,7 @@ import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, Zap, Clipboard, Che
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import StatsWidget from '@/components/StatsWidget';
 import ResultCard from '@/components/ResultCard';
-import { checkBulkLinks, checkSingleLink, getLastRateLimitInfo } from '@/services/api';
+import { checkBulkLinks, checkSingleLink, getLastRateLimitInfo, fetchMyProfile } from '@/services/api';
 import { LinkResult } from '@/types';
 import { toast } from 'sonner';  
 import { URL_REGEX, isMegaLink, extractUrls, deduplicateLinks } from '@/utils/helpers';
@@ -122,7 +122,7 @@ const triggerSuccessConfetti = () => {
 };
 
 function ValidatorContent() {
-  const { getIdToken, isConfigured, loading } = useAuth();
+  const { getIdToken, isConfigured, loading, user } = useAuth();
   const searchParams = useSearchParams();
   const defaultMode = searchParams.get('mode') === 'single' ? 'single' : 'bulk';
 
@@ -144,6 +144,19 @@ function ValidatorContent() {
   const [displayLimit, setDisplayLimit] = useState(100);
   const [asyncJob, setAsyncJob] = useState<AsyncJobUiState>(emptyAsyncJobState);
   const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Profile / privilege check ──
+  const [isTopContributor, setIsTopContributor] = useState(false);
+  useEffect(() => {
+    if (!user) { setIsTopContributor(false); return; }
+    let active = true;
+    getIdToken().then(authToken =>
+      fetchMyProfile({ authToken, firebaseUid: user.uid })
+    ).then(p => {
+      if (active) setIsTopContributor(p?.rank !== null && p?.rank !== undefined && p.rank <= 5);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [user, getIdToken]);
 
   const copyMenuRef = useRef<HTMLDivElement>(null);
   const bulkInputRef = useRef<HTMLTextAreaElement>(null);
@@ -1200,7 +1213,7 @@ function ValidatorContent() {
                        animate="show"
                        exit="exit"
                      >
-                       <ResultCard result={result} onDelete={handleDeleteHomeResult} />
+                       <ResultCard result={result} isTopContributor={isTopContributor} onDelete={handleDeleteHomeResult} />
                      </motion.div>
                    ))}
                  </AnimatePresence>
