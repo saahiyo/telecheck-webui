@@ -2,7 +2,8 @@
 
 import React, { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, ChevronRight, Loader2 } from 'lucide-react';
+import { ShieldCheck, ChevronRight } from 'lucide-react';
+import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import { useAuth } from '@/hooks/useAuth';
 import Link from 'next/link';
 
@@ -23,7 +24,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 size={22} className="animate-spin text-gray-400" />
+        <DotmSquare5 size={36} />
       </div>
     );
   }

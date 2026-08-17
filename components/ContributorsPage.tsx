@@ -701,7 +701,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                   {/* Loader/Skeleton or Content */}
                   {isModalLoading ? (
                     <div className="py-12 flex flex-col items-center justify-center space-y-4">
-                      <Loader2 className="animate-spin text-blue-500" size={28} />
+                      <DotmSquare5 size={36} />
                       <span className="text-xs text-gray-500 font-medium">Fetching activity history...</span>
                     </div>
                   ) : (

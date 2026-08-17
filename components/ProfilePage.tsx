@@ -20,6 +20,7 @@ import { getContributorIdentity } from '@/utils/contributorIdentity';
 import { getResults } from '@/utils/db';
 import { MyProfileResponse, LinkResult } from '@/types';
 import Link from 'next/link';
+import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -299,7 +300,7 @@ export default function ProfilePage() {
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 size={24} className="animate-spin text-gray-400" />
+        <DotmSquare5 size={36} />
       </div>
     );
   }
