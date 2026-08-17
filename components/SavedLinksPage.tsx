@@ -830,23 +830,28 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             <option value="recent">Has saved date</option>
           </select>
         </div>
-        {/* My Links button — only shown when signed in and have a username */}
-        {user && profile?.username && (
+        {/* My Links button — shown when signed in */}
+        {user && (
           <button
             type="button"
             onClick={() => {
+              if (!profile?.username) {
+                toast.error('Set a username on your profile first.');
+                router.push('/profile');
+                return;
+              }
               if (userParam === profile.username) {
                 router.push('/saved');
               } else {
                 router.push(`/saved?user=${profile.username}`);
               }
             }}
-            className={`hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all shrink-0 ${
-              userParam === profile.username
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all shrink-0 ${
+              profile?.username && userParam === profile.username
                 ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black shadow-sm'
                 : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
             }`}
-            title={userParam === profile.username ? 'Show all links' : 'Show only my links'}
+            title={profile?.username && userParam === profile.username ? 'Show all links' : 'Show only my links'}
           >
             <User size={13} />
             My Links
