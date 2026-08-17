@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'motion/react';
-import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Github, Heart, LogIn, UserCircle } from 'lucide-react';
+import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Heart, LogIn, UserCircle } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import GithubBtn from './GithubBtn';
 import AuthModal from './AuthModal';
@@ -284,15 +284,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </div>
 
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowShortcuts(true)}
-                  className="hidden sm:inline-flex p-2 rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-all duration-200 hover:bg-gray-50 dark:hover:bg-[#111]"
-                  aria-label="Keyboard shortcuts"
-                  title="Keyboard shortcuts (?)"
-                >
-                  <Keyboard size={16} />
-                </button>
                 {isConfigured && (
                   <button
                     type="button"
@@ -327,7 +318,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </button>
                 )}
                 <ThemeToggle buttonRef={themeToggleRef} />
-                <GithubBtn />
                 <button
                   type="button"
                   onClick={() => setIsMobileNavOpen(true)}
@@ -507,9 +497,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </span>
               </div>
               <span className="text-gray-200 dark:text-[#333]">|</span>
-              <a href="https://github.com/saahiyo/telecheck-webui" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors font-medium">
-                <Github size={13} /><span>GitHub</span>
-              </a>
+              <GithubBtn />
+              <span className="text-gray-200 dark:text-[#333]">|</span>
+              <button
+                type="button"
+                onClick={() => setShowShortcuts(true)}
+                className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors font-medium"
+                title="Keyboard shortcuts (?)"
+              >
+                <Keyboard size={13} /><span>Shortcuts</span>
+              </button>
             </div>
             {/* Made with + Legal */}
             <div className="flex flex-col items-end gap-1.5">
@@ -554,9 +551,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </span>
                 </div>
                 <span className="text-gray-200 dark:text-[#333]">|</span>
-                <a href="https://github.com/saahiyo/telecheck-webui" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-medium">
-                  <Github size={13} /><span>GitHub</span>
-                </a>
+                <GithubBtn />
               </div>
               <div className="flex items-center gap-3 text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest">
                 <Link href="/privacy" className="hover:text-black dark:hover:text-white transition-colors">Privacy</Link>
