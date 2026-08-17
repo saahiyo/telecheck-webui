@@ -220,8 +220,6 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const resultsScrollRef = useRef<HTMLDivElement | null>(null);
   const hasDataRef = useRef(false);
 
-  // Close validate menus on outside click
-  useEffect(() => {
   // Close filter dropdown on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -231,7 +229,6 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
   }, []);
 
   // Debounced handler: updates the query sent to the API after 300ms of inactivity
