@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User, Tag as TagIcon, Plus, Trash2, Crown } from 'lucide-react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, ChevronDown, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User, Tag as TagIcon, Plus, Trash2, Crown } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import debounce from 'lodash.debounce';
@@ -215,15 +215,22 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const router = useRouter();
   const userParam = searchParams.get('user') || '';
   
-  const resultsScrollRef = useRef<HTMLDivElement | null>(null);
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement | null>(null);
   const hasDataRef = useRef(false);
 
   // Close validate menus on outside click
   useEffect(() => {
+  // Close filter dropdown on outside click
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(event.target as Node)) {
+        setFilterDropdownOpen(false);
+      }
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   }, []);
 
   // Debounced handler: updates the query sent to the API after 300ms of inactivity
@@ -791,72 +798,88 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             )}
           </div>
 
-          <div className="relative sm:hidden shrink-0">
-            <div className={`h-full w-11 rounded-lg border flex items-center justify-center transition-colors ${
-              savedFilter === 'all' && !userParam
-                ? 'bg-white dark:bg-black border-gray-200 dark:border-[#333] text-gray-500 dark:text-gray-400'
-                : 'bg-gray-100 dark:bg-[#111] border-black dark:border-white text-black dark:text-white'
-            }`}>
-              {userParam && profile?.username && userParam === profile.username
-                ? <User size={15} />
-                : <SlidersHorizontal size={15} />
-              }
-            </div>
-            <select
-              aria-label="Filter saved links"
-              value={userParam && profile?.username && userParam === profile.username ? 'my-links' : savedFilter}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === 'my-links') {
-                  if (!profile?.username) { toast.error('Set a username on your profile first.'); router.push('/profile'); return; }
-                  router.push(`/saved?user=${profile.username}`);
-                } else {
-                  if (userParam) router.push('/saved');
-                  handleFilterChange(val as typeof savedFilter);
-                }
-              }}
-              className="absolute inset-0 opacity-0 cursor-pointer"
+          {/* Custom filter dropdown — mobile icon + desktop full */}
+          <div className="relative shrink-0" ref={filterDropdownRef}>
+            {/* Trigger */}
+            <button
+              type="button"
+              onClick={() => setFilterDropdownOpen(o => !o)}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border transition-all text-xs font-medium ${
+                savedFilter !== 'all' || (userParam && profile?.username && userParam === profile.username)
+                  ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black shadow-sm'
+                  : 'border-gray-200 bg-white text-gray-600 dark:border-[#333] dark:bg-black dark:text-gray-400'
+              }`}
             >
-              <option value="all">All links</option>
-              {user && <option value="my-links">My Links</option>}
-              <option value="with-description">Has description</option>
-              <option value="with-image">Has image</option>
-              <option value="with-members">Has members</option>
-              <option value="recent">Has saved date</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="relative sm:w-52 hidden sm:block">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            {userParam && profile?.username && userParam === profile.username
-              ? <User size={14} className="text-gray-400" />
-              : <SlidersHorizontal size={14} className="text-gray-400" />
-            }
-          </div>
-          <select
-            value={userParam && profile?.username && userParam === profile.username ? 'my-links' : savedFilter}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === 'my-links') {
-                if (!profile?.username) { toast.error('Set a username on your profile first.'); router.push('/profile'); return; }
-                router.push(`/saved?user=${profile.username}`);
-              } else {
-                if (userParam) router.push('/saved');
-                handleFilterChange(val as typeof savedFilter);
+              {userParam && profile?.username && userParam === profile.username
+                ? <User size={14} />
+                : <SlidersHorizontal size={14} />
               }
-            }}
-            className="w-full appearance-none pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white"
-          >
-            <option value="all">All links</option>
-            {user && <option value="my-links">My Links</option>}
-            <option value="with-description">Has description</option>
-            <option value="with-image">Has image</option>
-            <option value="with-members">Has members</option>
-            <option value="recent">Has saved date</option>
-          </select>
+              <span className="hidden sm:inline">
+                {userParam && profile?.username && userParam === profile.username
+                  ? 'My Links'
+                  : savedFilter === 'all' ? 'All links'
+                  : savedFilter === 'with-description' ? 'Has description'
+                  : savedFilter === 'with-image' ? 'Has image'
+                  : savedFilter === 'with-members' ? 'Has members'
+                  : 'Has saved date'
+                }
+              </span>
+              <ChevronDown size={12} className={`hidden sm:block transition-transform ${filterDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown panel */}
+            <AnimatePresence>
+              {filterDropdownOpen && (
+                <motion.div
+                  className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-black rounded-xl shadow-xl border border-gray-200 dark:border-[#333] py-1 z-[90] overflow-hidden"
+                  initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 4, scale: 0.98 }}
+                  transition={{ duration: 0.15, ease: 'easeOut' }}
+                >
+                  {[
+                    { value: 'all', label: 'All links', icon: <SlidersHorizontal size={13} /> },
+                    ...(user ? [{ value: 'my-links', label: 'My Links', icon: <User size={13} /> }] : []),
+                    { value: 'with-description', label: 'Has description', icon: null },
+                    { value: 'with-image', label: 'Has image', icon: null },
+                    { value: 'with-members', label: 'Has members', icon: null },
+                    { value: 'recent', label: 'Has saved date', icon: null },
+                  ].map(({ value, label, icon }) => {
+                    const isMyLinks = value === 'my-links';
+                    const isActive = isMyLinks
+                      ? !!(userParam && profile?.username && userParam === profile.username)
+                      : !userParam && savedFilter === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => {
+                          setFilterDropdownOpen(false);
+                          if (isMyLinks) {
+                            if (!profile?.username) { toast.error('Set a username on your profile first.'); router.push('/profile'); return; }
+                            router.push(`/saved?user=${profile.username}`);
+                          } else {
+                            if (userParam) router.push('/saved');
+                            handleFilterChange(value as typeof savedFilter);
+                          }
+                        }}
+                        className={`w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-medium transition-colors text-left ${
+                          isActive
+                            ? 'bg-black text-white dark:bg-white dark:text-black'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#111] hover:text-black dark:hover:text-white'
+                        }`}
+                      >
+                        {icon && <span className="shrink-0">{icon}</span>}
+                        {!icon && <span className="w-[13px] shrink-0" />}
+                        {label}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
 
       {isValidating && validationProgress.total > 0 && (
         <div className="mb-6 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333] p-3 rounded-lg animate-fade-in">
