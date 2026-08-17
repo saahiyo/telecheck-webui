@@ -217,6 +217,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement | null>(null);
+  const resultsScrollRef = useRef<HTMLDivElement | null>(null);
   const hasDataRef = useRef(false);
 
   // Close validate menus on outside click
@@ -880,6 +881,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             </AnimatePresence>
           </div>
         </div>
+
+      </div>
 
       {isValidating && validationProgress.total > 0 && (
         <div className="mb-6 bg-gray-50 dark:bg-[#111] border border-gray-200 dark:border-[#333] p-3 rounded-lg animate-fade-in">
