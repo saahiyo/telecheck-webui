@@ -793,19 +793,32 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
           <div className="relative sm:hidden shrink-0">
             <div className={`h-full w-11 rounded-lg border flex items-center justify-center transition-colors ${
-              savedFilter === 'all'
+              savedFilter === 'all' && !userParam
                 ? 'bg-white dark:bg-black border-gray-200 dark:border-[#333] text-gray-500 dark:text-gray-400'
                 : 'bg-gray-100 dark:bg-[#111] border-black dark:border-white text-black dark:text-white'
             }`}>
-              <SlidersHorizontal size={15} />
+              {userParam && profile?.username && userParam === profile.username
+                ? <User size={15} />
+                : <SlidersHorizontal size={15} />
+              }
             </div>
             <select
               aria-label="Filter saved links"
-              value={savedFilter}
-              onChange={(e) => handleFilterChange(e.target.value as typeof savedFilter)}
+              value={userParam && profile?.username && userParam === profile.username ? 'my-links' : savedFilter}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'my-links') {
+                  if (!profile?.username) { toast.error('Set a username on your profile first.'); router.push('/profile'); return; }
+                  router.push(`/saved?user=${profile.username}`);
+                } else {
+                  if (userParam) router.push('/saved');
+                  handleFilterChange(val as typeof savedFilter);
+                }
+              }}
               className="absolute inset-0 opacity-0 cursor-pointer"
             >
               <option value="all">All links</option>
+              {user && <option value="my-links">My Links</option>}
               <option value="with-description">Has description</option>
               <option value="with-image">Has image</option>
               <option value="with-members">Has members</option>
@@ -816,47 +829,33 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
         <div className="relative sm:w-52 hidden sm:block">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <SlidersHorizontal size={14} className="text-gray-400" />
+            {userParam && profile?.username && userParam === profile.username
+              ? <User size={14} className="text-gray-400" />
+              : <SlidersHorizontal size={14} className="text-gray-400" />
+            }
           </div>
           <select
-            value={savedFilter}
-            onChange={(e) => handleFilterChange(e.target.value as typeof savedFilter)}
+            value={userParam && profile?.username && userParam === profile.username ? 'my-links' : savedFilter}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === 'my-links') {
+                if (!profile?.username) { toast.error('Set a username on your profile first.'); router.push('/profile'); return; }
+                router.push(`/saved?user=${profile.username}`);
+              } else {
+                if (userParam) router.push('/saved');
+                handleFilterChange(val as typeof savedFilter);
+              }
+            }}
             className="w-full appearance-none pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white"
           >
             <option value="all">All links</option>
+            {user && <option value="my-links">My Links</option>}
             <option value="with-description">Has description</option>
             <option value="with-image">Has image</option>
             <option value="with-members">Has members</option>
             <option value="recent">Has saved date</option>
           </select>
         </div>
-        {/* My Links button — shown when signed in */}
-        {user && (
-          <button
-            type="button"
-            onClick={() => {
-              if (!profile?.username) {
-                toast.error('Set a username on your profile first.');
-                router.push('/profile');
-                return;
-              }
-              if (userParam === profile.username) {
-                router.push('/saved');
-              } else {
-                router.push(`/saved?user=${profile.username}`);
-              }
-            }}
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-medium transition-all shrink-0 ${
-              profile?.username && userParam === profile.username
-                ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black shadow-sm'
-                : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
-            }`}
-            title={profile?.username && userParam === profile.username ? 'Show all links' : 'Show only my links'}
-          >
-            <User size={13} />
-            My Links
-          </button>
-        )}
       </div>
 
       {isValidating && validationProgress.total > 0 && (
