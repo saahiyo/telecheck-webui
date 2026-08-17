@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ListChecks, ChevronLeft, ChevronRight, ChevronDown, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User, Tag as TagIcon, Plus, Trash2, Crown } from 'lucide-react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User, Tag as TagIcon, Plus, Trash2, Crown } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import debounce from 'lodash.debounce';
@@ -124,7 +124,6 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [isLoading, setIsLoading] = useState(!initialCache);
   const [isSearching, setIsSearching] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
-  const [isCopyingAll, setIsCopyingAll] = useState(false);
   const [validationProgress, setValidationProgress] = useState({ current: 0, total: 0 });
   const [total, setTotal] = useState(initialCache?.total || 0);
   const [page, setPage] = useState(1);
@@ -217,21 +216,11 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const userParam = searchParams.get('user') || '';
   
   const resultsScrollRef = useRef<HTMLDivElement | null>(null);
-  const [mobileValidateMenuOpen, setMobileValidateMenuOpen] = useState(false);
-  const [desktopValidateMenuOpen, setDesktopValidateMenuOpen] = useState(false);
-  const mobileValidateMenuRef = useRef<HTMLDivElement | null>(null);
-  const desktopValidateMenuRef = useRef<HTMLDivElement | null>(null);
   const hasDataRef = useRef(false);
 
   // Close validate menus on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (mobileValidateMenuRef.current && !mobileValidateMenuRef.current.contains(event.target as Node)) {
-        setMobileValidateMenuOpen(false);
-      }
-      if (desktopValidateMenuRef.current && !desktopValidateMenuRef.current.contains(event.target as Node)) {
-        setDesktopValidateMenuOpen(false);
-      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -489,54 +478,19 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, [links, savedFilter, isLinkDeleted]);
   const sortedLinks = useMemo(() => sortSavedLinks(filteredLinks, savedSort, randomSeed), [filteredLinks, savedSort, randomSeed]);
 
-  const handleCopyAllLinks = useCallback(async () => {
-    const expectedCount = Math.max(displayTotal, sortedLinks.length);
-    if (expectedCount === 0) {
-      toast.error('No saved links to copy.');
+  const handleCopyLinks = useCallback(async () => {
+    if (sortedLinks.length === 0) {
+      toast.error('No links to copy.');
       return;
     }
-
-    setIsCopyingAll(true);
-    const toastId = toast.loading(`Preparing ${expectedCount.toLocaleString()} saved links...`);
-
+    const urls = Array.from(new Set(sortedLinks.map(l => l.url).filter(Boolean)));
     try {
-      let linksToCopy = sortedLinks;
-
-      if (expectedCount > sortedLinks.length || page !== 1) {
-        const data = await fetchSavedLinks({
-          limit: Math.min(Math.max(expectedCount, PAGE_SIZE), 100000),
-          offset: 0,
-          search: debouncedSearchQuery,
-          tag: selectedTag,
-          user: userParam
-        });
-
-        if (data?.links?.length) {
-          linksToCopy = sortSavedLinks(
-            filterByMetadata(data.links, savedFilter),
-            savedSort,
-            randomSeed
-          );
-        }
-      }
-
-      const urls = Array.from(
-        new Set(linksToCopy.map((link) => link.url).filter(Boolean))
-      );
-
-      if (urls.length === 0) {
-        toast.error('No saved links to copy.', { id: toastId });
-        return;
-      }
-
       await copyText(urls.join('\n'));
-      toast.success(`Copied ${urls.length.toLocaleString()} link${urls.length === 1 ? '' : 's'}.`, { id: toastId });
+      toast.success(`Copied ${urls.length.toLocaleString()} link${urls.length === 1 ? '' : 's'}.`);
     } catch {
-      toast.error('Failed to copy saved links.', { id: toastId });
-    } finally {
-      setIsCopyingAll(false);
+      toast.error('Failed to copy links.');
     }
-  }, [PAGE_SIZE, debouncedSearchQuery, page, randomSeed, savedFilter, savedSort, selectedTag, sortedLinks, displayTotal, userParam]);
+  }, [sortedLinks]);
 
   // Pre-compute adapted results so React.memo'd ResultCards receive stable object references
   const adaptedResults = useMemo(() => sortedLinks.map((savedLink, idx) => {
@@ -741,13 +695,13 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             <Layers size={15} />
           </button>
           <button 
-            onClick={() => void handleCopyAllLinks()}
-            disabled={isCopyingAll || total === 0}
-            title="Copy all links"
-            aria-label="Copy all links"
+            onClick={() => void handleCopyLinks()}
+            disabled={sortedLinks.length === 0}
+            title="Copy loaded links"
+            aria-label="Copy loaded links"
             className="h-10 w-10 bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
           >
-            {isCopyingAll ? <Loader2 size={15} className="animate-spin" /> : <Copy size={15} />}
+            <Copy size={15} />
           </button>
           <button 
             onClick={handleRefresh}
@@ -758,46 +712,15 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           >
             <RefreshCw size={15} className={isLoading ? "animate-spin" : ""} />
           </button>
-          <div className="relative" ref={mobileValidateMenuRef}>
-            <button 
-              onClick={() => setMobileValidateMenuOpen(!mobileValidateMenuOpen)}
-              disabled={isValidating || links.length === 0}
-              title={isValidating ? 'Validating...' : 'Validate options'}
-              aria-label={isValidating ? 'Validating...' : 'Validate options'}
-              className="h-10 w-10 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
-            >
-              {isValidating ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
-            </button>
-            <AnimatePresence>
-            {mobileValidateMenuOpen && (
-              <motion.div
-                className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-black rounded-lg shadow-xl border border-gray-200 dark:border-[#333] py-1 z-[90] overflow-hidden ring-1 ring-black/5"
-                initial={{ opacity: 0, y: 8, scale: 0.98, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: 6, scale: 0.98, filter: 'blur(8px)' }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-              >
-                <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-[#111] border-b border-gray-100 dark:border-[#333]">
-                  Validation Scope
-                </div>
-                <button 
-                  onClick={() => { setMobileValidateMenuOpen(false); void handleValidatePage(); }}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#222] hover:text-black dark:hover:text-white transition-colors flex items-center gap-2"
-                >
-                  <ListChecks size={13} />
-                  <span>Validate Page</span>
-                </button>
-                <button 
-                  onClick={() => { setMobileValidateMenuOpen(false); void handleValidate(); }}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#222] hover:text-black dark:hover:text-white transition-colors flex items-center gap-2"
-                >
-                  <ShieldCheck size={13} />
-                  <span>Validate All</span>
-                </button>
-              </motion.div>
-            )}
-            </AnimatePresence>
-          </div>
+          <button 
+            onClick={() => void handleValidatePage()}
+            disabled={isValidating || links.length === 0}
+            title={isValidating ? 'Validating...' : 'Validate'}
+            aria-label={isValidating ? 'Validating...' : 'Validate'}
+            className="h-10 w-10 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all rounded-lg flex items-center justify-center shadow-sm"
+          >
+            {isValidating ? <Loader2 size={15} className="animate-spin" /> : <ShieldCheck size={15} />}
+          </button>
         </div>
 
         <div className="hidden sm:flex sm:items-center sm:gap-2 shrink-0">
@@ -813,12 +736,12 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             <span>Copy Links</span>
           </button>
           <button
-            onClick={() => void handleCopyAllLinks()}
-            disabled={isCopyingAll || total === 0}
+            onClick={() => void handleCopyLinks()}
+            disabled={sortedLinks.length === 0}
             className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
           >
-            {isCopyingAll ? <Loader2 size={14} className="animate-spin" /> : <Copy size={14} />}
-            <span>{isCopyingAll ? 'Copying...' : 'Copy All'}</span>
+            <Copy size={14} />
+            <span>Copy</span>
           </button>
           <button
             onClick={handleRefresh}
@@ -828,46 +751,14 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
             <span>Refresh</span>
           </button>
-          <div className="relative" ref={desktopValidateMenuRef}>
-            <button
-              onClick={() => setDesktopValidateMenuOpen(!desktopValidateMenuOpen)}
-              disabled={isValidating || links.length === 0}
-              className="text-xs font-semibold bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all px-4 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
-            >
-              {isValidating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
-              <span>{isValidating ? 'Validating...' : 'Validate'}</span>
-              <ChevronDown size={12} className={`transform transition-transform ${desktopValidateMenuOpen ? 'rotate-180' : ''}`} />
-            </button>
-            <AnimatePresence>
-            {desktopValidateMenuOpen && (
-              <motion.div
-                className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-black rounded-lg shadow-xl border border-gray-200 dark:border-[#333] py-1 z-[90] overflow-hidden ring-1 ring-black/5"
-                initial={{ opacity: 0, y: 8, scale: 0.98, filter: 'blur(8px)' }}
-                animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                exit={{ opacity: 0, y: 6, scale: 0.98, filter: 'blur(8px)' }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-              >
-                <div className="px-3 py-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-[#111] border-b border-gray-100 dark:border-[#333]">
-                  Validation Scope
-                </div>
-                <button 
-                  onClick={() => { setDesktopValidateMenuOpen(false); void handleValidatePage(); }}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#222] hover:text-black dark:hover:text-white transition-colors flex items-center gap-2"
-                >
-                  <ListChecks size={13} />
-                  <span>Validate Page</span>
-                </button>
-                <button 
-                  onClick={() => { setDesktopValidateMenuOpen(false); void handleValidate(); }}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#222] hover:text-black dark:hover:text-white transition-colors flex items-center gap-2"
-                >
-                  <ShieldCheck size={13} />
-                  <span>Validate All</span>
-                </button>
-              </motion.div>
-            )}
-            </AnimatePresence>
-          </div>
+          <button
+            onClick={() => void handleValidatePage()}
+            disabled={isValidating || links.length === 0}
+            className="text-xs font-semibold bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all px-4 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
+          >
+            {isValidating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
+            <span>{isValidating ? 'Validating...' : 'Validate'}</span>
+          </button>
         </div>
       </div>
 
