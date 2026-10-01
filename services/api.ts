@@ -577,19 +577,22 @@ export const fetchSavedLinks = async ({
 // --------------------------------------------
 export const fetchContributors = async ({
   limit = 20,
-  offset = 0
+  offset = 0,
+  timeframe = 'all'
 }: {
   limit?: number;
   offset?: number;
+  timeframe?: import('../types').LeaderboardTimeframe;
 } = {}): Promise<ContributorsResponse> => {
   try {
-    const cacheKey = `contributors:${limit}:${offset}`;
+    const cacheKey = `contributors:${limit}:${offset}:${timeframe}`;
     const cached = getCached<ContributorsResponse>(cacheKey);
     if (cached) return cached;
 
     const params = new URLSearchParams({
       limit: String(limit),
-      offset: String(offset)
+      offset: String(offset),
+      timeframe: String(timeframe)
     });
 
     const response = await fetch(`${BASE_URL}/contributors?${params.toString()}`);
@@ -600,7 +603,7 @@ export const fetchContributors = async ({
     return data;
   } catch (error) {
     console.error('Error fetching contributors:', error);
-    return { total: 0, limit, offset, contributors: [] };
+    return { total: 0, limit, offset, timeframe, contributors: [] };
   }
 };
 

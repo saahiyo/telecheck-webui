@@ -6,7 +6,7 @@ import debounce from 'lodash.debounce';
 import { clearCache, fetchContributors, fetchMyProfile, getCached, getMyProfileCacheKey, fetchSavedLinks } from '../services/api';
 import { useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
-import { Contributor, MyProfileResponse, ContributorsResponse, StoredLink } from '../types';
+import { Contributor, MyProfileResponse, ContributorsResponse, StoredLink, LeaderboardTimeframe } from '../types';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -28,7 +28,8 @@ function formatShortDate(dateValue?: string) {
 
 const ContributorsPage: React.FC<ContributorsPageProps> = () => {
   const { user, getIdToken } = useAuth();
-  const initialContribCache = getCached<ContributorsResponse>(`contributors:${PAGE_SIZE}:0`);
+  const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>('all');
+  const initialContribCache = getCached<ContributorsResponse>(`contributors:${PAGE_SIZE}:0:all`);
   const initialProfileCache = getCached<MyProfileResponse>(getMyProfileCacheKey());
   const router = useRouter();
 
@@ -191,14 +192,14 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
     };
   }, [profile, contributors]);
 
-  const loadData = useCallback(async (currentPage: number) => {
+  const loadData = useCallback(async (currentPage: number, currentTimeframe: LeaderboardTimeframe = timeframe) => {
     if (!hasDataRef.current) setIsLoading(true);
     try {
       const offset = (currentPage - 1) * PAGE_SIZE;
       const authToken = await getIdToken();
 
       const [contribData, profileData] = await Promise.all([
-        fetchContributors({ limit: PAGE_SIZE, offset }),
+        fetchContributors({ limit: PAGE_SIZE, offset, timeframe: currentTimeframe }),
         fetchMyProfile({ authToken, firebaseUid: user?.uid })
       ]);
 
@@ -212,11 +213,19 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [getIdToken, user?.uid]);
+  }, [getIdToken, user?.uid, timeframe]);
 
   useEffect(() => {
-    loadData(page);
-  }, [page, loadData]);
+    loadData(page, timeframe);
+  }, [page, timeframe, loadData]);
+
+  const handleTimeframeChange = (newTimeframe: LeaderboardTimeframe) => {
+    if (newTimeframe === timeframe) return;
+    setTimeframe(newTimeframe);
+    setPage(1);
+    hasDataRef.current = false;
+    setIsLoading(true);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -243,7 +252,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
     clearCache('contributors:');
     clearCache('profile:');
     setIsLoading(true);
-    await loadData(page);
+    await loadData(page, timeframe);
   };
 
   const highestLinksCount = useMemo(() => {
@@ -326,6 +335,63 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
+        </div>
+      </div>
+
+      {/* Timeframe Filter Tabs */}
+      <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+        <div className="inline-flex p-1 bg-gray-100 dark:bg-[#111] border border-gray-200 dark:border-[#333] rounded-xl shadow-xs">
+          <button
+            type="button"
+            onClick={() => handleTimeframeChange('all')}
+            className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              timeframe === 'all'
+                ? 'bg-white dark:bg-black text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                : 'text-gray-500 hover:text-black dark:hover:text-white'
+            }`}
+          >
+            <Trophy size={13} className={timeframe === 'all' ? 'text-yellow-500' : 'opacity-60'} />
+            <span>All Time</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTimeframeChange('weekly')}
+            className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              timeframe === 'weekly'
+                ? 'bg-white dark:bg-black text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                : 'text-gray-500 hover:text-black dark:hover:text-white'
+            }`}
+          >
+            <Calendar size={13} className={timeframe === 'weekly' ? 'text-blue-500' : 'opacity-60'} />
+            <span>This Week</span>
+            <span className="text-[10px] opacity-60 font-normal hidden sm:inline">(7d)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTimeframeChange('daily')}
+            className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              timeframe === 'daily'
+                ? 'bg-white dark:bg-black text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
+                : 'text-gray-500 hover:text-black dark:hover:text-white'
+            }`}
+          >
+            <Clock size={13} className={timeframe === 'daily' ? 'text-amber-500' : 'opacity-60'} />
+            <span>Today</span>
+            <span className="text-[10px] opacity-60 font-normal hidden sm:inline">(24h)</span>
+          </button>
+        </div>
+
+        <div className="text-[11px] sm:text-xs text-gray-400 dark:text-gray-500 font-medium flex items-center gap-1.5">
+          <Sparkles size={12} className="text-yellow-500" />
+          <span>
+            {timeframe === 'daily' 
+              ? 'Rankings for the last 24 hours' 
+              : timeframe === 'weekly' 
+              ? 'Rankings for the past 7 days' 
+              : 'All-time cumulative rankings'}
+          </span>
         </div>
       </div>
 
@@ -461,9 +527,19 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
           <div className="w-14 h-14 bg-white dark:bg-black border border-gray-100 dark:border-[#333] rounded-full flex items-center justify-center mb-4 shadow-sm">
             <Trophy size={24} className="text-gray-300 dark:text-gray-600" />
           </div>
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1.5">Leaderboard Empty</h3>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1.5">
+            {timeframe === 'daily' 
+              ? 'No Activity Today Yet' 
+              : timeframe === 'weekly' 
+              ? 'No Activity This Week Yet' 
+              : 'Leaderboard Empty'}
+          </h3>
           <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">
-            No valid links have been submitted yet. Be the first one to add a link and claim the #1 spot!
+            {timeframe === 'daily'
+              ? 'No links have been submitted in the last 24 hours. Submit a link today to lead the daily board!'
+              : timeframe === 'weekly'
+              ? 'No links have been submitted in the past 7 days. Submit a link this week to claim the weekly #1 spot!'
+              : 'No valid links have been submitted yet. Be the first one to add a link and claim the #1 spot!'}
           </p>
         </div>
       ) : (

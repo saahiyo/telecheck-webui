@@ -93,6 +93,8 @@ export interface StoredLinkResponse {
   links: StoredLink[];
 }
 
+export type LeaderboardTimeframe = 'all' | 'weekly' | 'daily';
+
 export interface Contributor {
   rank: number;
   username: string;
@@ -105,6 +107,7 @@ export interface ContributorsResponse {
   total: number;
   limit: number;
   offset: number;
+  timeframe?: LeaderboardTimeframe;
   contributors: Contributor[];
 }
 
