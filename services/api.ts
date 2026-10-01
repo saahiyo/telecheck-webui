@@ -464,7 +464,10 @@ export const validateSavedLinks = async ({
       headers: getContributorHeaders(undefined, authToken)
     });
 
-    if (!response.ok) throw new Error('Failed to validate links');
+    if (!response.ok) {
+      const errData = await response.json().catch(() => null);
+      throw new Error(errData?.error || `Failed to validate links (HTTP ${response.status})`);
+    }
 
     // After mutation, clear the links cache so we don't serve stale invalid links
     clearCache('links:');

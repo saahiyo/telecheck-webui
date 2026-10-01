@@ -419,8 +419,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       
       toast.success(`Validation complete! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
       await loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
-    } catch (error) {
-      toast.error('An error occurred during validation.', { id: toastId });
+    } catch (error: any) {
+      toast.error(error?.message || 'An error occurred during validation.', { id: toastId });
     } finally {
       setIsValidating(false);
     }
@@ -470,8 +470,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
       toast.success(`Page validated! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
       await loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
-    } catch (error) {
-      toast.error('An error occurred during page validation.', { id: toastId });
+    } catch (error: any) {
+      toast.error(error?.message || 'An error occurred during page validation.', { id: toastId });
     } finally {
       setIsValidating(false);
     }
