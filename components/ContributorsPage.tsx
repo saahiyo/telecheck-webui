@@ -154,43 +154,76 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
     return contributors.reduce((sum, c) => sum + (c.links_added || 0), 0);
   }, [contributors]);
 
+  const currentUserInList = useMemo(() => {
+    if (!profile?.username) return null;
+    return contributors.find(c => c.username.toLowerCase() === profile.username?.toLowerCase()) || null;
+  }, [contributors, profile?.username]);
+
+  const displayedUserRank = useMemo(() => {
+    if (timeframe === 'all') return profile?.rank ?? currentUserInList?.rank ?? null;
+    return currentUserInList ? currentUserInList.rank : null;
+  }, [timeframe, profile?.rank, currentUserInList]);
+
+  const displayedUserLinks = useMemo(() => {
+    if (timeframe === 'all') return profile?.links_added ?? currentUserInList?.links_added ?? 0;
+    return currentUserInList ? currentUserInList.links_added : 0;
+  }, [timeframe, profile?.links_added, currentUserInList]);
+
   const rankProgressInfo = useMemo(() => {
     // Not loaded yet — caller will show a loading state
     if (!profile) return null;
 
     // Logged in but no contributor record yet (brand-new account)
-    if (!profile.username || !profile.rank) {
+    if (!profile.username || (!profile.rank && !currentUserInList)) {
       return {
         status: 'unranked',
         text: 'Add valid links to earn a rank on the leaderboard!'
       };
     }
 
-    if (profile.rank === 1) {
+    const currentRank = displayedUserRank;
+    const currentLinks = displayedUserLinks;
+
+    if (!currentRank) {
       return {
-        status: 'lead',
-        text: 'You are leading the board! Keep up the great work. 🏆'
+        status: 'unranked',
+        text: timeframe === 'daily' 
+          ? 'Add valid links today to enter the daily leaderboard!'
+          : timeframe === 'weekly'
+          ? 'Add valid links this week to enter the weekly leaderboard!'
+          : 'Add valid links to earn a rank on the leaderboard!'
       };
     }
 
-    const nextRank = profile.rank - 1;
+    if (currentRank === 1) {
+      return {
+        status: 'lead',
+        text: timeframe === 'daily'
+          ? 'You are leading today’s board! Keep it up. 🏆'
+          : timeframe === 'weekly'
+          ? 'You are leading this week’s board! Keep it up. 🏆'
+          : 'You are leading the board! Keep up the great work. 🏆'
+      };
+    }
+
+    const nextRank = currentRank - 1;
     const nextContributor = contributors.find(c => c.rank === nextRank);
 
     if (!nextContributor) {
       return {
         status: 'climbing',
-        text: `You are ranked #${profile.rank}. Keep adding valid links to climb!`
+        text: `You are ranked #${currentRank}. Keep adding valid links to climb!`
       };
     }
 
-    const diff = (nextContributor.links_added || 0) - (profile.links_added || 0) + 1;
+    const diff = (nextContributor.links_added || 0) - (currentLinks || 0) + 1;
     return {
       status: 'climbing',
       text: `Add ${diff.toLocaleString()} more link${diff === 1 ? '' : 's'} to overtake ${nextContributor.username} (#${nextContributor.rank})!`,
       targetUser: nextContributor.username,
       linksNeeded: diff
     };
-  }, [profile, contributors]);
+  }, [profile, contributors, displayedUserRank, displayedUserLinks, timeframe, currentUserInList]);
 
   const loadData = useCallback(async (currentPage: number, currentTimeframe: LeaderboardTimeframe = timeframe) => {
     if (!hasDataRef.current) setIsLoading(true);
@@ -404,7 +437,9 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
               <Activity size={18} />
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Community Impact</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                {timeframe === 'daily' ? 'Today’s Impact' : timeframe === 'weekly' ? 'This Week’s Impact' : 'Community Impact'}
+              </p>
               <p className="text-lg font-bold text-black dark:text-white mt-0.5 tabular-nums">
                 {totalCommunityLinks.toLocaleString()} <span className="text-xs text-gray-500 font-normal">links added</span>
               </p>
@@ -417,7 +452,9 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
               <Users size={18} />
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Active Helpers</p>
+              <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                {timeframe === 'daily' ? 'Active Today' : timeframe === 'weekly' ? 'Active This Week' : 'Active Helpers'}
+              </p>
               <p className="text-lg font-bold text-black dark:text-white mt-0.5 tabular-nums">
                 {total.toLocaleString()} <span className="text-xs text-gray-500 font-normal">members</span>
               </p>
@@ -489,23 +526,27 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                   <span className="text-[9px] sm:text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-0.5 sm:mb-1">Your Rank</span>
                   <div className="flex items-center gap-1.5">
                     <Hash size={14} className="text-blue-500 w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                    <span className="text-xs sm:text-sm font-bold text-black dark:text-white">{profile.rank || '-'}</span>
+                    <span className="text-xs sm:text-sm font-bold text-black dark:text-white">
+                      {displayedUserRank ? `#${displayedUserRank}` : '-'}
+                    </span>
                   </div>
                 </div>
                 <div 
                   onClick={() => handleOpenContributorModal({
-                    rank: profile.rank || 0,
+                    rank: displayedUserRank || 0,
                     username: profile.username || '',
-                    links_added: profile.links_added,
+                    links_added: displayedUserLinks,
                     first_seen: profile.first_seen || '',
                     last_seen: profile.last_seen || ''
                   })}
                   className="px-3 sm:px-4 py-1.5 sm:py-2 flex flex-col items-center flex-1 sm:flex-auto cursor-pointer hover:bg-gray-100 dark:hover:bg-[#222] transition-colors"
                 >
-                  <span className="text-[9px] sm:text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-0.5 sm:mb-1">Links Added</span>
+                  <span className="text-[9px] sm:text-[10px] text-gray-500 font-medium uppercase tracking-wider mb-0.5 sm:mb-1">
+                    {timeframe === 'daily' ? 'Links Today' : timeframe === 'weekly' ? 'Links This Week' : 'Links Added'}
+                  </span>
                   <div className="flex items-center gap-1.5">
                     <Activity size={14} className="text-green-500 w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                    <span className="text-xs sm:text-sm font-bold text-black dark:text-white">{profile.links_added?.toLocaleString() || 0}</span>
+                    <span className="text-xs sm:text-sm font-bold text-black dark:text-white">{displayedUserLinks.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
