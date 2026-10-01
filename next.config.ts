@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   allowedDevOrigins: ['http://localhost:3000', '172.29.96.1'],
   devIndicators: false,
+  turbopack: {},
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,
