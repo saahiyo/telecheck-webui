@@ -284,9 +284,9 @@ function ValidatorContent() {
   const { validCount, invalidCount, megaCount } = useMemo(() => {
     let valid = 0, invalid = 0, mega = 0;
     for (const r of results) {
-      if (r.status === 'valid') valid++;
+      if (r.status === 'mega' || isMegaLink(r.link)) mega++;
+      else if (r.status === 'valid') valid++;
       else if (r.status === 'invalid') invalid++;
-      else if (r.status === 'mega') mega++;
     }
     return { validCount: valid, invalidCount: invalid, megaCount: mega };
   }, [results]);
@@ -353,26 +353,9 @@ function ValidatorContent() {
       toast.info(`Removed ${duplicateCount} duplicate${duplicateCount > 1 ? 's' : ''}`);
     }
 
-    const megaLinks = links.filter(l => isMegaLink(l));
-    const telegramLinks = links.filter(l => !isMegaLink(l));
+    const allResults: LinkResult[] = [];
 
-    const megaResults: LinkResult[] = megaLinks.map(l => ({
-      link: l,
-      status: 'mega',
-      reason: 'Mega.nz Link'
-    }));
-
-    let currentChecked = megaResults.length;
-    setCheckingProgress({ current: currentChecked, total: links.length });
-
-    const allResults: LinkResult[] = [...megaResults];
-
-    if (megaResults.length > 0) {
-      setResults(megaResults);
-      setHasChecked(true);
-    }
-
-    if (telegramLinks.length > 0) {
+    if (links.length > 0) {
       if (!isConfigured) {
         toast.error('Authentication is not configured. Please contact the site administrator.');
         setIsChecking(false);
@@ -387,20 +370,20 @@ function ValidatorContent() {
 
       const authToken = await getIdToken();
       if (!authToken) {
-        toast.error('Please sign in before validating Telegram links.');
+        toast.error('Please sign in before validating links.');
         window.dispatchEvent(new Event('app-open-auth-modal'));
         setIsChecking(false);
         return;
       }
 
       try {
-        const batchResults = await checkBulkLinks(telegramLinks, {
+        const batchResults = await checkBulkLinks(links, {
           authToken,
           onAsyncJob: (jobId) => {
             setAsyncJob({
               status: 'queued',
               jobId,
-              processed: megaResults.length,
+              processed: 0,
               total: links.length,
               streamed: 0,
             });
@@ -409,15 +392,15 @@ function ValidatorContent() {
             setAsyncJob(prev => ({
               ...prev,
               status,
-              processed: Math.max(prev.processed, megaResults.length + job.processed_links),
+              processed: job.processed_links,
               total: links.length,
             }));
           },
           onProgress: (processed, total) => {
-            setCheckingProgress(prev => ({
-              current: Math.max(prev.current, megaResults.length + processed),
+            setCheckingProgress({
+              current: processed,
               total: links.length
-            }));
+            });
           },
           onStreamResults: (newResults) => {
             allResults.push(...newResults);
@@ -490,35 +473,29 @@ function ValidatorContent() {
     const startTime = Date.now();
 
     let finalStatus = '';
-    if (isMegaLink(singleInput.trim())) {
-      const result: LinkResult = { link: singleInput.trim(), status: 'mega', reason: 'Mega.nz Link' };
-      setResults([result]);
-      finalStatus = 'mega';
-    } else {
-      if (!isConfigured) {
-        toast.error('Authentication is not configured. Please contact the site administrator.');
-        setIsChecking(false);
-        return;
-      }
-
-      if (loading) {
-        toast.info('Checking your sign-in session. Please try again in a moment.');
-        setIsChecking(false);
-        return;
-      }
-
-      const authToken = await getIdToken();
-      if (!authToken) {
-        toast.error('Please sign in before validating Telegram links.');
-        window.dispatchEvent(new Event('app-open-auth-modal'));
-        setIsChecking(false);
-        return;
-      }
-
-      const data = await checkSingleLink(singleInput, authToken);
-      setResults([data]);
-      finalStatus = data.status;
+    if (!isConfigured) {
+      toast.error('Authentication is not configured. Please contact the site administrator.');
+      setIsChecking(false);
+      return;
     }
+
+    if (loading) {
+      toast.info('Checking your sign-in session. Please try again in a moment.');
+      setIsChecking(false);
+      return;
+    }
+
+    const authToken = await getIdToken();
+    if (!authToken) {
+      toast.error('Please sign in before validating links.');
+      window.dispatchEvent(new Event('app-open-auth-modal'));
+      setIsChecking(false);
+      return;
+    }
+
+    const data = await checkSingleLink(singleInput.trim(), authToken);
+    setResults([data]);
+    finalStatus = data.status;
     setCheckingProgress({ current: 1, total: 1 });
     setHasChecked(true);
     setIsChecking(false);
@@ -613,14 +590,17 @@ function ValidatorContent() {
   const filteredResults = useMemo(() => {
     if (filter === 'all') {
       return [...results].sort((a, b) => {
-        const aValid = a.status === 'valid' || a.status === 'mega';
-        const bValid = b.status === 'valid' || b.status === 'mega';
+        const aValid = a.status === 'valid' || a.status === 'mega' || (isMegaLink(a.link) && a.status !== 'invalid');
+        const bValid = b.status === 'valid' || b.status === 'mega' || (isMegaLink(b.link) && b.status !== 'invalid');
         if (aValid && !bValid) return -1;
         if (!aValid && bValid) return 1;
         return 0;
       });
     }
-    return results.filter(r => r.status === filter);
+    if (filter === 'mega') {
+      return results.filter(r => r.status === 'mega' || isMegaLink(r.link));
+    }
+    return results.filter(r => r.status === filter && !isMegaLink(r.link));
   }, [results, filter]);
 
   const handleCopy = async (type: 'numbered' | 'gap' | 'plain' | 'original' | 'withTitle') => {

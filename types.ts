@@ -2,10 +2,11 @@ export interface LinkMetadata {
   title?: string;
   description?: string;
   image?: string;
+  platform?: string;
+  type?: string;
   memberCount?: number;
   memberCountCompact?: string;
   memberCountRaw?: string;
-  type?: string;
   checkedAt?: string;
   savedStatus?: string;
   savedId?: number;

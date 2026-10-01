@@ -13,7 +13,7 @@
     "@tanstack/react-virtual": "^3.13.24",
     "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",
-    "cuelume": "^0.3.0",
+    "cuelume": "^0.2.4",
     "dotenv": "^17.4.2",
     "firebase": "^12.16.0",
     "lodash.debounce": "^4.0.8",

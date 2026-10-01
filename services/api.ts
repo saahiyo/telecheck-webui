@@ -513,10 +513,26 @@ export const fetchTagCount = async (tag: string, user = ''): Promise<number> => 
   }
 };
 
+export const fetchLinksStats = async (): Promise<{ total: number; telegram: number; mega: number } | null> => {
+  const cacheKey = 'links:stats';
+  const cached = getCached<{ total: number; telegram: number; mega: number }>(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(`${BASE_URL}/links/stats`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    setCache(cacheKey, data);
+    return data;
+  } catch {
+    return null;
+  }
+};
+
 export const fetchSavedLinks = async ({
   limit = 50,
   offset = 0,
-  platform = 'telegram',
+  platform = '',
   search = '',
   tag = '',
   user = ''
@@ -529,7 +545,8 @@ export const fetchSavedLinks = async ({
   user?: string;
 }): Promise<import('../types').StoredLinkResponse | null> => {
   try {
-    const cacheKey = `links:${limit}:${offset}:${platform}:${search}:${tag}:${user}`;
+    const platformKey = platform && platform !== 'all' ? platform : 'all';
+    const cacheKey = `links:${limit}:${offset}:${platformKey}:${search}:${tag}:${user}`;
     const cached = getCached<import('../types').StoredLinkResponse>(cacheKey);
     if (cached) return cached;
 
@@ -538,11 +555,11 @@ export const fetchSavedLinks = async ({
     controller = new AbortController();
 
     const params = new URLSearchParams({
-      platform,
       limit: String(limit),
       offset: String(offset)
     });
 
+    if (platform && platform !== 'all') params.set('platform', platform);
     if (search) params.set('search', search);
     if (tag && tag !== 'All') params.set('tag', tag);
     if (user) params.set('username', user);

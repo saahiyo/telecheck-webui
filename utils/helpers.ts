@@ -7,7 +7,7 @@ export const URL_REGEX = /(https?:\/\/[^\s,]+|t\.me\/[^\s,]+)/g;
 /**
  * Check if a URL is a mega.nz link.
  */
-export const isMegaLink = (url: string): boolean => /mega\.nz/i.test(url);
+export const isMegaLink = (url: string): boolean => /(?:mega\.nz|mega\.co\.nz)/i.test(url);
 
 /**
  * Extract all URLs from a text string.

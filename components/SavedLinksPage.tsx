@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import debounce from 'lodash.debounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags, fetchMyProfile, createTag, deleteTag, fetchTagCount } from '../services/api';
+import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags, fetchMyProfile, createTag, deleteTag, fetchTagCount, fetchLinksStats } from '../services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { StoredLink, LinkResult, StoredLinkResponse, MyProfileResponse } from '../types';
 import { DEFAULT_TAGS } from '../utils/helpers';
@@ -27,6 +27,7 @@ export interface SavedLinksPageHandle {
 
 type SavedFilter = 'all' | 'with-description' | 'with-image' | 'with-members' | 'recent';
 type SavedSort = 'recently-updated' | 'recently-added' | 'random';
+type PlatformFilter = 'all' | 'telegram' | 'mega';
 
 const SORT_CHIPS: Array<{ value: SavedSort; label: string; shortLabel: string }> = [
   { value: 'recently-updated', label: 'Recently Updated', shortLabel: 'Updated' },
@@ -119,7 +120,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const PAGE_SIZE = 100;
   
   // Synchronous cache read for instant mount
-  const initialCache = getCached<StoredLinkResponse>(`links:${PAGE_SIZE}:0:telegram:`);
+  const initialCache = getCached<StoredLinkResponse>(`links:${PAGE_SIZE}:0:all:`);
   
   const [links, setLinks] = useState<StoredLink[]>(initialCache?.links || []);
   const [isLoading, setIsLoading] = useState(!initialCache);
@@ -132,6 +133,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [savedFilter, setSavedFilter] = useState<SavedFilter>('all');
   const [savedSort, setSavedSort] = useState<SavedSort>('recently-updated');
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
+  const [platformStats, setPlatformStats] = useState<{ total: number; telegram: number; mega: number } | null>(null);
   const [profile, setProfile] = useState<MyProfileResponse | null>(null);
   const [deletedLinkKeys, setDeletedLinkKeys] = useState<Set<string>>(() => new Set());
   const PREDEFINED_TAGS = DEFAULT_TAGS;
@@ -267,12 +270,12 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     setPage(1);
   };
 
-  const loadLinks = useCallback(async (currentPage: number, search: string, tag: string, user: string) => {
+  const loadLinks = useCallback(async (currentPage: number, search: string, tag: string, user: string, platform: PlatformFilter) => {
     // Only show full-page spinner if it's initial load (no data), otherwise keep cards visible
     if (!hasDataRef.current) setIsLoading(true);
     try {
       const offset = (currentPage - 1) * PAGE_SIZE;
-      const data = await fetchSavedLinks({ limit: PAGE_SIZE, offset, search, tag, user });
+      const data = await fetchSavedLinks({ limit: PAGE_SIZE, offset, platform, search, tag, user });
 
       // If request was aborted (null), skip state update to avoid wiping current data
       if (data === null) return;
@@ -289,8 +292,20 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, []);
 
   useEffect(() => {
-    loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
-  }, [page, debouncedSearchQuery, selectedTag, userParam, loadLinks]);
+    loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter);
+  }, [page, debouncedSearchQuery, selectedTag, userParam, platformFilter, loadLinks]);
+
+  useEffect(() => {
+    let active = true;
+    async function loadStats() {
+      try {
+        const stats = await fetchLinksStats();
+        if (active && stats) setPlatformStats(stats);
+      } catch {}
+    }
+    loadStats();
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -319,7 +334,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const handleRefresh = async () => {
     setIsLoading(true);
     trackLinksRefresh(links.length);
-    await loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
+    fetchLinksStats().then(s => s && setPlatformStats(s)).catch(() => {});
+    await loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter);
   };
 
   const handleSortChange = (nextSort: SavedSort) => {
@@ -403,6 +419,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         const result = await validateSavedLinks({ 
           limit: String(BATCH_SIZE_VAL),
           offset: currentOffset,
+          platform: platformFilter !== 'all' ? platformFilter : undefined,
           authToken
         });
 
@@ -419,7 +436,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       }
       
       toast.success(`Validation complete! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
-      await loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
+      fetchLinksStats().then(s => s && setPlatformStats(s)).catch(() => {});
+      await loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter);
     } catch (error: any) {
       toast.error(error?.message || 'An error occurred during validation.', { id: toastId });
     } finally {
@@ -454,6 +472,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         const result = await validateSavedLinks({
           limit: String(limit),
           offset: currentOffset,
+          platform: platformFilter !== 'all' ? platformFilter : undefined,
           authToken
         });
 
@@ -471,7 +490,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
       playSound('success', { emphasis: 'strong' });
       toast.success(`Page validated! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
-      await loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
+      fetchLinksStats().then(s => s && setPlatformStats(s)).catch(() => {});
+      await loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter);
     } catch (error: any) {
       playSound('error');
       toast.error(error?.message || 'An error occurred during page validation.', { id: toastId });
@@ -520,6 +540,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           title: savedLink.title || savedLink.description || 'Database Link',
           description: savedLink.description,
           image: savedLink.image,
+          platform: savedLink.platform,
+          type: savedLink.raw_metadata?.type || (savedLink as any).type,
           memberCount,
           memberCountCompact: formatCompactNumber(memberCount),
           memberCountRaw: memberCount?.toLocaleString(),
@@ -577,11 +599,13 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
   // Summary text
   const savedLinksSummary = (() => {
-    if (debouncedSearchQuery || selectedTag !== 'All' || userParam) {
+    const platformLabel = platformFilter === 'mega' ? 'MEGA' : platformFilter === 'telegram' ? 'Telegram' : '';
+    const platformStr = platformLabel ? `[${platformLabel}]` : '';
+    if (debouncedSearchQuery || selectedTag !== 'All' || userParam || platformLabel) {
       const queryStr = debouncedSearchQuery ? `"${debouncedSearchQuery}"` : '';
       const tagStr = selectedTag !== 'All' ? `[${selectedTag}]` : '';
       const userStr = userParam ? `@${userParam}` : '';
-      return `${filteredLinks.length} results ${queryStr} ${tagStr} ${userStr} · ${displayTotal} matched`;
+      return `${filteredLinks.length} results ${platformStr} ${queryStr} ${tagStr} ${userStr} · ${displayTotal} matched`.replace(/\s+/g, ' ');
     }
     if (savedFilter !== 'all') {
       return `${filteredLinks.length} filtered · ${filteredLinks.length} loaded · ${displayTotal} total`;
@@ -935,20 +959,23 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
               ? `No results found for "${debouncedSearchQuery}". Try a different search term.`
               : selectedTag !== 'All'
                 ? `No links tagged as "${selectedTag}". Try selecting a different tag.`
-                : userParam
-                  ? `User @${userParam} hasn't added any links matching this filter.`
-                  : 'There are no valid links returned from the database.'}
+                : platformFilter !== 'all'
+                  ? `No links found for ${platformFilter.toUpperCase()}. Try switching platform.`
+                  : userParam
+                    ? `User @${userParam} hasn't added any links matching this filter.`
+                    : 'There are no valid links returned from the database.'}
           </p>
           <button 
             onClick={() => {
               handleClearSearch();
               setSelectedTag('All');
               setSavedFilter('all');
+              setPlatformFilter('all');
               router.push('/saved');
             }}
             className="mt-6 text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-4 py-2 rounded-md"
           >
-            {(debouncedSearchQuery || selectedTag !== 'All' || userParam) ? 'Clear Filters' : 'Refresh Database'}
+            {(debouncedSearchQuery || selectedTag !== 'All' || platformFilter !== 'all' || userParam) ? 'Clear Filters' : 'Refresh Database'}
           </button>
         </div>
       ) : filteredLinks.length === 0 ? (
@@ -964,6 +991,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             onClick={() => {
               handleClearSearch();
               setSavedFilter('all');
+              setPlatformFilter('all');
               router.push('/saved');
             }}
             className="mt-6 text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-4 py-2 rounded-md"
@@ -989,9 +1017,51 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
             </div>
           )}
           <div className="mb-4 flex flex-col gap-3">
+            {/* Platform Filter Chips */}
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 shrink-0 min-w-[55px]">
+                Platform
+              </span>
+              <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+                {[
+                  { id: 'all' as const, label: 'All Platforms', shortLabel: 'All', count: platformStats?.total },
+                  { id: 'telegram' as const, label: 'Telegram', shortLabel: 'Telegram', count: platformStats?.telegram },
+                  { id: 'mega' as const, label: 'MEGA', shortLabel: 'MEGA', count: platformStats?.mega },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    data-cuelume-select
+                    onClick={() => {
+                      if (platformFilter === item.id) return;
+                      setPlatformFilter(item.id);
+                      setPage(1);
+                    }}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 flex items-center gap-1.5 ${
+                      platformFilter === item.id
+                        ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
+                    }`}
+                  >
+                    <span className="sm:hidden">{item.shortLabel}</span>
+                    <span className="hidden sm:inline">{item.label}</span>
+                    {item.count !== undefined && item.count !== null && (
+                      <span className={`text-[10px] font-semibold tabular-nums px-1 py-0.5 rounded-full min-w-[18px] text-center leading-none ${
+                        platformFilter === item.id
+                          ? 'bg-white/20 dark:bg-black/20 text-white dark:text-black'
+                          : 'bg-gray-100 dark:bg-[#222] text-gray-500 dark:text-gray-400'
+                      }`}>
+                        {item.count > 999 ? `${(item.count / 1000).toFixed(1)}k` : item.count}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Tag Filter Chips */}
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 shrink-0 min-w-[45px]">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 shrink-0 min-w-[55px]">
                 Tags
               </span>
               <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">

@@ -4,12 +4,12 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { LinkResult } from '../types';
-import { X, ExternalLink, Copy, Users, Tag as TagIcon, Loader2, Zap, Trash2, Plus, Crown } from 'lucide-react';
+import { X, ExternalLink, Copy, Users, Folder, Tag as TagIcon, Loader2, Zap, Trash2, Plus, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { copyText } from '../utils/clipboard';
 import { updateLinkTags } from '../services/api';
 import { trackLinkCopy, trackLinkPreview, trackTagModalOpen, trackTagToggle } from '../utils/tracking';
-import { DEFAULT_TAGS } from '../utils/helpers';
+import { DEFAULT_TAGS, isMegaLink } from '../utils/helpers';
 import ErrorBoundary from './ErrorBoundary';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -134,6 +134,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({
     else toast.error('Failed to update tags');
   };
 
+  const isMega = details.platform === 'mega' || isMegaLink(result.link);
   const avatarInitial = getInitial(details.title, result.link);
   const avatarBg = getAvatarColor(result.link);
 
@@ -142,9 +143,19 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({
     const txt = size === 'sm' ? 'text-sm' : 'text-xl';
     if (hasImage) return (
       <div className={`${sz} shrink-0 overflow-hidden rounded-full border border-gray-200 dark:border-[#333]`}>
-        <img src={details.image} alt={details.title || 'Channel'} className="w-full h-full object-cover" onError={() => setImgError(true)} />
+        <img src={details.image} alt={details.title || (isMega ? 'MEGA' : 'Channel')} className="w-full h-full object-cover" onError={() => setImgError(true)} />
       </div>
     );
+    if (isMega) {
+      return (
+        <div
+          className={`${sz} shrink-0 rounded-full flex items-center justify-center font-bold text-white shadow-sm bg-[#ea1a24]`}
+          title="MEGA"
+        >
+          <span className={size === 'sm' ? 'text-xs tracking-tighter' : 'text-base tracking-tight'}>M</span>
+        </div>
+      );
+    }
     if (isValid || details.title) return (
       <div className={`${sz} shrink-0 rounded-full flex items-center justify-center ${txt} font-bold text-white`} style={{ backgroundColor: avatarBg }}>
         {avatarInitial}
@@ -159,7 +170,11 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({
   else if (status === 'mega') statusColor = 'bg-blue-500';
 
   let statusLabel = result.reason || status || 'unknown';
-  if (isValid && details.type) statusLabel = details.type.charAt(0).toUpperCase() + details.type.slice(1);
+  if (isValid && details.type) {
+    statusLabel = details.type.charAt(0).toUpperCase() + details.type.slice(1);
+  } else if (isMega && isValid) {
+    statusLabel = 'Valid Link';
+  }
 
   const previewFields = [
     { label: 'Description', value: details.description },
@@ -193,6 +208,11 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({
             <div className="flex items-center gap-2 mb-0.5">
               <div className={`w-1.5 h-1.5 rounded-full ${statusColor} shrink-0`} />
               <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider truncate">{statusLabel}</span>
+              {isMega && (
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 text-[9px] font-bold uppercase tracking-wider">
+                  MEGA
+                </span>
+              )}
               {result.cached && (
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[9px] font-semibold uppercase tracking-wider">
                   <Zap size={8} /> Cached
@@ -202,19 +222,24 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({
             <p className="text-sm font-medium text-black dark:text-white truncate" title={details.title || result.link}>
               {details.title || result.link}
             </p>
-            {(details.title || details.memberCountCompact || details.memberCountRaw) && (
+            {(details.title || details.memberCountCompact || details.memberCountRaw || (isMega && details.description)) && (
               <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">
                 {details.title && (
                   <a href={href} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} className="truncate hover:underline underline-offset-2 decoration-gray-400" title={result.link}>
                     {result.link}
                   </a>
                 )}
-                {(details.memberCountCompact || details.memberCountRaw) && (
+                {isMega && details.description ? (
+                  <span className="flex items-center gap-1 shrink-0 text-[10px] font-medium text-gray-500 dark:text-gray-400">
+                    <Folder size={10} className="opacity-60" />
+                    {details.description}
+                  </span>
+                ) : (details.memberCountCompact || details.memberCountRaw) ? (
                   <span className="flex items-center gap-1 shrink-0 text-[10px] font-medium">
                     <Users size={10} className="opacity-60" />
                     {details.memberCountCompact || details.memberCountRaw}
                   </span>
-                )}
+                ) : null}
               </div>
             )}
           </div>
@@ -280,7 +305,9 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({
                 {/* Body */}
                 <div className="p-5 space-y-4">
                   <div className="rounded-xl border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] p-4">
-                    <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Telegram Link</p>
+                    <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                      {isMega ? 'MEGA Link' : 'Telegram Link'}
+                    </p>
                     <p className="text-sm text-black dark:text-white break-all">{result.link}</p>
                   </div>
                   {previewFields.length > 0 && (
