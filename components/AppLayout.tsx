@@ -11,6 +11,7 @@ import AuthModal from './AuthModal';
 import { Toaster } from 'sonner';
 import { trackNavigation } from '../utils/tracking';
 import { useAuth } from '@/hooks/useAuth';
+import { fetchMyProfile } from '@/services/api';
 
 const shortcutGroups = [
   {
@@ -59,7 +60,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const { user, isConfigured } = useAuth();
+  const { user, isConfigured, getIdToken } = useAuth();
   const themeToggleRef = useRef<HTMLButtonElement>(null);
 
   const pathname = usePathname();
@@ -211,6 +212,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Listen for banned account event
   const [bannedInfo, setBannedInfo] = useState<{ isBanned: boolean; error?: string; contact?: string } | null>(null);
+
   useEffect(() => {
     const handleBanned = (event: Event) => {
       const customEvent = event as CustomEvent;
@@ -224,6 +226,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     window.addEventListener('telecheck:banned', handleBanned);
     return () => window.removeEventListener('telecheck:banned', handleBanned);
   }, []);
+
+  // Proactively check profile on load / login to identify banned state immediately
+  useEffect(() => {
+    let cancelled = false;
+    const checkBanStatus = async () => {
+      try {
+        const token = user ? await getIdToken() : null;
+        const profile = await fetchMyProfile({ authToken: token, firebaseUid: user?.uid });
+        if (!cancelled && (profile.is_banned || profile.banned || profile.status === 'suspended')) {
+          setBannedInfo({
+            isBanned: true,
+            error: (profile as any).error || 'Your contributor account has been suspended by an administrator.',
+            contact: profile.contact || '@saahiyo',
+          });
+        }
+      } catch (err: any) {
+        if (!cancelled && (err?.banned || err?.status === 'suspended')) {
+          setBannedInfo({
+            isBanned: true,
+            error: err.message || 'Your contributor account has been suspended by an administrator.',
+            contact: err.contact || '@saahiyo',
+          });
+        }
+      }
+    };
+    checkBanStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, getIdToken]);
 
   return (
     <div className="min-h-screen w-full relative bg-white dark:bg-black font-sans selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
@@ -487,9 +519,53 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         )}
       </AnimatePresence>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {children}
-      </main>
+      {bannedInfo?.isBanned ? (
+        <main className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <div className="rounded-2xl border border-red-500/30 bg-[#0c0a09] p-8 shadow-2xl shadow-red-500/10">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 text-red-500">
+              <Ban size={32} strokeWidth={2.5} />
+            </div>
+            <h2 className="text-xl font-bold tracking-tight text-white">Account Suspended</h2>
+            <p className="mt-2 text-sm leading-relaxed text-gray-400">
+              {bannedInfo.error || 'Your contributor account has been suspended. Validations and link actions have been disabled.'}
+            </p>
+            <div className="mt-6 flex flex-col gap-2.5">
+              <a
+                href={`https://t.me/${(bannedInfo.contact || 'saahiyo').replace(/^@/, '')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition-all hover:bg-blue-500 active:scale-[0.98]"
+              >
+                <Send size={16} />
+                <span>Contact Admin ({bannedInfo.contact || '@saahiyo'})</span>
+              </a>
+              {user && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const { getFirebaseAuth } = await import('@/lib/firebase');
+                      const auth = getFirebaseAuth();
+                      if (auth) {
+                        const { signOut } = await import('firebase/auth');
+                        await signOut(auth);
+                      }
+                    } catch {}
+                    window.location.reload();
+                  }}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#27272a] bg-[#18181b] px-4 py-2.5 text-xs font-medium text-gray-300 transition-colors hover:bg-[#27272a] hover:text-white"
+                >
+                  Switch Account / Sign Out
+                </button>
+              )}
+            </div>
+          </div>
+        </main>
+      ) : (
+        <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          {children}
+        </main>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-[#333] mt-8">
