@@ -219,7 +219,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       const detail = customEvent.detail || {};
       setBannedInfo({
         isBanned: true,
-        error: detail.error || 'Your contributor account has been suspended by an administrator.',
+        error: detail.error || 'Your account has been suspended by an administrator.',
         contact: detail.contact || '@saahiyo',
       });
     };
@@ -237,7 +237,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (!cancelled && (profile.is_banned || profile.banned || profile.status === 'suspended')) {
           setBannedInfo({
             isBanned: true,
-            error: (profile as any).error || 'Your contributor account has been suspended by an administrator.',
+            error: (profile as any).error || 'Your account has been suspended by an administrator.',
             contact: profile.contact || '@saahiyo',
           });
         }
@@ -245,7 +245,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (!cancelled && (err?.banned || err?.status === 'suspended')) {
           setBannedInfo({
             isBanned: true,
-            error: err.message || 'Your contributor account has been suspended by an administrator.',
+            error: err.message || 'Your account has been suspended by an administrator.',
             contact: err.contact || '@saahiyo',
           });
         }
@@ -527,7 +527,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <h2 className="text-xl font-bold tracking-tight text-white">Account Suspended</h2>
             <p className="mt-2 text-sm leading-relaxed text-gray-400">
-              {bannedInfo.error || 'Your contributor account has been suspended. Validations and link actions have been disabled.'}
+              Your account has been suspended by an administrator.
             </p>
             <div className="mt-6 flex flex-col gap-2.5">
               <a
@@ -539,25 +539,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <Send size={16} />
                 <span>Contact Admin ({bannedInfo.contact || '@saahiyo'})</span>
               </a>
-              {user && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      const { getFirebaseAuth } = await import('@/lib/firebase');
-                      const auth = getFirebaseAuth();
-                      if (auth) {
-                        const { signOut } = await import('firebase/auth');
-                        await signOut(auth);
-                      }
-                    } catch {}
-                    window.location.reload();
-                  }}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#27272a] bg-[#18181b] px-4 py-2.5 text-xs font-medium text-gray-300 transition-colors hover:bg-[#27272a] hover:text-white"
-                >
-                  Switch Account / Sign Out
-                </button>
-              )}
             </div>
           </div>
         </main>
@@ -753,7 +734,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </h2>
 
               <p className="mt-2 text-sm leading-relaxed text-gray-400">
-                {bannedInfo.error || 'Your contributor account has been suspended for policy violations or abnormal requests. Validations and link actions have been disabled.'}
+                Your account has been suspended by an administrator.
               </p>
 
               <div className="mt-6 flex flex-col gap-2.5">
@@ -766,26 +747,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <Send size={16} />
                   <span>Contact Admin ({bannedInfo.contact || '@saahiyo'})</span>
                 </a>
-
-                {user && (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const { getFirebaseAuth } = await import('@/lib/firebase');
-                        const auth = getFirebaseAuth();
-                        if (auth) {
-                          const { signOut } = await import('firebase/auth');
-                          await signOut(auth);
-                        }
-                      } catch {}
-                      window.location.reload();
-                    }}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#27272a] bg-[#18181b] px-4 py-2.5 text-xs font-medium text-gray-300 transition-colors hover:bg-[#27272a] hover:text-white"
-                  >
-                    Switch Account / Sign Out
-                  </button>
-                )}
               </div>
             </motion.div>
           </motion.div>
