@@ -15,6 +15,7 @@ import { copyText } from '../utils/clipboard';
 import ResultCard from './ResultCard';
 import LinkCopyModal from './LinkCopyModal';
 import { trackSearchQuery, trackFilterChange, trackSortChange, trackLinksRefresh, trackLinksValidate, trackCopyModalOpen, trackPagination } from '../utils/tracking';
+import { play as playSound } from 'cuelume';
 
 interface SavedLinksPageProps {
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
@@ -468,9 +469,11 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         if (result.processed === 0) break;
       }
 
+      playSound('success', { emphasis: 'strong' });
       toast.success(`Page validated! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
       await loadLinks(page, debouncedSearchQuery, selectedTag, userParam);
     } catch (error: any) {
+      playSound('error');
       toast.error(error?.message || 'An error occurred during page validation.', { id: toastId });
     } finally {
       setIsValidating(false);
@@ -485,14 +488,17 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
 
   const handleCopyLinks = useCallback(async () => {
     if (sortedLinks.length === 0) {
+      playSound('error', { emphasis: 'subtle' });
       toast.error('No links to copy.');
       return;
     }
     const urls = Array.from(new Set(sortedLinks.map(l => l.url).filter(Boolean)));
     try {
       await copyText(urls.join('\n'));
+      playSound('success', { emphasis: 'subtle' });
       toast.success(`Copied ${urls.length.toLocaleString()} link${urls.length === 1 ? '' : 's'}.`);
     } catch {
+      playSound('error', { emphasis: 'subtle' });
       toast.error('Failed to copy links.');
     }
   }, [sortedLinks]);
@@ -735,6 +741,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
               trackCopyModalOpen(links.length);
             }}
             disabled={links.length === 0}
+            data-cuelume-open
             className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
           >
             <Layers size={14} />
@@ -743,6 +750,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           <button
             onClick={() => void handleCopyLinks()}
             disabled={sortedLinks.length === 0}
+            data-cuelume-tap
             className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
           >
             <Copy size={14} />
@@ -751,6 +759,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           <button
             onClick={handleRefresh}
             disabled={isLoading || isValidating}
+            data-cuelume-tap
+            data-cuelume-emphasis="subtle"
             className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-black dark:text-white transition-all px-3 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
           >
             <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
@@ -759,6 +769,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           <button
             onClick={() => void handleValidatePage()}
             disabled={isValidating || links.length === 0}
+            data-cuelume-tap
             className="text-xs font-semibold bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white transition-all px-4 py-2 rounded-md flex items-center justify-center gap-2 shadow-sm"
           >
             {isValidating ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />}
@@ -986,6 +997,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
               <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
                 <button
                   type="button"
+                  data-cuelume-select
                   onClick={() => { setSelectedTag('All'); setPage(1); }}
                   className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${
                     selectedTag === 'All'
@@ -999,6 +1011,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                   <button
                     key={t}
                     type="button"
+                    data-cuelume-select
                     onClick={() => { setSelectedTag(t); setPage(1); trackFilterChange(savedFilter, t); }}
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 flex items-center gap-1.5 ${
                       selectedTag === t
@@ -1114,6 +1127,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                   <button
                     key={chip.value}
                     type="button"
+                    data-cuelume-select
                     onClick={() => handleSortChange(chip.value)}
                     aria-pressed={savedSort === chip.value}
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${

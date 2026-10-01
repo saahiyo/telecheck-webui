@@ -4,7 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'motion/react';
-import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Heart, LogIn, UserCircle, Ban, Send, Copy, Check, RefreshCw, AlertCircle } from 'lucide-react';
+import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Heart, LogIn, UserCircle, Ban, Send, Copy, Check, RefreshCw, AlertCircle, Volume2, VolumeX } from 'lucide-react';
+import { bind as bindCuelume, setEnabled as setSoundEnabled, play as playSound } from 'cuelume';
 import ThemeToggle from './ThemeToggle';
 import GithubBtn from './GithubBtn';
 import AuthModal from './AuthModal';
@@ -71,6 +72,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.push(href);
     }
     trackNavigation(target);
+  };
+
+  const [isSoundEnabled, setIsSoundEnabled] = useState(true);
+
+  // Initialize cuelume binding and sound preference
+  useEffect(() => {
+    try {
+      bindCuelume();
+    } catch {}
+
+    const saved = localStorage.getItem('telecheck_sound');
+    const enabled = saved !== 'false';
+    setIsSoundEnabled(enabled);
+    setSoundEnabled(enabled);
+  }, []);
+
+  const toggleSound = () => {
+    const next = !isSoundEnabled;
+    setIsSoundEnabled(next);
+    setSoundEnabled(next);
+    localStorage.setItem('telecheck_sound', String(next));
+    if (next) {
+      playSound('toggle');
+    }
   };
 
   useEffect(() => {
@@ -401,6 +426,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <div className="hidden sm:flex items-center gap-1 bg-gray-100/50 dark:bg-[#111]/50 p-1 rounded-lg border border-gray-200 dark:border-[#333]">
                 <button
                   onClick={() => navigateTo('/', 'home')}
+                  data-cuelume-navigate
                   className={`relative px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 overflow-hidden ${pathname === '/' ? 'text-black dark:text-white' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
                 >
                   {pathname === '/' && (
@@ -416,6 +442,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
                 <button
                   onClick={() => navigateTo('/saved', 'saved')}
+                  data-cuelume-navigate
                   className={`relative px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 overflow-hidden ${pathname === '/saved' ? 'text-black dark:text-white' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
                 >
                   {pathname === '/saved' && (
@@ -431,6 +458,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
                 <button
                   onClick={() => navigateTo('/contributors', 'contributors')}
+                  data-cuelume-navigate
                   className={`relative px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-2 overflow-hidden ${pathname === '/contributors' ? 'text-black dark:text-white' : 'text-gray-500 hover:text-black dark:hover:text-white'}`}
                 >
                   {pathname === '/contributors' && (
@@ -481,6 +509,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     )}
                   </button>
                 )}
+                <button
+                  type="button"
+                  onClick={toggleSound}
+                  className={`p-2 rounded-md border transition-all duration-200 ${
+                    isSoundEnabled
+                      ? 'bg-white dark:bg-black border-gray-200 dark:border-[#333] text-gray-700 dark:text-gray-200 hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#111]'
+                      : 'bg-gray-100 dark:bg-[#181818] border-gray-200 dark:border-[#333] text-gray-400 dark:text-gray-500'
+                  }`}
+                  aria-label={isSoundEnabled ? 'Mute interaction sounds' : 'Unmute interaction sounds'}
+                  title={isSoundEnabled ? 'Sound is on (Click to mute)' : 'Sound is muted (Click to unmute)'}
+                >
+                  {isSoundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                </button>
                 <ThemeToggle buttonRef={themeToggleRef} />
                 <button
                   type="button"
