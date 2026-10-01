@@ -115,4 +115,8 @@ export interface MyProfileResponse {
   rank: number | null;
   first_seen?: string;
   last_seen?: string;
+  is_banned?: boolean;
+  banned?: boolean;
+  status?: string;
+  contact?: string;
 }

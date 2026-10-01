@@ -166,7 +166,22 @@ export const checkSingleLink = async (link: string, authToken?: string | null): 
       };
     }
 
-    if (!response.ok) throw new Error('Failed to check link');
+    if (!response.ok) {
+      if (response.status === 403) {
+        const errData = await response.json().catch(() => ({}));
+        if (errData.banned || errData.status === 'suspended') {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('telecheck:banned', { detail: errData }));
+          }
+          return {
+            link: cleanLink,
+            status: 'invalid',
+            reason: errData.error || 'Account suspended',
+          };
+        }
+      }
+      throw new Error('Failed to check link');
+    }
 
     const data = await response.json();
     clearCache('contributors:');
@@ -273,6 +288,11 @@ export const checkBulkLinks = async (
 
     if (response.status !== 200 && response.status !== 202) {
       const data = await response.json().catch(() => null);
+      if (response.status === 403 && (data?.banned || data?.status === 'suspended')) {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('telecheck:banned', { detail: data }));
+        }
+      }
       if (response.status === 401) {
         throw new Error(data?.error || 'Please sign in before validating links.');
       }
@@ -603,9 +623,35 @@ export const fetchMyProfile = async ({
     const response = await fetch(`${BASE_URL}/contributors/me?${profileParams.toString()}`, {
       headers: getContributorHeaders(undefined, authToken)
     });
+    
+    if (response.status === 403) {
+      const errData = await response.json().catch(() => ({}));
+      if (errData.banned || errData.status === 'suspended') {
+        const bannedProfile: MyProfileResponse = {
+          username: null,
+          links_added: 0,
+          rank: null,
+          is_banned: true,
+          banned: true,
+          status: 'suspended',
+          contact: errData.contact || '@saahiyo',
+        };
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('telecheck:banned', { detail: bannedProfile }));
+        }
+        return bannedProfile;
+      }
+    }
+
     if (!response.ok) throw new Error('Failed to fetch my profile');
 
     const profile = await response.json() as MyProfileResponse;
+    if (profile.is_banned || profile.banned || profile.status === 'suspended') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('telecheck:banned', { detail: profile }));
+      }
+    }
+
     // Browser storage represents only the pre-login, device-based identity.
     // Never let it overwrite the profile selected by a verified Firebase UID.
     const data = firebaseUid ? profile : rememberContributorProfile(profile);

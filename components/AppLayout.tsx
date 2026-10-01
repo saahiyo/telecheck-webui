@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'motion/react';
-import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Heart, LogIn, UserCircle } from 'lucide-react';
+import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Heart, LogIn, UserCircle, Ban, Send } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import GithubBtn from './GithubBtn';
 import AuthModal from './AuthModal';
@@ -207,6 +207,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const handleOpenAuthModal = () => setIsAuthModalOpen(true);
     window.addEventListener('app-open-auth-modal', handleOpenAuthModal);
     return () => window.removeEventListener('app-open-auth-modal', handleOpenAuthModal);
+  }, []);
+
+  // Listen for banned account event
+  const [bannedInfo, setBannedInfo] = useState<{ isBanned: boolean; error?: string; contact?: string } | null>(null);
+  useEffect(() => {
+    const handleBanned = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const detail = customEvent.detail || {};
+      setBannedInfo({
+        isBanned: true,
+        error: detail.error || 'Your contributor account has been suspended by an administrator.',
+        contact: detail.contact || '@saahiyo',
+      });
+    };
+    window.addEventListener('telecheck:banned', handleBanned);
+    return () => window.removeEventListener('telecheck:banned', handleBanned);
   }, []);
 
   return (
@@ -635,6 +651,70 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+
+      {/* Account Suspended / Banned Full-Screen Modal */}
+      <AnimatePresence>
+        {bannedInfo?.isBanned && (
+          <motion.div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md p-4 sm:p-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="relative w-full max-w-md rounded-2xl border border-red-500/30 bg-[#0c0a09] dark:bg-[#0c0a09] p-6 text-center shadow-2xl shadow-red-500/10 ring-1 ring-red-500/20"
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 text-red-500 shadow-lg shadow-red-500/20">
+                <Ban size={32} strokeWidth={2.5} />
+              </div>
+
+              <h2 className="text-xl font-bold tracking-tight text-white">
+                Account Suspended
+              </h2>
+
+              <p className="mt-2 text-sm leading-relaxed text-gray-400">
+                {bannedInfo.error || 'Your contributor account has been suspended for policy violations or abnormal requests. Validations and link actions have been disabled.'}
+              </p>
+
+              <div className="mt-6 flex flex-col gap-2.5">
+                <a
+                  href={`https://t.me/${(bannedInfo.contact || 'saahiyo').replace(/^@/, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition-all hover:bg-blue-500 active:scale-[0.98]"
+                >
+                  <Send size={16} />
+                  <span>Contact Admin ({bannedInfo.contact || '@saahiyo'})</span>
+                </a>
+
+                {user && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const { getFirebaseAuth } = await import('@/lib/firebase');
+                        const auth = getFirebaseAuth();
+                        if (auth) {
+                          const { signOut } = await import('firebase/auth');
+                          await signOut(auth);
+                        }
+                      } catch {}
+                      window.location.reload();
+                    }}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#27272a] bg-[#18181b] px-4 py-2.5 text-xs font-medium text-gray-300 transition-colors hover:bg-[#27272a] hover:text-white"
+                  >
+                    Switch Account / Sign Out
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
