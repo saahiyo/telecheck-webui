@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AnimatePresence, motion } from 'motion/react';
-import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Heart, LogIn, UserCircle, Ban, Send } from 'lucide-react';
+import { Layers, ShieldCheck, Database, Users, Menu, X, Keyboard, Heart, LogIn, UserCircle, Ban, Send, Copy, Check, RefreshCw, AlertCircle } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import GithubBtn from './GithubBtn';
 import AuthModal from './AuthModal';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { trackNavigation } from '../utils/tracking';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchMyProfile } from '@/services/api';
@@ -211,16 +211,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Listen for banned account event
-  const [bannedInfo, setBannedInfo] = useState<{ isBanned: boolean; error?: string; contact?: string } | null>(null);
+  const [bannedInfo, setBannedInfo] = useState<{ isBanned: boolean; error?: string; reason?: string; contact?: string; caseId?: string } | null>(null);
+  const [isCopiedAppeal, setIsCopiedAppeal] = useState(false);
 
   useEffect(() => {
     const handleBanned = (event: Event) => {
       const customEvent = event as CustomEvent;
       const detail = customEvent.detail || {};
+      const reason = detail.reason || detail.error || 'Your account has been suspended by an administrator.';
       setBannedInfo({
         isBanned: true,
-        error: detail.error || 'Your account has been suspended by an administrator.',
+        error: reason,
+        reason,
         contact: detail.contact || '@saahiyo',
+        caseId: `#TC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
       });
     };
     window.addEventListener('telecheck:banned', handleBanned);
@@ -235,18 +239,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         const token = user ? await getIdToken() : null;
         const profile = await fetchMyProfile({ authToken: token, firebaseUid: user?.uid });
         if (!cancelled && (profile.is_banned || profile.banned || profile.status === 'suspended')) {
+          const reason = (profile as any).ban_reason || (profile as any).reason || (profile as any).error || 'Suspended by an administrator for policy violations.';
           setBannedInfo({
             isBanned: true,
-            error: (profile as any).error || 'Your account has been suspended by an administrator.',
+            error: reason,
+            reason,
             contact: profile.contact || '@saahiyo',
+            caseId: `#TC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
           });
         }
       } catch (err: any) {
         if (!cancelled && (err?.banned || err?.status === 'suspended')) {
+          const reason = err?.reason || err?.message || 'Your account has been suspended by an administrator.';
           setBannedInfo({
             isBanned: true,
-            error: err.message || 'Your account has been suspended by an administrator.',
+            error: reason,
+            reason,
             contact: err.contact || '@saahiyo',
+            caseId: `#TC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
           });
         }
       }
@@ -256,6 +266,112 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       cancelled = true;
     };
   }, [user, getIdToken]);
+
+  const handleCopyAppeal = () => {
+    if (!bannedInfo) return;
+    const ref = bannedInfo.caseId || '#TC-SEC';
+    const reason = bannedInfo.reason || bannedInfo.error || 'Account Suspended';
+    const text = `[TeleCheck Pro Appeal]\nReference ID: ${ref}\nReason: ${reason}\nDate: ${new Date().toLocaleDateString()}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setIsCopiedAppeal(true);
+      toast.success('Appeal details copied to clipboard!');
+      setTimeout(() => setIsCopiedAppeal(false), 2000);
+    }).catch(() => {
+      toast.error('Failed to copy to clipboard.');
+    });
+  };
+
+  const renderSuspendedCard = (isModal = false) => {
+    if (!bannedInfo) return null;
+    return (
+      <div className={`relative w-full ${isModal ? 'max-w-lg' : 'max-w-md mx-auto'} rounded-2xl border border-red-500/30 bg-gradient-to-b from-[#18181c] to-[#101014] p-6 sm:p-7 text-center shadow-2xl shadow-red-500/15 overflow-hidden ring-1 ring-red-500/20`}>
+        {/* Subtle top glow */}
+        <div className="pointer-events-none absolute -top-12 left-1/2 -translate-x-1/2 h-28 w-48 rounded-full bg-red-500/20 blur-2xl" />
+
+        {/* Status Badge */}
+        <div className="relative mb-4 inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-[11px] font-bold tracking-wider uppercase text-red-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span>Access Restricted</span>
+        </div>
+
+        {/* Icon */}
+        <div className="relative mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 text-red-500 shadow-lg shadow-red-500/20">
+          <Ban size={28} strokeWidth={2.5} />
+        </div>
+
+        <h2 className="relative text-xl font-bold tracking-tight text-white">
+          Account Suspended
+        </h2>
+
+        <p className="relative mt-1.5 text-xs sm:text-sm leading-relaxed text-zinc-400 max-w-sm mx-auto">
+          Your access to link verification and platform submissions has been suspended by an administrator.
+        </p>
+
+        {/* Structured Details Box */}
+        <div className="relative mt-5 rounded-xl border border-white/10 bg-black/50 p-3.5 text-left text-xs space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-zinc-400 font-medium">Status</span>
+            <span className="rounded-md border border-red-500/30 bg-red-500/15 px-2 py-0.5 text-[11px] font-semibold text-red-400">
+              Suspended
+            </span>
+          </div>
+          <div className="flex items-start justify-between gap-3">
+            <span className="text-zinc-400 font-medium shrink-0">Reason</span>
+            <span className="text-zinc-200 font-medium text-right break-words">
+              {bannedInfo.reason || bannedInfo.error || 'Abnormal request volume / Automated spamming'}
+            </span>
+          </div>
+          <div className="flex items-center justify-between gap-2 border-t border-white/5 pt-2">
+            <span className="text-zinc-400 font-medium">Appeal Reference</span>
+            <code className="rounded bg-white/5 px-1.5 py-0.5 font-mono text-[11px] text-zinc-300">
+              {bannedInfo.caseId || '#TC-SEC'}
+            </code>
+          </div>
+        </div>
+
+        {/* Advisory Note */}
+        <p className="relative mt-3.5 text-[11px] leading-relaxed text-zinc-400 flex items-start gap-1.5 text-left px-1">
+          <AlertCircle size={14} className="shrink-0 mt-0.5 text-zinc-400" />
+          <span>
+            If you believe this restriction was placed in error, please reach out to the administrator on Telegram with your Appeal Reference.
+          </span>
+        </p>
+
+        {/* Action Buttons */}
+        <div className="relative mt-5 flex flex-col gap-2.5">
+          <a
+            href={`https://t.me/${(bannedInfo.contact || 'saahiyo').replace(/^@/, '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition-all active:scale-[0.98]"
+          >
+            <Send size={15} />
+            <span>Contact Admin ({bannedInfo.contact || '@saahiyo'})</span>
+          </a>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={handleCopyAppeal}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-700/80 bg-white/[0.04] hover:bg-white/[0.08] hover:text-white px-3 py-2 text-xs font-medium text-zinc-300 transition-colors"
+            >
+              {isCopiedAppeal ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+              <span>{isCopiedAppeal ? 'Copied!' : 'Copy Appeal Info'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-700/80 bg-white/[0.04] hover:bg-white/[0.08] hover:text-white px-3 py-2 text-xs font-medium text-zinc-300 transition-colors"
+            >
+              <RefreshCw size={13} />
+              <span>Check Status</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen w-full relative bg-white dark:bg-black font-sans selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
@@ -521,26 +637,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {bannedInfo?.isBanned ? (
         <main className="max-w-xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <div className="rounded-2xl border border-red-500/30 bg-[#0c0a09] p-8 shadow-2xl shadow-red-500/10">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 text-red-500">
-              <Ban size={32} strokeWidth={2.5} />
-            </div>
-            <h2 className="text-xl font-bold tracking-tight text-white">Account Suspended</h2>
-            <p className="mt-2 text-sm leading-relaxed text-gray-400">
-              Your account has been suspended by an administrator.
-            </p>
-            <div className="mt-6 flex flex-col gap-2.5">
-              <a
-                href={`https://t.me/${(bannedInfo.contact || 'saahiyo').replace(/^@/, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition-all hover:bg-blue-500 active:scale-[0.98]"
-              >
-                <Send size={16} />
-                <span>Contact Admin ({bannedInfo.contact || '@saahiyo'})</span>
-              </a>
-            </div>
-          </div>
+          {renderSuspendedCard(false)}
         </main>
       ) : (
         <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -719,35 +816,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="relative w-full max-w-md rounded-2xl border border-red-500/30 bg-[#0c0a09] dark:bg-[#0c0a09] p-6 text-center shadow-2xl shadow-red-500/10 ring-1 ring-red-500/20"
               initial={{ opacity: 0, scale: 0.95, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 16 }}
               transition={{ duration: 0.2 }}
+              className="w-full max-w-lg"
             >
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 text-red-500 shadow-lg shadow-red-500/20">
-                <Ban size={32} strokeWidth={2.5} />
-              </div>
-
-              <h2 className="text-xl font-bold tracking-tight text-white">
-                Account Suspended
-              </h2>
-
-              <p className="mt-2 text-sm leading-relaxed text-gray-400">
-                Your account has been suspended by an administrator.
-              </p>
-
-              <div className="mt-6 flex flex-col gap-2.5">
-                <a
-                  href={`https://t.me/${(bannedInfo.contact || 'saahiyo').replace(/^@/, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/30 transition-all hover:bg-blue-500 active:scale-[0.98]"
-                >
-                  <Send size={16} />
-                  <span>Contact Admin ({bannedInfo.contact || '@saahiyo'})</span>
-                </a>
-              </div>
+              {renderSuspendedCard(true)}
             </motion.div>
           </motion.div>
         )}
