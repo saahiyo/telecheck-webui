@@ -759,6 +759,7 @@ function ValidatorContent() {
                   setMode('bulk');
                   trackModeSwitch('bulk');
                 }}
+                data-cuelume-select
                 className={`relative flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 overflow-hidden ${
                   mode === 'bulk'
                     ? 'text-black dark:text-white'
@@ -782,6 +783,7 @@ function ValidatorContent() {
                   setMode('single');
                   trackModeSwitch('single');
                 }}
+                data-cuelume-select
                 className={`relative flex-1 flex items-center justify-center gap-2 py-1.5 rounded-md text-xs font-medium transition-colors duration-200 overflow-hidden ${
                   mode === 'single'
                     ? 'text-black dark:text-white'
@@ -842,6 +844,7 @@ function ValidatorContent() {
                     <div className="absolute top-2 right-2 flex gap-1">
                       <button
                         onClick={handlePaste}
+                        data-cuelume-tap
                         className="p-1.5 text-gray-400 hover:text-black dark:hover:text-white transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-[#222]"
                         title="Paste"
                       >
@@ -850,6 +853,8 @@ function ValidatorContent() {
                       {bulkInput && (
                         <button 
                           onClick={() => setBulkInput('')}
+                          data-cuelume-tap
+                          data-cuelume-emphasis="subtle"
                           className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-[#222]"
                           title="Clear"
                         >
@@ -910,6 +915,7 @@ function ValidatorContent() {
                        <button
                          type="button"
                          onClick={handlePaste}
+                         data-cuelume-tap
                          className="p-1.5 text-gray-400 hover:text-black dark:hover:text-white rounded-md transition-colors"
                        >
                          <Clipboard size={14} />
@@ -923,6 +929,7 @@ function ValidatorContent() {
               <motion.button
                 onClick={mode === 'bulk' ? handleBulkCheck : (e) => handleSingleCheck(e)}
                 disabled={isChecking || (mode === 'bulk' ? !bulkInput.trim() : !singleInput.trim())}
+                data-cuelume-tap
                 className="w-full py-2.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-all flex justify-center items-center gap-2 text-xs shadow-sm"
                 whileTap={{ scale: 0.985 }}
               >
@@ -1076,10 +1083,11 @@ function ValidatorContent() {
                  </div>
                  
                  <div className="flex gap-2">
-                  <div className="relative" ref={copyMenuRef}>
+                   <div className="relative" ref={copyMenuRef}>
                     <button 
                       ref={exportButtonRef}
                       onClick={() => setCopyMenuOpen(!copyMenuOpen)}
+                      data-cuelume-open
                       className="text-xs font-medium bg-white dark:bg-black border border-gray-200 dark:border-[#333] hover:bg-gray-50 dark:hover:bg-[#111] text-black dark:text-white transition-colors px-3 py-1.5 rounded-md flex items-center gap-1.5"
                       title="Export results (E)"
                     >
@@ -1111,6 +1119,7 @@ function ValidatorContent() {
                            <button 
                             key={item.id}
                             onClick={() => void handleCopy(item.id as any)}
+                            data-cuelume-tap
                             className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#222] hover:text-black dark:hover:text-white transition-colors"
                           >
                             {item.label}
@@ -1122,6 +1131,8 @@ function ValidatorContent() {
                   </div>
                    <button 
                     onClick={clearAll} 
+                    data-cuelume-tap
+                    data-cuelume-emphasis="subtle"
                     className="text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 px-3 py-1.5 rounded-md transition-colors"
                   >
                      Clear
@@ -1150,6 +1161,7 @@ function ValidatorContent() {
                       <motion.button
                          key={f.id}
                          onClick={() => setFilter(f.id as any)}
+                         data-cuelume-select
                          variants={homeSectionVariants}
                          layout
                          className={`relative flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors overflow-hidden ${

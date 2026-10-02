@@ -200,6 +200,7 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({
           onClick={() => { setIsPreviewOpen(true); trackLinkPreview(result.link); }}
           role="button"
           tabIndex={0}
+          data-cuelume-open
           onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { setIsPreviewOpen(true); trackLinkPreview(result.link); } }}
           aria-label={`View details for ${details.title || result.link}`}
         >
@@ -250,16 +251,27 @@ const ResultCard: React.FC<ResultCardProps> = React.memo(({
           <button
             onClick={() => { setIsTagModalOpen(true); trackTagModalOpen(result.link); }}
             disabled={!isTopContributor}
+            data-cuelume-open
             className={`p-2 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black dark:focus-visible:ring-white ${isTopContributor ? 'text-gray-500 hover:text-black dark:hover:text-white' : 'text-gray-300 dark:text-gray-700 cursor-not-allowed opacity-50'}`}
             title={isTopContributor ? 'Edit Tags' : 'Top contributors only'}
           >
             <TagIcon size={14} />
           </button>
-          <button onClick={() => void copyToClipboard()} className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors" title="Copy Link">
+          <button 
+            onClick={() => void copyToClipboard()} 
+            data-cuelume-tap
+            className="p-2 text-gray-500 hover:text-black dark:hover:text-white rounded-md transition-colors" 
+            title="Copy Link"
+          >
             <Copy size={14} />
           </button>
           {onDelete && (
-            <button onClick={() => setIsDeleteModalOpen(true)} className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors" title="Delete">
+            <button 
+              onClick={() => setIsDeleteModalOpen(true)} 
+              data-cuelume-open
+              className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md transition-colors" 
+              title="Delete"
+            >
               <Trash2 size={14} />
             </button>
           )}

@@ -377,6 +377,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
           <button
             type="button"
             onClick={() => handleTimeframeChange('all')}
+            data-cuelume-select
             className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               timeframe === 'all'
                 ? 'bg-white dark:bg-black text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
@@ -390,6 +391,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
           <button
             type="button"
             onClick={() => handleTimeframeChange('weekly')}
+            data-cuelume-select
             className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               timeframe === 'weekly'
                 ? 'bg-white dark:bg-black text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
@@ -404,6 +406,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
           <button
             type="button"
             onClick={() => handleTimeframeChange('daily')}
+            data-cuelume-select
             className={`px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
               timeframe === 'daily'
                 ? 'bg-white dark:bg-black text-black dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/10'
@@ -717,6 +720,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1 || isLoading || !!searchQuery}
+                  data-cuelume-tap
                   className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1 shadow-sm"
                 >
                   <ChevronLeft size={14} />
@@ -725,6 +729,7 @@ const ContributorsPage: React.FC<ContributorsPageProps> = () => {
                 <button
                   onClick={() => setPage(p => Math.min(Math.ceil(total / PAGE_SIZE), p + 1))}
                   disabled={page >= Math.ceil(total / PAGE_SIZE) || isLoading || !!searchQuery}
+                  data-cuelume-tap
                   className="px-3 py-1.5 text-xs font-medium rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-black dark:text-white hover:bg-gray-50 dark:hover:bg-[#111] disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1 shadow-sm"
                 >
                   Next

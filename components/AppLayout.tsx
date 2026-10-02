@@ -76,7 +76,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
 
-  // Initialize cuelume binding and sound preference
+  // Initialize cuelume binding, sound preference, and global fallback listener
   useEffect(() => {
     try {
       bindCuelume();
@@ -86,6 +86,59 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const enabled = saved !== 'false';
     setIsSoundEnabled(enabled);
     setSoundEnabled(enabled);
+
+    // Global purposeful fallback for buttons and interactive controls
+    // If an element already has data-cuelume-*, cuelume's own bind() handles it.
+    // If it doesn't, this delegated handler plays an appropriate sound.
+    const handleGlobalClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+
+      // Find nearest button, link, summary, or interactive element
+      const interactive = target.closest<HTMLElement>(
+        'button, a, [role="button"], [role="tab"], [role="checkbox"], [role="switch"], summary'
+      );
+      if (!interactive) return;
+
+      // If disabled, skip
+      if (
+        (interactive as HTMLButtonElement).disabled ||
+        interactive.getAttribute('aria-disabled') === 'true'
+      ) {
+        return;
+      }
+
+      // Check if cuelume declarative attribute is already present on this element or ancestors
+      const hasCuelume = !!interactive.closest(
+        '[data-cuelume-tap],[data-cuelume-select],[data-cuelume-toggle],[data-cuelume-open],[data-cuelume-close],[data-cuelume-navigate]'
+      );
+      if (hasCuelume) {
+        return; // Cuelume's own bind() capture listener handled this
+      }
+
+      // Determine purposeful sound
+      const role = interactive.getAttribute('role');
+      const ariaHasPopup = interactive.getAttribute('aria-haspopup');
+      const ariaExpanded = interactive.getAttribute('aria-expanded');
+      const tagName = interactive.tagName;
+
+      if (role === 'tab' || interactive.classList.contains('rounded-full') && interactive.closest('[class*="flex"]')) {
+        playSound('select');
+      } else if (role === 'checkbox' || role === 'switch' || ariaExpanded !== null) {
+        playSound('toggle');
+      } else if (ariaHasPopup || interactive.getAttribute('title')?.toLowerCase().includes('export') || interactive.getAttribute('title')?.toLowerCase().includes('menu')) {
+        playSound('open');
+      } else if (tagName === 'A') {
+        playSound('navigate');
+      } else {
+        playSound('tap');
+      }
+    };
+
+    document.addEventListener('click', handleGlobalClick, true);
+    return () => {
+      document.removeEventListener('click', handleGlobalClick, true);
+    };
   }, []);
 
   const toggleSound = () => {
