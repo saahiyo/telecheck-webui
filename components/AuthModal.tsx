@@ -204,6 +204,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 </div>
                 <button
                   onClick={handleClose}
+                  data-cuelume-close
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-[#333] bg-gray-100/50 dark:bg-[#111]/50 text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-colors"
                   aria-label="Close"
                 >

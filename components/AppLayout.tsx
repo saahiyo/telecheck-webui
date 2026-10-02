@@ -9,7 +9,7 @@ import { bind as bindCuelume, setEnabled as setSoundEnabled, play as playSound }
 import ThemeToggle from './ThemeToggle';
 import GithubBtn from './GithubBtn';
 import AuthModal from './AuthModal';
-import { Toaster, toast } from 'sonner';
+import { Toaster, toast, useSonner } from 'sonner';
 import { trackNavigation } from '../utils/tracking';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchMyProfile } from '@/services/api';
@@ -451,8 +451,57 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   };
 
+  function ToastSoundListener() {
+    const { toasts } = useSonner();
+    const prevToastsRef = useRef<Map<string | number, string>>(new Map());
+
+    useEffect(() => {
+      const prevMap = prevToastsRef.current;
+      const currentMap = new Map<string | number, string>();
+
+      toasts.forEach((t) => {
+        const id = t.id;
+        const type = (t.type as string) || 'default';
+        const title = typeof t.title === 'string' ? t.title.toLowerCase() : '';
+        currentMap.set(id, type);
+
+        // Check if this is a newly arrived toast or a status change (e.g. from loading to success)
+        const prevType = prevMap.get(id);
+        if (prevType !== type) {
+          // Play distinct sound based on type and content
+          if (type === 'success') {
+            if (title.includes('copied') || title.includes('copy')) {
+              playSound('ready', { emphasis: 'strong' });
+            } else {
+              playSound('success', { emphasis: 'strong' });
+            }
+          } else if (type === 'error') {
+            playSound('error', { emphasis: 'strong' });
+          } else if (type === 'warning') {
+            playSound('warning', { emphasis: 'normal' });
+          } else if (type === 'loading') {
+            playSound('loading', { emphasis: 'subtle' });
+          } else if (type === 'info') {
+            if (title.includes('duplicate') || title.includes('removed')) {
+              playSound('count');
+            } else {
+              playSound('attention', { emphasis: 'subtle' });
+            }
+          } else {
+            playSound('attention', { emphasis: 'subtle' });
+          }
+        }
+      });
+
+      prevToastsRef.current = currentMap;
+    }, [toasts]);
+
+    return null;
+  }
+
   return (
     <div className="min-h-screen w-full relative bg-white dark:bg-black font-sans selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black transition-colors duration-200">
+      <ToastSoundListener />
       <Toaster position="bottom-center" toastOptions={{
         className: 'dark:bg-[#111] dark:text-white dark:border-[#333] bg-white text-black border-gray-200',
       }} />
@@ -766,6 +815,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setShowShortcuts(true)}
+                data-cuelume-open
                 className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors font-medium"
                 title="Keyboard shortcuts (?)"
               >
@@ -857,6 +907,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setShowShortcuts(false)}
+                data-cuelume-close
                 className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 dark:border-[#333] bg-gray-100/50 dark:bg-[#111]/50 text-gray-700 dark:text-gray-200 transition-colors hover:text-black dark:hover:text-white"
                 aria-label="Close keyboard shortcuts"
               >

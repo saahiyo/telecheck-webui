@@ -827,6 +827,7 @@ function ValidatorContent() {
                       id="bulk-link-input"
                       value={bulkInput}
                       onChange={(e) => setBulkInput(e.target.value)}
+                      data-cuelume-type
                       placeholder={`Paste your list here or drag a .txt file...\n\nhttps://t.me/channel1\nhttps://t.me/channel2`}
                       className="w-full h-48 sm:h-64 p-3 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-colors resize-none text-xs font-mono placeholder:text-gray-400 dark:placeholder:text-gray-600 leading-relaxed text-black dark:text-white"
                       spellCheck={false}
@@ -907,6 +908,7 @@ function ValidatorContent() {
                        type="text"
                        value={singleInput}
                        onChange={(e) => setSingleInput(e.target.value)}
+                       data-cuelume-type
                        placeholder="https://t.me/username"
                        className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm font-medium text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
                        aria-label="Single Telegram link input"

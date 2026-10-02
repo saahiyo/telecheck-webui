@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { trackThemeToggle } from '../utils/tracking';
+import { play } from 'cuelume';
 
 const themeColors = {
   light: '#f8fafc',
@@ -53,12 +54,16 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ buttonRef }) => {
       syncThemeColor('light');
       trackThemeToggle('light');
     }
+    try {
+      play('toggle');
+    } catch {}
   };
 
   return (
     <button
       ref={buttonRef}
       onClick={toggleTheme}
+      data-cuelume-toggle
       className="p-2 rounded-md bg-white dark:bg-black border border-gray-200 dark:border-[#333] text-gray-500 hover:text-black dark:text-gray-400 dark:hover:text-white transition-all duration-200 hover:bg-gray-50 dark:hover:bg-[#111]"
       aria-label="Toggle Theme"
       title="Toggle theme (T)"

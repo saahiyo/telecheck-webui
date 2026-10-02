@@ -1,3 +1,5 @@
+import { play } from 'cuelume';
+
 function fallbackCopyText(text: string) {
   const textArea = document.createElement('textarea');
   textArea.value = text;
@@ -20,24 +22,42 @@ function fallbackCopyText(text: string) {
 
 export async function copyText(text: string) {
   if (!text) {
+    try {
+      play('error');
+    } catch {}
     throw new Error('No text provided');
   }
+
+  let copied = false;
 
   if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
     try {
       await navigator.clipboard.writeText(text);
-      return;
+      copied = true;
     } catch {
       // Fall back for browsers that expose the API but still reject the call.
     }
   }
 
-  if (typeof document === 'undefined') {
-    throw new Error('Clipboard is not available');
+  if (!copied) {
+    if (typeof document === 'undefined') {
+      try {
+        play('error');
+      } catch {}
+      throw new Error('Clipboard is not available');
+    }
+
+    const didCopy = fallbackCopyText(text);
+    if (!didCopy) {
+      try {
+        play('error');
+      } catch {}
+      throw new Error('Fallback copy failed');
+    }
   }
 
-  const didCopy = fallbackCopyText(text);
-  if (!didCopy) {
-    throw new Error('Fallback copy failed');
-  }
+  // Purposeful audio feedback for copying: warm glass chime 'ready'
+  try {
+    play('ready', { emphasis: 'strong' });
+  } catch {}
 }

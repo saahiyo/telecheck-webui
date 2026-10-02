@@ -817,6 +817,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
               type="text"
               value={searchQuery}
               onChange={handleSearchChange}
+              data-cuelume-type
               placeholder="Search by title, link, or description..."
               className="w-full pl-9 pr-10 py-2.5 rounded-lg bg-white dark:bg-black border border-gray-200 dark:border-[#333] focus:border-black dark:focus:border-white outline-none transition-all text-sm text-black dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-600"
             />
