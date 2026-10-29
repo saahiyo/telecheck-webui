@@ -425,7 +425,7 @@ export const checkBulkLinks = async (
     return links.map(l => ({
       link: l,
       status: 'unknown',
-      reason: 'Network or API Error'
+      reason: error instanceof Error ? error.message : 'Network or API Error'
     }));
   }
 };

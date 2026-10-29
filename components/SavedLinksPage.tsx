@@ -209,8 +209,9 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, [deletedLinkKeys]);
 
   const displayTotal = useMemo(() => {
-    return Math.max(0, total - deletedLinkKeys.size);
-  }, [total, deletedLinkKeys]);
+    const deletedInCurrentSet = links.filter(isLinkDeleted).length;
+    return Math.max(0, total - deletedInCurrentSet);
+  }, [total, links, isLinkDeleted]);
   const [showScrollJump, setShowScrollJump] = useState(false);
   const [scrollJumpTarget, setScrollJumpTarget] = useState<'top' | 'bottom'>('bottom');
   const [scrollJumpContext, setScrollJumpContext] = useState<'container' | 'window'>('window');
@@ -223,6 +224,10 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const filterDropdownRef = useRef<HTMLDivElement | null>(null);
   const resultsScrollRef = useRef<HTMLDivElement | null>(null);
   const hasDataRef = useRef(false);
+  const linksLengthRef = useRef(links.length);
+  useEffect(() => {
+    linksLengthRef.current = links.length;
+  }, [links.length]);
 
   // Close filter dropdown on outside click
   useEffect(() => {
@@ -242,10 +247,10 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       setPage(1); // Reset to first page on new search
       // Track search query when it actually executes
       if (q.trim()) {
-        trackSearchQuery(q, links.length);
+        trackSearchQuery(q, linksLengthRef.current);
       }
     }, 300),
-    [links.length]
+    []
   );
 
   // Cleanup debounce timer on unmount
@@ -283,6 +288,13 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       setLinks(data.links || []);
       setTotal(data.total || 0);
       hasDataRef.current = (data.links?.length ?? 0) > 0;
+
+      if (currentPage > 1 && (!data.links || data.links.length === 0) && (data.total || 0) > 0) {
+        const lastPage = Math.ceil(data.total / PAGE_SIZE);
+        if (lastPage < currentPage) {
+          setPage(Math.max(1, lastPage));
+        }
+      }
     } catch (error) {
       toast.error('Failed to load saved links from database.');
     } finally {
@@ -427,12 +439,13 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         kept += result.kept;
         deleted += result.deleted;
         
-        // Since links are deleted, the offset only increases by the number of links we KEPT
-        currentOffset += result.kept;
+        // Since expired links are deleted, the offset advances by links that remain in the DB
+        const advance = result.kept + (result.skipped || 0);
+        currentOffset += advance;
         
         setValidationProgress({ current: Math.min(processed, total), total });
         
-        if (result.processed === 0) break; // Safety break
+        if (result.processed === 0 || (advance === 0 && result.deleted === 0)) break; // Safety break
       }
       
       toast.success(`Validation complete! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
@@ -480,12 +493,13 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         kept += result.kept;
         deleted += result.deleted;
         
-        // Advance offset only by links we didn't delete
-        currentOffset += result.kept;
+        // Advance offset by links that were retained in the DB
+        const advance = result.kept + (result.skipped || 0);
+        currentOffset += advance;
         
         setValidationProgress({ current: processed, total: totalToProcess });
         
-        if (result.processed === 0) break;
+        if (result.processed === 0 || (advance === 0 && result.deleted === 0)) break;
       }
 
       playSound('success', { emphasis: 'strong' });

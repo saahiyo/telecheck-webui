@@ -62,13 +62,13 @@ const StatsWidget: React.FC<StatsWidgetProps> = ({ refreshTrigger = 0 }) => {
       <StatCard 
         icon={CheckCircle2} 
         label="24H Valid Links" 
-        value={stats?.valid_links || stats?.valid} 
+        value={stats?.valid_links ?? stats?.valid} 
         index={1}
       />
       <StatCard 
         icon={XCircle} 
         label="24H Invalid Links" 
-        value={stats?.invalid_links || stats?.invalid} 
+        value={stats?.invalid_links ?? stats?.invalid} 
         index={2}
       />
     </div>

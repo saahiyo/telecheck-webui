@@ -21,6 +21,7 @@ import { getResults } from '@/utils/db';
 import { MyProfileResponse, LinkResult } from '@/types';
 import Link from 'next/link';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
+import { copyText } from '@/utils/clipboard';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -120,7 +121,7 @@ function CopyField({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(value);
+      await copyText(value);
       setCopied(true);
       toast.success(`${label} copied`);
       setTimeout(() => setCopied(false), 2000);

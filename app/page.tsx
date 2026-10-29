@@ -337,14 +337,34 @@ function ValidatorContent() {
     setDisplayLimit(100);
     const startTime = Date.now();
 
-    const { unique: links, duplicateCount } = await new Promise<{ unique: string[]; duplicateCount: number }>((resolve) => {
-      const worker = new Worker(new URL('../utils/dedup.worker.ts', import.meta.url));
-      worker.onmessage = (e) => {
-        resolve(e.data);
-        worker.terminate();
-      };
-      worker.postMessage(bulkInput);
-    });
+    let links: string[] = [];
+    let duplicateCount = 0;
+
+    try {
+      if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
+        const workerResult = await new Promise<{ unique: string[]; duplicateCount: number }>((resolve, reject) => {
+          const worker = new Worker(new URL('../utils/dedup.worker.ts', import.meta.url));
+          worker.onmessage = (e) => {
+            resolve(e.data);
+            worker.terminate();
+          };
+          worker.onerror = (err) => {
+            worker.terminate();
+            reject(err);
+          };
+          worker.postMessage(bulkInput);
+        });
+        links = workerResult.unique;
+        duplicateCount = workerResult.duplicateCount;
+      } else {
+        throw new Error('Worker not supported');
+      }
+    } catch {
+      const allExtracted = extractUrls(bulkInput);
+      const dedupResult = deduplicateLinks(allExtracted);
+      links = dedupResult.unique;
+      duplicateCount = dedupResult.duplicateCount;
+    }
 
     // Track bulk validation start
     trackBulkValidation(links.length, duplicateCount > 0);
