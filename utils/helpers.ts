@@ -10,10 +10,13 @@ export const URL_REGEX = /(https?:\/\/[^\s,]+|t\.me\/[^\s,]+)/g;
 export const isMegaLink = (url: string): boolean => /(?:mega\.nz|mega\.co\.nz)/i.test(url);
 
 /**
- * Extract all URLs from a text string.
+ * Extract all URLs from a text string, stripping trailing punctuation (periods, commas, brackets, quotes)
+ * commonly captured from markdown, chat pastes, or prose.
  */
 export const extractUrls = (text: string): string[] => {
-    return (text.match(URL_REGEX) || []).map(l => l.trim());
+    return (text.match(URL_REGEX) || [])
+        .map(l => l.trim().replace(/[.,;:!?)\]>'"]+$/, ''))
+        .filter(Boolean);
 };
 
 /**

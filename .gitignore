@@ -28,5 +28,5 @@ dist-ssr
 tsconfig.tsbuildinfo
 
 project_loc.txt
-test-poll.js
+scripts/test-poll.js
 

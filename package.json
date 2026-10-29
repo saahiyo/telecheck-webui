@@ -14,14 +14,11 @@
     "@vercel/analytics": "^1.6.1",
     "canvas-confetti": "^1.9.4",
     "cuelume": "^0.2.4",
-    "dotenv": "^17.4.2",
     "firebase": "^12.16.0",
-    "framer-motion": "^13.5.0",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.555.0",
     "motion": "^12.38.0",
     "next": "^16.0.0",
-    "npm-check-updates": "^20.0.0",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "sonner": "^2.0.7"
@@ -34,6 +31,7 @@
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "autoprefixer": "^10.4.22",
+    "npm-check-updates": "^20.0.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.17",
     "typescript": "~5.8.2"

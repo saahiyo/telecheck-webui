@@ -8,7 +8,9 @@
 const URL_REGEX = /(https?:\/\/[^\s,]+|t\.me\/[^\s,]+)/g;
 
 const extractUrls = (text: string): string[] => {
-    return (text.match(URL_REGEX) || []).map(l => l.trim());
+    return (text.match(URL_REGEX) || [])
+        .map(l => l.trim().replace(/[.,;:!?)\]>'"]+$/, ''))
+        .filter(Boolean);
 };
 
 const deduplicateLinks = (links: string[]): { unique: string[]; duplicateCount: number } => {
