@@ -44,17 +44,28 @@ function getSavedCardDelay(index: number) {
   return Math.min((index % 12) * 0.025, 0.18);
 }
 
-// Client-side filter for metadata attributes (not search — search is server-side)
-function filterByMetadata(sourceLinks: StoredLink[], savedFilter: SavedFilter) {
-  if (savedFilter === 'all') return sourceLinks;
+// Client-side filter for metadata attributes and member size
+function filterByMetadata(sourceLinks: StoredLink[], savedFilter: SavedFilter, minMembers: number = 0) {
+  let list = sourceLinks;
+  if (savedFilter !== 'all') {
+    list = list.filter((link) => {
+      if (savedFilter === 'with-description') return !!link.description?.trim();
+      if (savedFilter === 'with-image') return !!link.image?.trim();
+      if (savedFilter === 'with-members') return typeof link.member_count === 'number' && link.member_count > 0;
+      if (savedFilter === 'recent') return !!link.checked_at;
+      return true;
+    });
+  }
 
-  return sourceLinks.filter((link) => {
-    if (savedFilter === 'with-description') return !!link.description?.trim();
-    if (savedFilter === 'with-image') return !!link.image?.trim();
-    if (savedFilter === 'with-members') return typeof link.member_count === 'number' && link.member_count > 0;
-    if (savedFilter === 'recent') return !!link.checked_at;
-    return true;
-  });
+  if (minMembers > 0) {
+    list = list.filter((link) => {
+      const parsedCount = parseMemberCountRaw(link.raw_metadata?.memberCountRaw);
+      const count = parsedCount ?? link.member_count;
+      return typeof count === 'number' && count >= minMembers;
+    });
+  }
+
+  return list;
 }
 
 function formatSavedDate(dateValue?: string | number | Date) {
@@ -132,6 +143,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [savedFilter, setSavedFilter] = useState<SavedFilter>('all');
+  const [minMembersFilter, setMinMembersFilter] = useState<number>(0);
   const [savedSort, setSavedSort] = useState<SavedSort>('recently-updated');
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
   const [platformStats, setPlatformStats] = useState<{ total: number; telegram: number; mega: number } | null>(null);
@@ -514,10 +526,10 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     }
   };
 
-  // Client-side: filter by metadata attributes and exclude locally deleted links
+  // Client-side: filter by metadata attributes, member size, and exclude locally deleted links
   const filteredLinks = useMemo(() => {
-    return filterByMetadata(links, savedFilter).filter(link => !isLinkDeleted(link));
-  }, [links, savedFilter, isLinkDeleted]);
+    return filterByMetadata(links, savedFilter, minMembersFilter).filter(link => !isLinkDeleted(link));
+  }, [links, savedFilter, minMembersFilter, isLinkDeleted]);
   const sortedLinks = useMemo(() => sortSavedLinks(filteredLinks, savedSort, randomSeed), [filteredLinks, savedSort, randomSeed]);
 
   const handleCopyLinks = useCallback(async () => {
@@ -1069,6 +1081,36 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
                         {item.count > 999 ? `${(item.count / 1000).toFixed(1)}k` : item.count}
                       </span>
                     )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Member Count Filter Chips */}
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 shrink-0 min-w-[55px]">
+                Members
+              </span>
+              <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
+                {[
+                  { value: 0, label: 'All Sizes' },
+                  { value: 1000, label: '>1K' },
+                  { value: 10000, label: '>10K' },
+                  { value: 50000, label: '>50K' },
+                  { value: 100000, label: '>100K' },
+                ].map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    data-cuelume-select
+                    onClick={() => setMinMembersFilter(m.value)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${
+                      minMembersFilter === m.value
+                        ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
+                    }`}
+                  >
+                    {m.label}
                   </button>
                 ))}
               </div>

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, Zap, Clipboard, ChevronDown, FileUp } from 'lucide-react';
+import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, Zap, Clipboard, ChevronDown, FileUp, RefreshCw, Users } from 'lucide-react';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import StatsWidget from '@/components/StatsWidget';
 import ResultCard from '@/components/ResultCard';
@@ -281,14 +281,15 @@ function ValidatorContent() {
   }, [bulkInput]);
 
   // ── Memoized result counts (single pass) ──
-  const { validCount, invalidCount, megaCount } = useMemo(() => {
-    let valid = 0, invalid = 0, mega = 0;
+  const { validCount, invalidCount, megaCount, unknownCount } = useMemo(() => {
+    let valid = 0, invalid = 0, mega = 0, unknown = 0;
     for (const r of results) {
       if (r.status === 'mega' || isMegaLink(r.link)) mega++;
       else if (r.status === 'valid') valid++;
       else if (r.status === 'invalid') invalid++;
+      else unknown++;
     }
-    return { validCount: valid, invalidCount: invalid, megaCount: mega };
+    return { validCount: valid, invalidCount: invalid, megaCount: mega, unknownCount: unknown };
   }, [results]);
   const asyncJobActive = asyncJob.status !== 'idle';
   const asyncJobStatusLabel = asyncJob.status.charAt(0).toUpperCase() + asyncJob.status.slice(1);
@@ -537,6 +538,8 @@ function ValidatorContent() {
   };
 
   const [filter, setFilter] = useState<'all' | 'valid' | 'invalid' | 'mega'>('all');
+  const [minMembers, setMinMembers] = useState<number>(0);
+  const [isRetryingUnknown, setIsRetryingUnknown] = useState(false);
 
   const clearAll = useCallback(() => {
     setBulkInput('');
@@ -547,8 +550,49 @@ function ValidatorContent() {
     setAsyncJob(emptyAsyncJobState);
     setCopyMenuOpen(false);
     setFilter('all');
+    setMinMembers(0);
     void clearResults();
   }, []);
+
+  const handleRetryUnknown = async () => {
+    const failedLinks = results.filter(r => r.status === 'unknown').map(r => r.link);
+    if (!failedLinks.length || isChecking || isRetryingUnknown) return;
+
+    const authToken = await getIdToken();
+    if (!authToken) {
+      toast.error('Please sign in before validating links.');
+      window.dispatchEvent(new Event('app-open-auth-modal'));
+      return;
+    }
+
+    setIsRetryingUnknown(true);
+    setIsChecking(true);
+    setCheckingProgress({ current: 0, total: failedLinks.length });
+    const toastId = toast.loading(`Retrying ${failedLinks.length} unverified link${failedLinks.length > 1 ? 's' : ''}...`);
+
+    try {
+      const retriedResults = await checkBulkLinks(failedLinks, {
+        authToken,
+        onProgress: (current, total) => setCheckingProgress({ current, total }),
+      });
+
+      const retriedMap = new Map(retriedResults.map(r => [r.link, r]));
+      setResults(prev => prev.map(r => retriedMap.get(r.link) || r));
+
+      const recoveredCount = retriedResults.filter(r => r.status !== 'unknown').length;
+      if (recoveredCount > 0) {
+        toast.success(`Verified ${recoveredCount} of ${failedLinks.length} failed link${failedLinks.length > 1 ? 's' : ''}!`, { id: toastId });
+      } else {
+        toast.warning('Links could not be verified. They may be rate-limited or unreachable.', { id: toastId });
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to retry links', { id: toastId });
+    } finally {
+      setIsRetryingUnknown(false);
+      setIsChecking(false);
+      setRefreshStatsTrigger(prev => prev + 1);
+    }
+  };
 
   // Handle global shortcuts triggered by AppLayout
   useEffect(() => {
@@ -608,20 +652,30 @@ function ValidatorContent() {
   }, [mode, hasChecked, results.length, runValidation, clearAll]);
 
   const filteredResults = useMemo(() => {
+    let list = results;
     if (filter === 'all') {
-      return [...results].sort((a, b) => {
+      list = [...results].sort((a, b) => {
         const aValid = a.status === 'valid' || a.status === 'mega' || (isMegaLink(a.link) && a.status !== 'invalid');
         const bValid = b.status === 'valid' || b.status === 'mega' || (isMegaLink(b.link) && b.status !== 'invalid');
         if (aValid && !bValid) return -1;
         if (!aValid && bValid) return 1;
         return 0;
       });
+    } else if (filter === 'mega') {
+      list = results.filter(r => r.status === 'mega' || isMegaLink(r.link));
+    } else {
+      list = results.filter(r => r.status === filter && !isMegaLink(r.link));
     }
-    if (filter === 'mega') {
-      return results.filter(r => r.status === 'mega' || isMegaLink(r.link));
+
+    if (minMembers > 0) {
+      list = list.filter(r => {
+        const count = r.details?.memberCount;
+        return typeof count === 'number' && count >= minMembers;
+      });
     }
-    return results.filter(r => r.status === filter && !isMegaLink(r.link));
-  }, [results, filter]);
+
+    return list;
+  }, [results, filter, minMembers]);
 
   const handleCopy = async (type: 'numbered' | 'gap' | 'plain' | 'original' | 'withTitle') => {
     try {
@@ -1104,7 +1158,19 @@ function ValidatorContent() {
                    </span>
                  </div>
                  
-                 <div className="flex gap-2">
+                 <div className="flex items-center gap-2">
+                   {unknownCount > 0 && !isChecking && (
+                     <button
+                       onClick={() => void handleRetryUnknown()}
+                       disabled={isRetryingUnknown}
+                       data-cuelume-tap
+                       className="text-xs font-semibold bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40 hover:bg-amber-100 dark:hover:bg-amber-900/30 px-2.5 py-1.5 rounded-md transition-colors flex items-center gap-1.5 shadow-2xs"
+                       title="Retry rate-limited or unverified links"
+                     >
+                       <RefreshCw size={12} className={isRetryingUnknown ? 'animate-spin' : ''} />
+                       <span>Retry Unknown ({unknownCount})</span>
+                     </button>
+                   )}
                    <div className="relative" ref={copyMenuRef}>
                     <button 
                       ref={exportButtonRef}
@@ -1211,6 +1277,42 @@ function ValidatorContent() {
                     )
                   })}
                </motion.div>
+
+               {/* Member Count Filter */}
+               {(filter === 'all' || filter === 'valid') && results.some(r => typeof r.details?.memberCount === 'number' && r.details.memberCount > 0) && (
+                 <motion.div
+                   className="flex items-center gap-1.5 mb-3 overflow-x-auto no-scrollbar pb-1 text-xs"
+                   initial={{ opacity: 0, y: 6 }}
+                   animate={{ opacity: 1, y: 0 }}
+                   transition={{ duration: 0.18 }}
+                 >
+                   <div className="flex items-center gap-1 text-[11px] font-medium text-gray-400 dark:text-gray-500 mr-1 shrink-0">
+                     <Users size={12} />
+                     <span>Members:</span>
+                   </div>
+                   {[
+                     { value: 0, label: 'All Sizes' },
+                     { value: 1000, label: '>1K' },
+                     { value: 10000, label: '>10K' },
+                     { value: 50000, label: '>50K' },
+                     { value: 100000, label: '>100K' },
+                   ].map((m) => (
+                     <button
+                       key={m.value}
+                       type="button"
+                       data-cuelume-select
+                       onClick={() => setMinMembers(m.value)}
+                       className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all shrink-0 ${
+                         minMembers === m.value
+                           ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-2xs'
+                           : 'bg-white dark:bg-black text-gray-500 dark:text-gray-400 border-gray-200 dark:border-[#333] hover:border-gray-300 dark:hover:border-[#555]'
+                       }`}
+                     >
+                       {m.label}
+                     </button>
+                   ))}
+                 </motion.div>
+               )}
 
                 <motion.div
                   ref={homeResultsScrollRef}
