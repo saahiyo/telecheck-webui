@@ -75,6 +75,7 @@ export interface StoredLink {
   description?: string;
   image?: string;
   member_count?: number;
+  created_at?: string;
   checked_at?: string;
   tags?: string[];
   contributor_username?: string | null;

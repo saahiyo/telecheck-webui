@@ -533,6 +533,8 @@ export const fetchSavedLinks = async ({
   search = '',
   tag = '',
   user = '',
+  sortBy = 'checked_at',
+  sortOrder = 'desc',
   signal,
 }: {
   limit?: number;
@@ -541,11 +543,13 @@ export const fetchSavedLinks = async ({
   search?: string;
   tag?: string;
   user?: string;
+  sortBy?: 'checked_at' | 'id' | 'created_at';
+  sortOrder?: 'asc' | 'desc';
   signal?: AbortSignal;
 }): Promise<import('../types').StoredLinkResponse | null> => {
   try {
     const platformKey = platform && platform !== 'all' ? platform : 'all';
-    const cacheKey = `links:${limit}:${offset}:${platformKey}:${search}:${tag}:${user}`;
+    const cacheKey = `links:${limit}:${offset}:${platformKey}:${search}:${tag}:${user}:${sortBy}:${sortOrder}`;
     const cached = getCached<import('../types').StoredLinkResponse>(cacheKey);
     if (cached) return cached;
 
@@ -558,6 +562,8 @@ export const fetchSavedLinks = async ({
     if (search) params.set('search', search);
     if (tag && tag !== 'All') params.set('tag', tag);
     if (user) params.set('username', user);
+    if (sortBy) params.set('sort_by', sortBy);
+    if (sortOrder) params.set('order', sortOrder);
 
     const response = await fetch(
       `${BASE_URL}/links?${params.toString()}`,

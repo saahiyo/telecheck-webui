@@ -102,6 +102,11 @@ function sortSavedLinks(sourceLinks: StoredLink[], savedSort: SavedSort, randomS
 
   if (savedSort === 'recently-added') {
     return sortedLinks.sort((left, right) => {
+      const rightCreated = getSortableTimestamp(right.created_at);
+      const leftCreated = getSortableTimestamp(left.created_at);
+      if (rightCreated && leftCreated && rightCreated !== leftCreated) {
+        return rightCreated - leftCreated;
+      }
       const idDiff = (right.id ?? 0) - (left.id ?? 0);
       if (idDiff !== 0) return idDiff;
       return getSortableTimestamp(right.checked_at) - getSortableTimestamp(left.checked_at);
@@ -120,7 +125,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const PAGE_SIZE = 100;
   
   // Synchronous cache read for instant mount
-  const initialCache = getCached<StoredLinkResponse>(`links:${PAGE_SIZE}:0:all:`);
+  const initialCache = getCached<StoredLinkResponse>(`links:${PAGE_SIZE}:0:all::::checked_at:desc`);
   
   const [links, setLinks] = useState<StoredLink[]>(initialCache?.links || []);
   const [isLoading, setIsLoading] = useState(!initialCache);
@@ -271,12 +276,29 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     setPage(1);
   };
 
-  const loadLinks = useCallback(async (currentPage: number, search: string, tag: string, user: string, platform: PlatformFilter) => {
+  const loadLinks = useCallback(async (
+    currentPage: number,
+    search: string,
+    tag: string,
+    user: string,
+    platform: PlatformFilter,
+    sort: SavedSort
+  ) => {
     // Only show full-page spinner if it's initial load (no data), otherwise keep cards visible
     if (!hasDataRef.current) setIsLoading(true);
     try {
       const offset = (currentPage - 1) * PAGE_SIZE;
-      const data = await fetchSavedLinks({ limit: PAGE_SIZE, offset, platform, search, tag, user });
+      const sortBy = sort === 'recently-added' ? 'id' : 'checked_at';
+      const data = await fetchSavedLinks({
+        limit: PAGE_SIZE,
+        offset,
+        platform,
+        search,
+        tag,
+        user,
+        sortBy,
+        sortOrder: 'desc'
+      });
 
       // If request was aborted (null), skip state update to avoid wiping current data
       if (data === null) return;
@@ -300,8 +322,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   }, []);
 
   useEffect(() => {
-    loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter);
-  }, [page, debouncedSearchQuery, selectedTag, userParam, platformFilter, loadLinks]);
+    loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter, savedSort);
+  }, [page, debouncedSearchQuery, selectedTag, userParam, platformFilter, savedSort, loadLinks]);
 
   useEffect(() => {
     let active = true;
@@ -334,7 +356,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     setIsLoading(true);
     trackLinksRefresh(links.length);
     fetchLinksStats().then(s => s && setPlatformStats(s)).catch(() => {});
-    await loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter);
+    await loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter, savedSort);
   };
 
   const handleSortChange = (nextSort: SavedSort) => {
@@ -343,6 +365,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     }
 
     setSavedSort(nextSort);
+    setPage(1);
     trackSortChange(nextSort);
   };
 
@@ -396,7 +419,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       
       toast.success(`Validation complete! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
       fetchLinksStats().then(s => s && setPlatformStats(s)).catch(() => {});
-      await loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter);
+      await loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter, savedSort);
     } catch (error: any) {
       toast.error(error?.message || 'An error occurred during validation.', { id: toastId });
     } finally {
@@ -451,7 +474,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
       playSound('success', { emphasis: 'strong' });
       toast.success(`Page validated! Kept ${kept} links, removed ${deleted} expired.`, { id: toastId });
       fetchLinksStats().then(s => s && setPlatformStats(s)).catch(() => {});
-      await loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter);
+      await loadLinks(page, debouncedSearchQuery, selectedTag, userParam, platformFilter, savedSort);
     } catch (error: any) {
       playSound('error');
       toast.error(error?.message || 'An error occurred during page validation.', { id: toastId });
@@ -490,12 +513,21 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     const parsedCount = parseMemberCountRaw(savedLink.raw_metadata?.memberCountRaw);
     const memberCount = parsedCount ?? savedLink.member_count;
 
+    const formattedAdded = savedLink.created_at ? formatSavedDate(savedLink.created_at) : '';
+    const formattedChecked = savedLink.checked_at ? formatSavedDate(savedLink.checked_at) : '';
+    let reasonText = `Saved on ${formattedChecked || formattedAdded || 'Recent'}`;
+    if (formattedAdded && formattedChecked && formattedAdded !== formattedChecked) {
+      reasonText = `Added ${formattedAdded} · Checked ${formattedChecked}`;
+    } else if (formattedAdded) {
+      reasonText = `Added on ${formattedAdded}`;
+    }
+
     return {
       key: savedLink.id || idx,
       result: {
         link: savedLink.url,
         status: savedLink.status || 'valid',
-        reason: `Saved on ${formatSavedDate(savedLink.checked_at || Date.now())}`,
+        reason: reasonText,
         details: {
           title: savedLink.title || savedLink.description || 'Database Link',
           description: savedLink.description,
@@ -506,6 +538,7 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
           memberCountCompact: formatCompactNumber(memberCount),
           memberCountRaw: memberCount?.toLocaleString(),
           checkedAt: savedLink.checked_at,
+          createdAt: savedLink.created_at,
           savedStatus: savedLink.status,
           savedId: savedLink.id,
           contributorUsername: savedLink.contributor_username,
