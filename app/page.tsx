@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo, Suspense } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, Zap, Clipboard, ChevronDown, FileUp, RefreshCw, Users } from 'lucide-react';
+import { Layers, Loader2, Link2, Search, Trash2, ArrowRight, Zap, Clipboard, ChevronDown, FileUp, RefreshCw } from 'lucide-react';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import StatsWidget from '@/components/StatsWidget';
 import ResultCard from '@/components/ResultCard';
@@ -538,7 +538,6 @@ function ValidatorContent() {
   };
 
   const [filter, setFilter] = useState<'all' | 'valid' | 'invalid' | 'mega'>('all');
-  const [minMembers, setMinMembers] = useState<number>(0);
   const [isRetryingUnknown, setIsRetryingUnknown] = useState(false);
 
   const clearAll = useCallback(() => {
@@ -550,7 +549,6 @@ function ValidatorContent() {
     setAsyncJob(emptyAsyncJobState);
     setCopyMenuOpen(false);
     setFilter('all');
-    setMinMembers(0);
     void clearResults();
   }, []);
 
@@ -667,15 +665,8 @@ function ValidatorContent() {
       list = results.filter(r => r.status === filter && !isMegaLink(r.link));
     }
 
-    if (minMembers > 0) {
-      list = list.filter(r => {
-        const count = r.details?.memberCount;
-        return typeof count === 'number' && count >= minMembers;
-      });
-    }
-
     return list;
-  }, [results, filter, minMembers]);
+  }, [results, filter]);
 
   const handleCopy = async (type: 'numbered' | 'gap' | 'plain' | 'original' | 'withTitle') => {
     try {
@@ -1278,41 +1269,6 @@ function ValidatorContent() {
                   })}
                </motion.div>
 
-               {/* Member Count Filter */}
-               {(filter === 'all' || filter === 'valid') && results.some(r => typeof r.details?.memberCount === 'number' && r.details.memberCount > 0) && (
-                 <motion.div
-                   className="flex items-center gap-1.5 mb-3 overflow-x-auto no-scrollbar pb-1 text-xs"
-                   initial={{ opacity: 0, y: 6 }}
-                   animate={{ opacity: 1, y: 0 }}
-                   transition={{ duration: 0.18 }}
-                 >
-                   <div className="flex items-center gap-1 text-[11px] font-medium text-gray-400 dark:text-gray-500 mr-1 shrink-0">
-                     <Users size={12} />
-                     <span>Members:</span>
-                   </div>
-                   {[
-                     { value: 0, label: 'All Sizes' },
-                     { value: 1000, label: '>1K' },
-                     { value: 10000, label: '>10K' },
-                     { value: 50000, label: '>50K' },
-                     { value: 100000, label: '>100K' },
-                   ].map((m) => (
-                     <button
-                       key={m.value}
-                       type="button"
-                       data-cuelume-select
-                       onClick={() => setMinMembers(m.value)}
-                       className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all shrink-0 ${
-                         minMembers === m.value
-                           ? 'bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-2xs'
-                           : 'bg-white dark:bg-black text-gray-500 dark:text-gray-400 border-gray-200 dark:border-[#333] hover:border-gray-300 dark:hover:border-[#555]'
-                       }`}
-                     >
-                       {m.label}
-                     </button>
-                   ))}
-                 </motion.div>
-               )}
 
                 <motion.div
                   ref={homeResultsScrollRef}

@@ -483,11 +483,8 @@ export const validateSavedLinks = async ({
 };
 
 // --------------------------------------------
-// SAVED LINKS (with search + abort control)
+// SAVED LINKS (with search)
 // --------------------------------------------
-
-// Global controller to cancel previous requests (search/filter changes)
-let controller: AbortController | null = null;
 
 // Lightweight fetch just for tag counts — uses its own controller per call, never aborts siblings
 export const fetchTagCount = async (tag: string, user = ''): Promise<number> => {
@@ -535,7 +532,8 @@ export const fetchSavedLinks = async ({
   platform = '',
   search = '',
   tag = '',
-  user = ''
+  user = '',
+  signal,
 }: {
   limit?: number;
   offset?: number;
@@ -543,16 +541,13 @@ export const fetchSavedLinks = async ({
   search?: string;
   tag?: string;
   user?: string;
+  signal?: AbortSignal;
 }): Promise<import('../types').StoredLinkResponse | null> => {
   try {
     const platformKey = platform && platform !== 'all' ? platform : 'all';
     const cacheKey = `links:${limit}:${offset}:${platformKey}:${search}:${tag}:${user}`;
     const cached = getCached<import('../types').StoredLinkResponse>(cacheKey);
     if (cached) return cached;
-
-    // Cancel previous request (important for search typing)
-    if (controller) controller.abort();
-    controller = new AbortController();
 
     const params = new URLSearchParams({
       limit: String(limit),
@@ -566,7 +561,7 @@ export const fetchSavedLinks = async ({
 
     const response = await fetch(
       `${BASE_URL}/links?${params.toString()}`,
-      { signal: controller.signal, headers: getContributorHeaders() }
+      { signal, headers: getContributorHeaders() }
     );
 
     if (!response.ok) throw new Error('Failed to fetch saved links');
@@ -582,7 +577,7 @@ export const fetchSavedLinks = async ({
     return result;
 
   } catch (error: any) {
-    if (error.name === 'AbortError') {
+    if (error?.name === 'AbortError' || error?.code === 20 || error?.message?.includes('aborted')) {
       // Silent cancel — return null so caller knows to skip state update
       return null;
     }
@@ -664,6 +659,11 @@ export const fetchMyProfile = async ({
         }
         return bannedProfile;
       }
+    }
+
+    if (response.status === 401 || response.status === 404) {
+      // Normal guest/anonymous state when not signed in or no profile created yet
+      return { username: null, links_added: 0, rank: null };
     }
 
     if (!response.ok) throw new Error('Failed to fetch my profile');

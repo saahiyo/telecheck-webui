@@ -305,8 +305,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         caseId: `#TC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
       });
     };
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      if (
+        reason?.name === 'AbortError' ||
+        reason?.code === 20 ||
+        (typeof reason?.message === 'string' && reason.message.toLowerCase().includes('abort'))
+      ) {
+        event.preventDefault();
+      }
+    };
+
     window.addEventListener('telecheck:banned', handleBanned);
-    return () => window.removeEventListener('telecheck:banned', handleBanned);
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    return () => {
+      window.removeEventListener('telecheck:banned', handleBanned);
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
   }, []);
 
   // Proactively check profile on load / login to identify banned state immediately

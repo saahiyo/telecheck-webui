@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, ChevronDown, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User, Tag as TagIcon, Plus, Trash2, Crown } from 'lucide-react';
+import { Loader2, Database, RefreshCw, Layers, ShieldCheck, ChevronLeft, ChevronRight, ChevronDown, Search, SlidersHorizontal, X, ArrowUp, ArrowDown, Copy, User } from 'lucide-react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { DotmSquare5 } from '@/components/ui/dotm-square-5';
 import debounce from 'lodash.debounce';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags, fetchMyProfile, createTag, deleteTag, fetchTagCount, fetchLinksStats } from '../services/api';
+import { fetchSavedLinks, validateSavedLinks, getCached, fetchTags, fetchMyProfile, createTag, deleteTag, fetchLinksStats } from '../services/api';
 import { useAuth } from '@/hooks/useAuth';
 import { StoredLink, LinkResult, StoredLinkResponse, MyProfileResponse } from '../types';
 import { DEFAULT_TAGS } from '../utils/helpers';
@@ -44,28 +44,17 @@ function getSavedCardDelay(index: number) {
   return Math.min((index % 12) * 0.025, 0.18);
 }
 
-// Client-side filter for metadata attributes and member size
-function filterByMetadata(sourceLinks: StoredLink[], savedFilter: SavedFilter, minMembers: number = 0) {
-  let list = sourceLinks;
-  if (savedFilter !== 'all') {
-    list = list.filter((link) => {
-      if (savedFilter === 'with-description') return !!link.description?.trim();
-      if (savedFilter === 'with-image') return !!link.image?.trim();
-      if (savedFilter === 'with-members') return typeof link.member_count === 'number' && link.member_count > 0;
-      if (savedFilter === 'recent') return !!link.checked_at;
-      return true;
-    });
-  }
+// Client-side filter for metadata attributes (not search — search is server-side)
+function filterByMetadata(sourceLinks: StoredLink[], savedFilter: SavedFilter) {
+  if (savedFilter === 'all') return sourceLinks;
 
-  if (minMembers > 0) {
-    list = list.filter((link) => {
-      const parsedCount = parseMemberCountRaw(link.raw_metadata?.memberCountRaw);
-      const count = parsedCount ?? link.member_count;
-      return typeof count === 'number' && count >= minMembers;
-    });
-  }
-
-  return list;
+  return sourceLinks.filter((link) => {
+    if (savedFilter === 'with-description') return !!link.description?.trim();
+    if (savedFilter === 'with-image') return !!link.image?.trim();
+    if (savedFilter === 'with-members') return typeof link.member_count === 'number' && link.member_count > 0;
+    if (savedFilter === 'recent') return !!link.checked_at;
+    return true;
+  });
 }
 
 function formatSavedDate(dateValue?: string | number | Date) {
@@ -143,7 +132,6 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [savedFilter, setSavedFilter] = useState<SavedFilter>('all');
-  const [minMembersFilter, setMinMembersFilter] = useState<number>(0);
   const [savedSort, setSavedSort] = useState<SavedSort>('recently-updated');
   const [platformFilter, setPlatformFilter] = useState<PlatformFilter>('all');
   const [platformStats, setPlatformStats] = useState<{ total: number; telegram: number; mega: number } | null>(null);
@@ -154,12 +142,8 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
   const [selectedTag, setSelectedTag] = useState<string>('All');
   const [randomSeed, setRandomSeed] = useState(() => Date.now());
 
-  // Manage Tags panel (top contributors only)
-  const [isManageTagsOpen, setIsManageTagsOpen] = useState(false);
-  const [newTagInput, setNewTagInput] = useState('');
   const [isCreatingTag, setIsCreatingTag] = useState(false);
   const [deletingTag, setDeletingTag] = useState<string | null>(null);
-  const [tagCounts, setTagCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
@@ -338,22 +322,13 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
         const tags = await fetchTags();
         const resolved = (tags && tags.length > 0) ? tags : DEFAULT_TAGS;
         if (active) setAvailableTags(resolved);
-
-        // Fetch counts for each tag in parallel (dedicated function — no shared abort controller)
-        const entries = await Promise.all(
-          resolved.map(async (tag) => {
-            const count = await fetchTagCount(tag, userParam);
-            return [tag, count] as [string, number];
-          })
-        );
-        if (active) setTagCounts(Object.fromEntries(entries));
       } catch {
         if (active) setAvailableTags(DEFAULT_TAGS);
       }
     }
     loadDynamicTags();
     return () => { active = false; };
-  }, [userParam]);
+  }, []);
 
   const handleRefresh = async () => {
     setIsLoading(true);
@@ -376,47 +351,6 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     trackFilterChange(nextFilter, selectedTag);
   };
 
-  const handleCreateTag = async () => {
-    const name = newTagInput.trim();
-    if (!name) return;
-    if (availableTags.includes(name)) {
-      toast.error('Tag already exists');
-      return;
-    }
-    const authToken = await getIdToken();
-    if (!authToken) {
-      toast.error('Please sign in to manage tags.');
-      return;
-    }
-    setIsCreatingTag(true);
-    const ok = await createTag(name, authToken);
-    setIsCreatingTag(false);
-    if (ok) {
-      setAvailableTags(prev => [...prev, name]);
-      setNewTagInput('');
-      toast.success(`Tag "${name}" created`);
-    } else {
-      toast.error('Failed to create tag');
-    }
-  };
-
-  const handleDeleteTag = async (tag: string) => {
-    const authToken = await getIdToken();
-    if (!authToken) {
-      toast.error('Please sign in to manage tags.');
-      return;
-    }
-    setDeletingTag(tag);
-    const ok = await deleteTag(tag, authToken);
-    setDeletingTag(null);
-    if (ok) {
-      setAvailableTags(prev => prev.filter(t => t !== tag));
-      if (selectedTag === tag) setSelectedTag('All');
-      toast.success(`Tag "${tag}" deleted`);
-    } else {
-      toast.error('Failed to delete tag');
-    }
-  };
 
   const handleValidate = async () => {
     if (total === 0) return;
@@ -526,10 +460,10 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
     }
   };
 
-  // Client-side: filter by metadata attributes, member size, and exclude locally deleted links
+  // Client-side: filter by metadata attributes and exclude locally deleted links
   const filteredLinks = useMemo(() => {
-    return filterByMetadata(links, savedFilter, minMembersFilter).filter(link => !isLinkDeleted(link));
-  }, [links, savedFilter, minMembersFilter, isLinkDeleted]);
+    return filterByMetadata(links, savedFilter).filter(link => !isLinkDeleted(link));
+  }, [links, savedFilter, isLinkDeleted]);
   const sortedLinks = useMemo(() => sortSavedLinks(filteredLinks, savedSort, randomSeed), [filteredLinks, savedSort, randomSeed]);
 
   const handleCopyLinks = useCallback(async () => {
@@ -1086,163 +1020,6 @@ const SavedLinksPage = React.forwardRef<SavedLinksPageHandle, SavedLinksPageProp
               </div>
             </div>
 
-            {/* Member Count Filter Chips */}
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 shrink-0 min-w-[55px]">
-                Members
-              </span>
-              <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
-                {[
-                  { value: 0, label: 'All Sizes' },
-                  { value: 1000, label: '>1K' },
-                  { value: 10000, label: '>10K' },
-                  { value: 50000, label: '>50K' },
-                  { value: 100000, label: '>100K' },
-                ].map((m) => (
-                  <button
-                    key={m.value}
-                    type="button"
-                    data-cuelume-select
-                    onClick={() => setMinMembersFilter(m.value)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${
-                      minMembersFilter === m.value
-                        ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Tag Filter Chips */}
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 shrink-0 min-w-[55px]">
-                Tags
-              </span>
-              <div className="flex-1 flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
-                <button
-                  type="button"
-                  data-cuelume-select
-                  onClick={() => { setSelectedTag('All'); setPage(1); }}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 ${
-                    selectedTag === 'All'
-                      ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
-                      : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
-                  }`}
-                >
-                  All
-                </button>
-                {availableTags.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    data-cuelume-select
-                    onClick={() => { setSelectedTag(t); setPage(1); trackFilterChange(savedFilter, t); }}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all shrink-0 flex items-center gap-1.5 ${
-                      selectedTag === t
-                        ? 'border-black bg-black text-white shadow-sm dark:border-white dark:bg-white dark:text-black'
-                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
-                    }`}
-                  >
-                    {t}
-                    {tagCounts[t] !== undefined && tagCounts[t] > 0 && (
-                      <span className={`text-[10px] font-semibold tabular-nums px-1 py-0.5 rounded-full min-w-[18px] text-center leading-none ${
-                        selectedTag === t
-                          ? 'bg-white/20 dark:bg-black/20 text-white dark:text-black'
-                          : 'bg-gray-100 dark:bg-[#222] text-gray-500 dark:text-gray-400'
-                      }`}>
-                        {tagCounts[t] > 999 ? '999+' : tagCounts[t]}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-              {/* Manage Tags button — top contributors only */}
-              {isTopContributor && (
-                <button
-                  type="button"
-                  onClick={() => setIsManageTagsOpen(o => !o)}
-                  title="Manage tags"
-                  className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full border text-xs font-medium transition-all ${
-                    isManageTagsOpen
-                      ? 'border-black bg-black text-white dark:border-white dark:bg-white dark:text-black'
-                      : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-black dark:border-[#333] dark:bg-black dark:text-gray-400 dark:hover:border-[#444] dark:hover:text-white'
-                  }`}
-                >
-                  <Crown size={11} />
-                  <span className="hidden sm:inline">Manage</span>
-                </button>
-              )}
-            </div>
-
-            {/* Manage Tags panel — top contributors only */}
-            <AnimatePresence>
-              {isTopContributor && isManageTagsOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.18, ease: 'easeOut' }}
-                  className="rounded-xl border border-gray-200 dark:border-[#333] bg-white dark:bg-black p-4 flex flex-col gap-3"
-                >
-                  <div className="flex items-center gap-2">
-                    <Crown size={12} className="text-yellow-500" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Tag Management
-                    </span>
-                  </div>
-
-                  {/* Create new tag */}
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newTagInput}
-                      onChange={e => setNewTagInput(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') void handleCreateTag(); }}
-                      placeholder="New tag name…"
-                      maxLength={32}
-                      className="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] text-xs text-black dark:text-white placeholder:text-gray-400 focus:outline-none focus:border-black dark:focus:border-white transition-colors"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => void handleCreateTag()}
-                      disabled={isCreatingTag || !newTagInput.trim()}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-black dark:bg-white text-white dark:text-black text-xs font-semibold hover:opacity-80 disabled:opacity-40 transition-opacity"
-                    >
-                      {isCreatingTag ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-                      Add
-                    </button>
-                  </div>
-
-                  {/* Existing tags with delete */}
-                  <div className="flex flex-wrap gap-2">
-                    {availableTags.map(tag => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#111] px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300"
-                      >
-                        <TagIcon size={10} className="text-gray-400" />
-                        {tag}
-                        <button
-                          type="button"
-                          onClick={() => void handleDeleteTag(tag)}
-                          disabled={deletingTag === tag}
-                          className="ml-0.5 text-gray-400 hover:text-red-500 transition-colors disabled:opacity-40"
-                          title={`Delete "${tag}"`}
-                        >
-                          {deletingTag === tag
-                            ? <Loader2 size={10} className="animate-spin" />
-                            : <Trash2 size={10} />
-                          }
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
 
             {/* Sort Chips */}
             <div className="flex items-center gap-4">

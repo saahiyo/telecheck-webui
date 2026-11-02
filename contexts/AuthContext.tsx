@@ -66,17 +66,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Claim the legacy browser/device contributor on the first sign-in.
           // The API verifies this token and will never let another Firebase UID
           // take over an already-linked contributor.
+          setLoading(false);
+
+          // Claim the legacy contributor in the background without blocking auth state readiness
           clearCache('profile:');
-          await fetchMyProfile({ authToken: token, firebaseUid: currentUser.uid });
+          void fetchMyProfile({ authToken: token, firebaseUid: currentUser.uid });
         } catch (error: any) {
           console.error('Failed to get ID token:', error.message);
           setIdToken(null);
+          setLoading(false);
         }
       } else {
         setIdToken(null);
+        setLoading(false);
       }
-
-      setLoading(false);
     });
 
     return unsubscribe;
